@@ -1,0 +1,1 @@
+# 生成 warning_id、plan_id、suggestion_id 等编号
