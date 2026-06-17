@@ -18,12 +18,12 @@ class MachineRuntimeStatus(BaseModel):
     input_rate: Optional[float] = Field(
         default=None,
         ge=0,
-        description="实时吞入速率，单位：片/小时",
+        description="实时吞入速率，单位：片/小时,如果来源是半小时数量，需要先换算为片/小时",
     )
     output_rate: Optional[float] = Field(
         default=None,
         ge=0,
-        description="实时产出速率，单位：片/小时",
+        description="实时产出速率，单位：片/小时,来源是半小时数量，需要先换算为片/小时",
     )
     completed_quantity: Optional[float] = Field(
         default=None,
@@ -39,6 +39,15 @@ class MachineMaster(BaseModel):
     equipment_name: Optional[str] = Field(default=None, description="机台名称")
     process_code: str = Field(..., description="机台所属工序编码")
     process_name: Optional[str] = Field(default=None, description="机台所属工序名称")
+    line_code: Optional[str] = Field(
+        default=None,
+        description="机台所属产线编码",
+    )
+    line_name: Optional[str] = Field(
+        default=None,
+        description="机台所属产线名称",
+    )
+    
 
 
 class ProductModel(BaseModel):
@@ -49,12 +58,11 @@ class ProductModel(BaseModel):
     wafer_size: str = Field(..., description="硅片尺寸，例如:182、210")
     shape_code: str = Field(..., description="形状代码，例如:R、N、P")
 
-
 class ProcessRouteStep(BaseModel):
     """工艺路线中的单个工序节点。"""
 
-    process_code: str = Field(..., description="当前工序编码")
-    process_name: Optional[str] = Field(default=None, description="当前工序名称")
+    process_code: str = Field(..., description="工序编码")
+    process_name: Optional[str] = Field(default=None, description="工序名称")
     sequence_no: int = Field(..., ge=0, description="工序顺序号")
     upstream_process_code: Optional[str] = Field(default=None, description="上游工序编码")
     upstream_process_name: Optional[str] = Field(default=None, description="上游工序名称")
@@ -70,8 +78,10 @@ class BufferSegment(BaseModel):
     buffer_name: Optional[str] = Field(default=None, description="Buffer 名称")
     service_process_codes: List[str] = Field(
         default_factory=list,
-        description="Buffer 服务的工序编码列表，按工艺顺序排列",
+        description="Buffer 服务的工序编码列表。确定buffer服务的上下游关系"
     )
+    cycle_code: Optional[str] = Field(default=None, description="所属循环编码")
+    cycle_name: Optional[str] = Field(default=None, description="所属循环名称")
     max_capacity: float = Field(..., ge=0, description="Buffer 最大容量，单位：片")
     buffer_type: Optional[str] = Field(default=None, description="Buffer 类型")
     safety_stock_lower_limit: Optional[float] = Field(
@@ -80,22 +90,28 @@ class BufferSegment(BaseModel):
         description="静态安全库存下限，单位：片",
     )
 
+class BufferServiceProcess(BaseModel):
+    """Buffer 服务工序明细。"""
+
+    process_code: str = Field(..., description="服务工序列表.工序编码")
+    process_name: Optional[str] = Field(default=None, description="服务工序列表.工序名称")
+
 
 class BufferInventoryItem(BaseModel):
     """Buffer 区间库存明细。"""
 
-    buffer_code: str = Field(..., description="Buffer 段编码")
-    source_process_code: str = Field(..., description="库存来源工序编码")
-    source_process_name: Optional[str] = Field(default=None, description="库存来源工序名称")
+    buffer_code: str = Field(..., description="Buffer 编码")
+    source_process_code: str = Field(..., description="库存来源（上游）工序编码")
+    source_process_name: Optional[str] = Field(default=None, description="库存来源(上游)工序名称")
     target_process_code: Optional[str] = Field(default=None, description="库存目标下游工序编码")
     target_process_name: Optional[str] = Field(default=None, description="库存目标下游工序名称")
     product_code: str = Field(..., description="库存对应产品型号")
     order_code: Optional[str] = Field(default=None, description="库存绑定订单编号")
     material_code: Optional[str] = Field(default=None, description="库存绑定物料编码")
-    inventory_quantity: float = Field(
-        ...,
+    currentStockQuantity: Optional[int] = Field(
+        default=None,
         ge=0,
-        description="区间库存数量，单位：片；不要直接使用 currentUtilizationRate 作为该值",
+        description="当前buffer库存量,单位:片"
     )
 
 
@@ -116,8 +132,6 @@ class OrderInfo(BaseModel):
     product_code: str = Field(..., description="订单产品型号")
     total_quantity: float = Field(..., ge=0, description="订单总数量，单位：片")
     completed_quantity: float = Field(default=0, ge=0, description="订单已完成数量，单位：片")
-    next_order_code: Optional[str] = Field(default=None, description="下一订单编号")
-    next_product_code: Optional[str] = Field(default=None, description="下一订单产品型号")
 
 
 class AlgorithmConfig(BaseModel):

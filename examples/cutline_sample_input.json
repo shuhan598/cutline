@@ -1,0 +1,282 @@
+{
+  "config": {
+    "cutline_lead_minutes": 30
+  },
+  "product_models": [
+    {
+      "product_code": "HG182T",
+      "product_name": "HG182T",
+      "wafer_size": "182",
+      "shape_code": "R"
+    },
+    {
+      "product_code": "HG182R",
+      "product_name": "HG182R",
+      "wafer_size": "182",
+      "shape_code": "R"
+    }
+  ],
+  "process_route_steps": [
+    {
+      "process_code": "ZR",
+      "process_name": "制绒",
+      "sequence_no": 10,
+      "upstream_process_code": null,
+      "upstream_process_name": null,
+      "downstream_process_code": "PK",
+      "downstream_process_name": "硼扩",
+      "unload_cache_type": "buffer"
+    },
+    {
+      "process_code": "PK",
+      "process_name": "硼扩",
+      "sequence_no": 11,
+      "upstream_process_code": "ZR",
+      "upstream_process_name": "制绒",
+      "downstream_process_code": null,
+      "downstream_process_name": null,
+      "unload_cache_type": "buffer"
+    }
+  ],
+  "buffer_segments": [
+    {
+      "buffer_code": "BUF_ZR_PK",
+      "buffer_name": "制绒到硼扩 Buffer",
+      "service_process_codes": [
+        "ZR",
+        "PK"
+      ],
+      "max_capacity": 156000,
+      "buffer_type": "process_buffer",
+      "safety_stock_lower_limit": 0
+    }
+  ],
+  "buffer_inventories": [
+    {
+      "buffer_code": "BUF_ZR_PK",
+      "sourceName": "制绒 ZR -> 硼扩 PK / HG182T",
+      "source_process_code": "ZR",
+      "source_process_name": "制绒",
+      "target_process_code": "PK",
+      "target_process_name": "硼扩",
+      "product_code": "HG182T",
+      "process_from": "ZR",
+      "process_to": "PK",
+      "order_code": "MO-HG182T-ZRPK-001",
+      "material_code": "MAT-HG182T",
+      "inventory_quantity": 1600,
+      "unit": "片"
+    },
+    {
+      "buffer_code": "BUF_ZR_PK",
+      "sourceName": "制绒 ZR -> 硼扩 PK / HG182R",
+      "source_process_code": "ZR",
+      "source_process_name": "制绒",
+      "target_process_code": "PK",
+      "target_process_name": "硼扩",
+      "product_code": "HG182R",
+      "process_from": "ZR",
+      "process_to": "PK",
+      "order_code": "MO-HG182R-ZRPK-001",
+      "material_code": "MAT-HG182R",
+      "inventory_quantity": 20000,
+      "unit": "片"
+    }
+  ],
+  "machine_statuses": [
+    {
+      "equipment_code": "zr01",
+      "equipment_id": "zr01",
+      "process_code": "ZR",
+      "process_name": "制绒",
+      "status": "running",
+      "order_code": "MO-HG182T-ZR-001",
+      "product_code": "HG182T",
+      "wafer_size": "182",
+      "shape_code": "R",
+      "input_quantity_30min": 4000,
+      "out_quantity_30min": 4000,
+      "input_rate_per_hour": 8000,
+      "output_rate_per_hour": 8000,
+      "actual_capacity_per_hour": 8000,
+      "theoretical_uph": 10000
+    },
+    {
+      "equipment_code": "zr02",
+      "equipment_id": "zr02",
+      "process_code": "ZR",
+      "process_name": "制绒",
+      "status": "running",
+      "order_code": "MO-HG182T-ZR-002",
+      "product_code": "HG182T",
+      "wafer_size": "182",
+      "shape_code": "R",
+      "input_quantity_30min": 4000,
+      "out_quantity_30min": 4000,
+      "input_rate_per_hour": 8000,
+      "output_rate_per_hour": 8000,
+      "actual_capacity_per_hour": 8000,
+      "theoretical_uph": 10000
+    },
+    {
+      "equipment_code": "zr03",
+      "equipment_id": "zr03",
+      "process_code": "ZR",
+      "process_name": "制绒",
+      "status": "running",
+      "order_code": "MO-HG182R-ZR-003",
+      "product_code": "HG182R",
+      "wafer_size": "182",
+      "shape_code": "R",
+      "input_quantity_30min": 4000,
+      "out_quantity_30min": 4000,
+      "input_rate_per_hour": 8000,
+      "output_rate_per_hour": 8000,
+      "actual_capacity_per_hour": 8000,
+      "theoretical_uph": 10000
+    },
+    {
+      "equipment_code": "pk01",
+      "equipment_id": "pk01",
+      "process_code": "PK",
+      "process_name": "硼扩",
+      "status": "running",
+      "order_code": "MO-HG182T-PK-001",
+      "product_code": "HG182T",
+      "wafer_size": "182",
+      "shape_code": "R",
+      "input_quantity_30min": 4800,
+      "out_quantity_30min": 4800,
+      "input_rate_per_hour": 9600,
+      "output_rate_per_hour": 9600,
+      "actual_capacity_per_hour": 9600,
+      "theoretical_uph": 12000
+    },
+    {
+      "equipment_code": "pk02",
+      "equipment_id": "pk02",
+      "process_code": "PK",
+      "process_name": "硼扩",
+      "status": "running",
+      "order_code": "MO-HG182T-PK-002",
+      "product_code": "HG182T",
+      "wafer_size": "182",
+      "shape_code": "R",
+      "input_quantity_30min": 4800,
+      "out_quantity_30min": 4800,
+      "input_rate_per_hour": 9600,
+      "output_rate_per_hour": 9600,
+      "actual_capacity_per_hour": 9600,
+      "theoretical_uph": 12000
+    },
+    {
+      "equipment_code": "pk03",
+      "equipment_id": "pk03",
+      "process_code": "PK",
+      "process_name": "硼扩",
+      "status": "running",
+      "order_code": "MO-HG182R-PK-003",
+      "product_code": "HG182R",
+      "wafer_size": "182",
+      "shape_code": "R",
+      "input_quantity_30min": 4800,
+      "out_quantity_30min": 4800,
+      "input_rate_per_hour": 9600,
+      "output_rate_per_hour": 9600,
+      "actual_capacity_per_hour": 9600,
+      "theoretical_uph": 12000
+    }
+  ],
+  "capacity_records": [
+    {
+      "equipment_code": "zr01",
+      "product_code": "HG182T",
+      "actual_capacity_per_hour": 8000,
+      "theoretical_uph": 10000,
+      "process_time_minutes": 40
+    },
+    {
+      "equipment_code": "zr02",
+      "product_code": "HG182T",
+      "actual_capacity_per_hour": 8000,
+      "theoretical_uph": 10000,
+      "process_time_minutes": 40
+    },
+    {
+      "equipment_code": "zr03",
+      "product_code": "HG182R",
+      "actual_capacity_per_hour": 8000,
+      "theoretical_uph": 10000,
+      "process_time_minutes": 40
+    },
+    {
+      "equipment_code": "zr03",
+      "product_code": "HG182T",
+      "actual_capacity_per_hour": 8000,
+      "theoretical_uph": 10000,
+      "process_time_minutes": 40
+    },
+    {
+      "equipment_code": "pk01",
+      "product_code": "HG182T",
+      "actual_capacity_per_hour": 9600,
+      "theoretical_uph": 12000,
+      "process_time_minutes": 60
+    },
+    {
+      "equipment_code": "pk02",
+      "product_code": "HG182T",
+      "actual_capacity_per_hour": 9600,
+      "theoretical_uph": 12000,
+      "process_time_minutes": 60
+    },
+    {
+      "equipment_code": "pk03",
+      "product_code": "HG182R",
+      "actual_capacity_per_hour": 9600,
+      "theoretical_uph": 12000,
+      "process_time_minutes": 60
+    }
+  ],
+ "expected_result": {
+    "expected_net_rate_per_hour": 3200,
+    "expected_depletion_minutes": 30,
+    "expected_warning_type": "stockout",
+    "expected_warning_triggered": true,
+    "expected_selected_candidate": "zr03",
+    "warning_calculation": {
+      "buffer_code": "BUF_ZR_PK",
+      "product_code": "HG182T",
+      "process_from": "ZR",
+      "process_to": "PK",
+      "inventory_quantity": 1600,
+      "upstream_output_per_hour": 16000,
+      "downstream_input_per_hour": 19200,
+      "net_rate_per_hour": 3200,
+      "depletion_hours": 0.5,
+      "depletion_minutes": 30,
+      "cutline_lead_minutes": 30,
+      "warning_triggered": true
+    },
+    "selected_candidate_detail": {
+      "equipment_code": "zr03",
+      "current_product_code": "HG182R",
+      "target_product_code": "HG182T",
+      "contribution_capacity_per_hour": 8000,
+      "remaining_capacity_gap_per_hour": -4800
+    },
+    "borrow_impact_check": {
+      "borrowed_equipment_code": "zr03",
+      "product_code": "HG182R",
+      "inventory_quantity": 20000,
+      "process_from": "ZR",
+      "process_to": "PK",
+      "upstream_output_per_hour_after_borrow": 0,
+      "downstream_input_per_hour_after_borrow": 9600,
+      "net_rate_per_hour_after_borrow": 9600,
+      "depletion_minutes_after_borrow": 125,
+      "cutline_lead_minutes": 30,
+      "warning_triggered_after_borrow": false
+    }
+  }
+}
