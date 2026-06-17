@@ -54,33 +54,25 @@
   "buffer_inventories": [
     {
       "buffer_code": "BUF_ZR_PK",
-      "sourceName": "制绒 ZR -> 硼扩 PK / HG182T",
-      "source_process_code": "ZR",
-      "source_process_name": "制绒",
-      "target_process_code": "PK",
-      "target_process_name": "硼扩",
       "product_code": "HG182T",
       "process_from": "ZR",
+      "process_from_name": "制绒",
       "process_to": "PK",
+      "process_to_name": "硼扩",
       "order_code": "MO-HG182T-ZRPK-001",
       "material_code": "MAT-HG182T",
-      "inventory_quantity": 1600,
-      "unit": "片"
+      "inventory_quantity": 1600
     },
     {
       "buffer_code": "BUF_ZR_PK",
-      "sourceName": "制绒 ZR -> 硼扩 PK / HG182R",
-      "source_process_code": "ZR",
-      "source_process_name": "制绒",
-      "target_process_code": "PK",
-      "target_process_name": "硼扩",
       "product_code": "HG182R",
       "process_from": "ZR",
+      "process_from_name": "制绒",
       "process_to": "PK",
+      "process_to_name": "硼扩",
       "order_code": "MO-HG182R-ZRPK-001",
       "material_code": "MAT-HG182R",
-      "inventory_quantity": 20000,
-      "unit": "片"
+      "inventory_quantity": 20000
     }
   ],
   "machine_statuses": [

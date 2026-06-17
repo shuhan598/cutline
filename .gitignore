@@ -8,6 +8,8 @@ env/
 .idea/
 .vscode/
 
+.claude/
+
 .env
 *.token
 *.key

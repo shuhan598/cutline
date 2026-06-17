@@ -1,7 +1,22 @@
+from app.core.net_rate.rate_utils import get_machine_output_rate_per_hour
+
+
 def _get_value(source, field_name):
     if isinstance(source, dict):
         return source.get(field_name)
     return getattr(source, field_name, None)
+
+
+def find_actual_capacity(data, equipment_code, product_code):
+    """查机台在指定型号下的静态实际产能（片/小时），无记录返回 None。"""
+    for record in (_get_value(data, "capacity_records") or []):
+        if (
+            _get_value(record, "equipment_code") == equipment_code
+            and _get_value(record, "product_code") == product_code
+        ):
+            return _get_value(record, "actual_capacity_per_hour")
+
+    return None
 
 
 def build_product_model_map(data):
@@ -48,8 +63,8 @@ def find_candidates_for_warning(data, warning_result):
             "process_from": process_from,
             "process_to": process_to,
             "candidate_found": False,
-            "candidate_status": "manual_intervention_required",
-            "reason": "no_compatible_running_upstream_machine",
+            "candidate_status": "warning_not_triggered",
+            "reason": "warning_not_triggered",
             "candidates": [],
         }
 
@@ -75,6 +90,12 @@ def find_candidates_for_warning(data, warning_result):
                 "target_product_code": product_code,
                 "wafer_size": _get_value(current_model, "wafer_size"),
                 "shape_code": _get_value(current_model, "shape_code"),
+                "current_output_rate_per_hour": get_machine_output_rate_per_hour(machine),
+                "contribution_capacity_per_hour": find_actual_capacity(
+                    data,
+                    _get_value(machine, "equipment_code"),
+                    product_code,
+                ),
                 "reason": "same_process_size_shape_running_machine",
             }
         )

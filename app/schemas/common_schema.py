@@ -12,19 +12,39 @@ class MachineRuntimeStatus(BaseModel):
     """机台实时状态。"""
 
     equipment_code: str = Field(..., description="机台编码")
-    status: str = Field(..., description="当前机台状态，例如：运行、待机、停机")
+    process_code: str = Field(..., description="机台所属工序编码")
+    process_name: Optional[str] = Field(default=None, description="机台所属工序名称")
+    status: str = Field(..., description="当前机台状态，例如：running、idle、stopped")
     order_code: Optional[str] = Field(default=None, description="当前生产订单编号")
     product_code: Optional[str] = Field(default=None, description="当前生产产品型号")
-    input_rate: Optional[float] = Field(
+    wafer_size: Optional[str] = Field(default=None, description="当前型号硅片尺寸，缺省时按 product_code 从产品型号表查询")
+    shape_code: Optional[str] = Field(default=None, description="当前型号形状代码，缺省时按 product_code 从产品型号表查询")
+    input_rate_per_hour: Optional[float] = Field(
         default=None,
         ge=0,
-        description="实时吞入速率，单位：片/小时,如果来源是半小时数量，需要先换算为片/小时",
+        description="实时吞入速率，单位：片/小时。优先字段",
     )
-    output_rate: Optional[float] = Field(
+    output_rate_per_hour: Optional[float] = Field(
         default=None,
         ge=0,
-        description="实时产出速率，单位：片/小时,来源是半小时数量，需要先换算为片/小时",
+        description="实时产出速率，单位：片/小时。优先字段",
     )
+    input_quantity_30min: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="近半小时吞入量，单位：片。无实时速率时按 ×2 换算为片/小时",
+    )
+    out_quantity_30min: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="近半小时产出量，单位：片。无实时速率时按 ×2 换算为片/小时",
+    )
+    actual_capacity_per_hour: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="当前型号实际产能，单位：片/小时。作为速率兜底来源",
+    )
+    theoretical_uph: Optional[float] = Field(default=None, ge=0, description="理论 UPH，单位：片/小时")
     completed_quantity: Optional[float] = Field(
         default=None,
         ge=0,
@@ -101,17 +121,17 @@ class BufferInventoryItem(BaseModel):
     """Buffer 区间库存明细。"""
 
     buffer_code: str = Field(..., description="Buffer 编码")
-    source_process_code: str = Field(..., description="库存来源（上游）工序编码")
-    source_process_name: Optional[str] = Field(default=None, description="库存来源(上游)工序名称")
-    target_process_code: Optional[str] = Field(default=None, description="库存目标下游工序编码")
-    target_process_name: Optional[str] = Field(default=None, description="库存目标下游工序名称")
+    process_from: str = Field(..., description="库存来源（上游）工序编码")
+    process_from_name: Optional[str] = Field(default=None, description="库存来源(上游)工序名称")
+    process_to: Optional[str] = Field(default=None, description="库存目标（下游）工序编码")
+    process_to_name: Optional[str] = Field(default=None, description="库存目标(下游)工序名称")
     product_code: str = Field(..., description="库存对应产品型号")
     order_code: Optional[str] = Field(default=None, description="库存绑定订单编号")
     material_code: Optional[str] = Field(default=None, description="库存绑定物料编码")
-    currentStockQuantity: Optional[int] = Field(
-        default=None,
+    inventory_quantity: float = Field(
+        default=0,
         ge=0,
-        description="当前buffer库存量,单位:片"
+        description="当前区间库存量，单位：片",
     )
 
 
@@ -120,8 +140,8 @@ class MachineCapacityRecord(BaseModel):
 
     equipment_code: str = Field(..., description="机台编码")
     product_code: str = Field(..., description="产品型号编码")
-    actual_capacity: float = Field(..., ge=0, description="实际产能，单位：片/小时")
-    rated_capacity: Optional[float] = Field(default=None, ge=0, description="额定产能，单位：片/小时")
+    actual_capacity_per_hour: float = Field(..., ge=0, description="实际产能，单位：片/小时")
+    theoretical_uph: Optional[float] = Field(default=None, ge=0, description="理论 UPH，单位：片/小时")
     process_time_minutes: float = Field(..., ge=0, description="工艺时长，单位：分钟")
 
 
