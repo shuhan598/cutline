@@ -4,7 +4,7 @@ from pathlib import Path
 from app.core.net_rate.net_rate_calculator import calculate_all_net_rates, calculate_net_rate
 
 
-SAMPLE_INPUT_PATH = Path(__file__).resolve().parents[1] / "examples" / "cutline_sample_input.json"
+SAMPLE_INPUT_PATH = Path(__file__).resolve().parents[2] / "examples" / "cutline_sample_input.json"
 
 
 def load_sample_input():

@@ -12,7 +12,7 @@ from app.core.warning.stockout_warning import (
 )
 
 
-SAMPLE_INPUT_PATH = Path(__file__).resolve().parents[1] / "examples" / "cutline_sample_input.json"
+SAMPLE_INPUT_PATH = Path(__file__).resolve().parents[2] / "examples" / "cutline_sample_input.json"
 
 
 def load_sample_input():
