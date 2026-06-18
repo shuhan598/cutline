@@ -12,6 +12,7 @@ class MachineRuntimeStatus(BaseModel):
     """机台实时状态。"""
 
     equipment_code: str = Field(..., description="机台编码")
+    equipment_name: Optional[str] = Field(default=None, description="机台名称")
     process_code: str = Field(..., description="机台所属工序编码")
     process_name: Optional[str] = Field(default=None, description="机台所属工序名称")
     status: str = Field(..., description="当前机台状态，例如：running、idle、stopped")
