@@ -1,149 +1,121 @@
-from app.core.net_rate.rate_utils import get_machine_output_rate_per_hour
+# 候选机台查找组件：吃 snapshot + list[StockoutWarningResult]，吐 list[CandidateResult]
+
+from app.core.net_rate.rate_strategy import RateStrategy
+from app.schemas.request_schema import CutlineSnapshot
+from app.schemas.result_schema import (
+    CandidateMachine,
+    CandidateResult,
+    StockoutWarningResult,
+)
 
 
-def _get_value(source, field_name):
-    if isinstance(source, dict):
-        return source.get(field_name)
-    return getattr(source, field_name, None)
+class CandidateMachineFinder:
+    """为触发的断料预警，按全局耗尽紧迫度顺序查找同工序同尺寸同形状的在产机台。"""
 
+    def __init__(self, rate_strategy: RateStrategy):
+        self._rate_strategy = rate_strategy
 
-def find_actual_capacity(data, equipment_code, product_code):
-    """查机台在指定型号下的静态实际产能（片/小时），无记录返回 None。"""
-    for record in (_get_value(data, "capacity_records") or []):
-        if (
-            _get_value(record, "equipment_code") == equipment_code
-            and _get_value(record, "product_code") == product_code
-        ):
-            return _get_value(record, "actual_capacity_per_hour")
+    def find(
+        self,
+        snapshot: CutlineSnapshot,
+        warnings: list[StockoutWarningResult],
+    ) -> list[CandidateResult]:
+        triggered = [
+            warning
+            for warning in warnings
+            if warning.warning_triggered and warning.warning_type == "stockout"
+        ]
+        triggered.sort(key=self._depletion_sort_key)
 
-    return None
-
-
-def build_product_model_map(data):
-    product_models = _get_value(data, "product_models") or []
-
-    return {
-        _get_value(product_model, "product_code"): product_model
-        for product_model in product_models
-        if _get_value(product_model, "product_code") is not None
-    }
-
-
-def is_same_size_and_shape(current_model, target_model):
-    current_wafer_size = _get_value(current_model, "wafer_size")
-    target_wafer_size = _get_value(target_model, "wafer_size")
-    current_shape_code = _get_value(current_model, "shape_code")
-    target_shape_code = _get_value(target_model, "shape_code")
-
-    return (
-        current_wafer_size is not None
-        and current_shape_code is not None
-        and current_wafer_size == target_wafer_size
-        and current_shape_code == target_shape_code
-    )
-
-
-def find_candidates_for_warning(data, warning_result):
-    buffer_code = _get_value(warning_result, "buffer_code")
-    product_code = _get_value(warning_result, "product_code")
-    process_from = _get_value(warning_result, "process_from")
-    process_to = _get_value(warning_result, "process_to")
-    product_model_map = build_product_model_map(data)
-    target_model = product_model_map.get(product_code)
-    machine_statuses = _get_value(data, "machine_statuses") or []
-    candidates = []
-
-    if (
-        _get_value(warning_result, "warning_triggered") is not True
-        or _get_value(warning_result, "warning_type") != "stockout"
-    ):
-        return {
-            "buffer_code": buffer_code,
-            "product_code": product_code,
-            "process_from": process_from,
-            "process_to": process_to,
-            "candidate_found": False,
-            "candidate_status": "warning_not_triggered",
-            "reason": "warning_not_triggered",
-            "candidates": [],
+        product_model_map = {
+            product_model.product_code: product_model
+            for product_model in snapshot.product_models
         }
 
-    for machine in machine_statuses:
-        current_product_code = _get_value(machine, "product_code")
-        current_model = product_model_map.get(current_product_code)
+        return [
+            self._for_warning(snapshot, warning, product_model_map)
+            for warning in triggered
+        ]
 
-        if _get_value(machine, "status") != "running":
-            continue
-        if _get_value(machine, "process_code") != process_from:
-            continue
-        if current_product_code == product_code:
-            continue
-        if not is_same_size_and_shape(current_model, target_model):
-            continue
+    def _depletion_sort_key(self, warning: StockoutWarningResult) -> float:
+        if warning.depletion_minutes is None:
+            return float("inf")
+        return warning.depletion_minutes
 
-        candidates.append(
-            {
-                "equipment_code": _get_value(machine, "equipment_code"),
-                "equipment_name": _get_value(machine, "equipment_name"),
-                "process_code": _get_value(machine, "process_code"),
-                "current_product_code": current_product_code,
-                "target_product_code": product_code,
-                "wafer_size": _get_value(current_model, "wafer_size"),
-                "shape_code": _get_value(current_model, "shape_code"),
-                "current_output_rate_per_hour": get_machine_output_rate_per_hour(machine),
-                "contribution_capacity_per_hour": find_actual_capacity(
-                    data,
-                    _get_value(machine, "equipment_code"),
-                    product_code,
-                ),
-                "reason": "same_process_size_shape_running_machine",
-            }
+    def _for_warning(
+        self,
+        snapshot: CutlineSnapshot,
+        warning: StockoutWarningResult,
+        product_model_map,
+    ) -> CandidateResult:
+        target_model = product_model_map.get(warning.product_code)
+        candidates = []
+
+        for machine in snapshot.machine_statuses:
+            if machine.status != "running":
+                continue
+            if machine.process_code != warning.process_from:
+                continue
+            if machine.product_code == warning.product_code:
+                continue
+
+            current_model = product_model_map.get(machine.product_code)
+            if not self._same_size_and_shape(current_model, target_model):
+                continue
+
+            candidates.append(
+                CandidateMachine(
+                    equipment_code=machine.equipment_code,
+                    equipment_name=machine.equipment_name,
+                    process_code=machine.process_code,
+                    current_product_code=machine.product_code,
+                    target_product_code=warning.product_code,
+                    wafer_size=current_model.wafer_size if current_model else None,
+                    shape_code=current_model.shape_code if current_model else None,
+                    current_output_rate_per_hour=self._rate_strategy.output_rate(machine),
+                    contribution_capacity_per_hour=self._actual_capacity(
+                        snapshot, machine.equipment_code, warning.product_code
+                    ),
+                    reason="same_process_size_shape_running_machine",
+                )
+            )
+
+        if candidates:
+            return CandidateResult(
+                buffer_code=warning.buffer_code,
+                product_code=warning.product_code,
+                process_from=warning.process_from,
+                process_to=warning.process_to,
+                candidate_found=True,
+                candidate_status="candidate_found",
+                reason=None,
+                candidates=candidates,
+            )
+
+        return CandidateResult(
+            buffer_code=warning.buffer_code,
+            product_code=warning.product_code,
+            process_from=warning.process_from,
+            process_to=warning.process_to,
+            candidate_found=False,
+            candidate_status="manual_intervention_required",
+            reason="no_compatible_running_upstream_machine",
+            candidates=[],
         )
 
-    if candidates:
-        return {
-            "buffer_code": buffer_code,
-            "product_code": product_code,
-            "process_from": process_from,
-            "process_to": process_to,
-            "candidate_found": True,
-            "candidate_status": "candidate_found",
-            "candidates": candidates,
-        }
-
-    return {
-        "buffer_code": buffer_code,
-        "product_code": product_code,
-        "process_from": process_from,
-        "process_to": process_to,
-        "candidate_found": False,
-        "candidate_status": "manual_intervention_required",
-        "reason": "no_compatible_running_upstream_machine",
-        "candidates": [],
-    }
-
-
-def find_all_candidates(data, warning_results):
-    def depletion_minutes_sort_key(warning_result):
-        depletion_minutes = _get_value(warning_result, "depletion_minutes")
-        if depletion_minutes is None:
-            return float("inf")
-
-        try:
-            return float(depletion_minutes)
-        except (TypeError, ValueError):
-            return float("inf")
-
-    stockout_warnings = [
-        warning_result
-        for warning_result in (warning_results or [])
-        if (
-            _get_value(warning_result, "warning_triggered") is True
-            and _get_value(warning_result, "warning_type") == "stockout"
+    def _same_size_and_shape(self, current_model, target_model) -> bool:
+        if current_model is None or target_model is None:
+            return False
+        return (
+            current_model.wafer_size == target_model.wafer_size
+            and current_model.shape_code == target_model.shape_code
         )
-    ]
 
-    return [
-        find_candidates_for_warning(data, warning_result)
-        for warning_result in sorted(stockout_warnings, key=depletion_minutes_sort_key)
-    ]
+    def _actual_capacity(self, snapshot: CutlineSnapshot, equipment_code, product_code):
+        for record in snapshot.capacity_records:
+            if (
+                record.equipment_code == equipment_code
+                and record.product_code == product_code
+            ):
+                return record.actual_capacity_per_hour
+        return None
