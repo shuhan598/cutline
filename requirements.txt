@@ -1,0 +1,5 @@
+pydantic>=2.11,<3
+pydantic-settings>=2.6
+fastapi>=0.135
+uvicorn>=0.44
+pytest>=8
