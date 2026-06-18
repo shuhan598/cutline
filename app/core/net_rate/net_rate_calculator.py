@@ -1,76 +1,69 @@
-from app.core.net_rate.rate_utils import (
-    get_machine_input_rate_per_hour,
-    get_machine_output_rate_per_hour,
-)
+# 净速率计算组件：吃 CutlineSnapshot，吐 list[NetRateResult]
+
+from app.core.net_rate.rate_strategy import RateStrategy
+from app.schemas.request_schema import CutlineSnapshot
+from app.schemas.result_schema import NetRateResult
 
 
-def _get_value(source, field_name):
-    if isinstance(source, dict):
-        return source.get(field_name)
-    return getattr(source, field_name, None)
+class NetRateCalculator:
+    """按 buffer 区间(段)聚合上游产出与下游吞入，得到净消耗速率。"""
 
+    def __init__(self, rate_strategy: RateStrategy):
+        self._rate_strategy = rate_strategy
 
-def calculate_net_rate(
-    data,
-    buffer_code,
-    product_code,
-    process_from,
-    process_to,
-):
-    machine_statuses = data.get("machine_statuses", []) if isinstance(data, dict) else []
+    def calculate(self, snapshot: CutlineSnapshot) -> list[NetRateResult]:
+        results = []
+        seen_segments = set()
 
-    upstream_output_per_hour = 0.0
-    downstream_input_per_hour = 0.0
-    upstream_equipment_codes = []
-    downstream_equipment_codes = []
+        for inventory in snapshot.buffer_inventories:
+            segment_key = (
+                inventory.buffer_code,
+                inventory.product_code,
+                inventory.process_from,
+                inventory.process_to,
+            )
+            if segment_key in seen_segments:
+                continue
 
-    for machine in machine_statuses:
-        equipment_code = _get_value(machine, "equipment_code")
+            seen_segments.add(segment_key)
+            results.append(self._calculate_segment(snapshot, *segment_key))
 
-        if _get_value(machine, "status") != "running":
-            continue
+        return results
 
-        if _get_value(machine, "product_code") != product_code:
-            continue
+    def _calculate_segment(
+        self,
+        snapshot: CutlineSnapshot,
+        buffer_code,
+        product_code,
+        process_from,
+        process_to,
+    ) -> NetRateResult:
+        upstream_output_per_hour = 0.0
+        downstream_input_per_hour = 0.0
+        upstream_equipment_codes = []
+        downstream_equipment_codes = []
 
-        process_code = _get_value(machine, "process_code")
-        if process_code == process_from:
-            upstream_output_per_hour += get_machine_output_rate_per_hour(machine)
-            upstream_equipment_codes.append(equipment_code)
-        elif process_code == process_to:
-            downstream_input_per_hour += get_machine_input_rate_per_hour(machine)
-            downstream_equipment_codes.append(equipment_code)
+        for machine in snapshot.machine_statuses:
+            if machine.status != "running":
+                continue
+            if machine.product_code != product_code:
+                continue
 
-    return {
-        "buffer_code": buffer_code,
-        "product_code": product_code,
-        "process_from": process_from,
-        "process_to": process_to,
-        "upstream_output_per_hour": upstream_output_per_hour,
-        "downstream_input_per_hour": downstream_input_per_hour,
-        "net_rate_per_hour": downstream_input_per_hour - upstream_output_per_hour,
-        "upstream_equipment_codes": upstream_equipment_codes,
-        "downstream_equipment_codes": downstream_equipment_codes,
-    }
+            if machine.process_code == process_from:
+                upstream_output_per_hour += self._rate_strategy.output_rate(machine)
+                upstream_equipment_codes.append(machine.equipment_code)
+            elif machine.process_code == process_to:
+                downstream_input_per_hour += self._rate_strategy.input_rate(machine)
+                downstream_equipment_codes.append(machine.equipment_code)
 
-
-def calculate_all_net_rates(data):
-    buffer_inventories = data.get("buffer_inventories", []) if isinstance(data, dict) else []
-    results = []
-    seen_segments = set()
-
-    for inventory in buffer_inventories:
-        segment_key = (
-            _get_value(inventory, "buffer_code"),
-            _get_value(inventory, "product_code"),
-            _get_value(inventory, "process_from"),
-            _get_value(inventory, "process_to"),
+        return NetRateResult(
+            buffer_code=buffer_code,
+            product_code=product_code,
+            process_from=process_from,
+            process_to=process_to,
+            upstream_output_per_hour=upstream_output_per_hour,
+            downstream_input_per_hour=downstream_input_per_hour,
+            net_rate_per_hour=downstream_input_per_hour - upstream_output_per_hour,
+            upstream_equipment_codes=upstream_equipment_codes,
+            downstream_equipment_codes=downstream_equipment_codes,
         )
-
-        if segment_key in seen_segments:
-            continue
-
-        seen_segments.add(segment_key)
-        results.append(calculate_net_rate(data, *segment_key))
-
-    return results
