@@ -1,50 +1,42 @@
-import json
 from pathlib import Path
 
-from app.core.net_rate.net_rate_calculator import calculate_all_net_rates
+from app.adapters.mock_adapter import MockAdapter
+from app.core.net_rate.net_rate_calculator import NetRateCalculator
+from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
 from app.core.prediction_time.depletion_time.depletion_time_calculator import (
-    calculate_all_depletion_times,
+    DepletionTimeCalculator,
 )
 
 
 COMPLEX_INPUT_PATH = Path(__file__).resolve().parents[2] / "examples" / "cutline_complex_input.json"
 
 
-def load_complex_input():
-    with COMPLEX_INPUT_PATH.open(encoding="utf-8") as file:
-        return json.load(file)
+def load_complex_snapshot():
+    return MockAdapter().load(COMPLEX_INPUT_PATH)
 
 
-def build_depletion_results(data):
-    return calculate_all_depletion_times(data, calculate_all_net_rates(data))
+def build_depletions(snapshot):
+    net_rates = NetRateCalculator(RealtimeFirstRateStrategy()).calculate(snapshot)
+    return DepletionTimeCalculator().calculate(snapshot, net_rates)
 
 
-def results_by_segment(results):
+def by_segment(results):
     return {
-        (
-            result["buffer_code"],
-            result["product_code"],
-            result["process_from"],
-            result["process_to"],
-        ): result
-        for result in results
+        (r.buffer_code, r.product_code, r.process_from, r.process_to): r
+        for r in results
     }
 
 
-def test_calculate_all_depletion_times_matches_complex_input_design():
-    data = load_complex_input()
+def test_depletion_times_match_complex_input_design():
+    segments = by_segment(build_depletions(load_complex_snapshot()))
 
-    by_segment = results_by_segment(build_depletion_results(data))
-
-    assert by_segment[("BUF_PK_OX", "HG210R", "PK", "OX")]["depletion_minutes"] == 10
-    assert by_segment[("BUF_ZR_PK", "HG182N", "ZR", "PK")]["depletion_minutes"] == 15
-    assert by_segment[("BUF_ZR_PK", "HG182T", "ZR", "PK")]["depletion_minutes"] == 20
-    assert by_segment[("BUF_ZR_PK", "HG182R", "ZR", "PK")]["depletion_minutes"] == 120
+    assert segments[("BUF_PK_OX", "HG210R", "PK", "OX")].depletion_minutes == 10
+    assert segments[("BUF_ZR_PK", "HG182N", "ZR", "PK")].depletion_minutes == 15
+    assert segments[("BUF_ZR_PK", "HG182T", "ZR", "PK")].depletion_minutes == 20
+    assert segments[("BUF_ZR_PK", "HG182R", "ZR", "PK")].depletion_minutes == 120
 
 
 def test_complex_depletion_results_are_all_decreasing_inventory_cases():
-    data = load_complex_input()
+    results = build_depletions(load_complex_snapshot())
 
-    results = build_depletion_results(data)
-
-    assert {result["depletion_status"] for result in results} == {"decreasing"}
+    assert {r.depletion_status for r in results} == {"decreasing"}

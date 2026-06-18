@@ -1,79 +1,69 @@
-import math
+# 耗尽时间计算组件：吃 snapshot + list[NetRateResult]，吐 list[DepletionResult]
+
+from app.schemas.request_schema import CutlineSnapshot
+from app.schemas.result_schema import DepletionResult, NetRateResult
+from app.utils.numeric import safe_float
 
 
-def safe_float(value, default=0.0):
-    try:
-        if value is None:
-            return default
+class DepletionTimeCalculator:
+    """按净速率与区间库存推算耗尽时间（分钟）。"""
 
-        converted = float(value)
-        if not math.isfinite(converted):
-            return default
+    def calculate(
+        self,
+        snapshot: CutlineSnapshot,
+        net_rates: list[NetRateResult],
+    ) -> list[DepletionResult]:
+        return [self._for_segment(snapshot, net_rate) for net_rate in net_rates]
 
-        return converted
-    except (TypeError, ValueError, OverflowError):
-        return default
+    def _for_segment(
+        self,
+        snapshot: CutlineSnapshot,
+        net_rate: NetRateResult,
+    ) -> DepletionResult:
+        inventory_quantity = self._inventory_quantity(
+            snapshot,
+            net_rate.buffer_code,
+            net_rate.product_code,
+            net_rate.process_from,
+            net_rate.process_to,
+        )
+        net_rate_per_hour = safe_float(net_rate.net_rate_per_hour)
 
+        depletion_minutes = None
+        if net_rate_per_hour > 0:
+            depletion_minutes = inventory_quantity / net_rate_per_hour * 60
+            depletion_status = "decreasing"
+        elif net_rate_per_hour == 0:
+            depletion_status = "stable"
+        else:
+            depletion_status = "increasing"
 
-def _get_value(source, field_name):
-    if isinstance(source, dict):
-        return source.get(field_name)
-    return getattr(source, field_name, None)
+        return DepletionResult(
+            buffer_code=net_rate.buffer_code,
+            product_code=net_rate.product_code,
+            process_from=net_rate.process_from,
+            process_to=net_rate.process_to,
+            inventory_quantity=inventory_quantity,
+            net_rate_per_hour=net_rate_per_hour,
+            depletion_minutes=depletion_minutes,
+            depletion_status=depletion_status,
+        )
 
-
-def find_inventory_quantity(data, buffer_code, product_code, process_from, process_to):
-    buffer_inventories = _get_value(data, "buffer_inventories") or []
-    inventory_quantity = 0.0
-
-    for inventory in buffer_inventories:
-        if (
-            _get_value(inventory, "buffer_code") == buffer_code
-            and _get_value(inventory, "product_code") == product_code
-            and _get_value(inventory, "process_from") == process_from
-            and _get_value(inventory, "process_to") == process_to
-        ):
-            inventory_quantity += safe_float(_get_value(inventory, "inventory_quantity"))
-
-    return inventory_quantity
-
-
-def calculate_depletion_time(data, net_rate_result):
-    buffer_code = _get_value(net_rate_result, "buffer_code")
-    product_code = _get_value(net_rate_result, "product_code")
-    process_from = _get_value(net_rate_result, "process_from")
-    process_to = _get_value(net_rate_result, "process_to")
-    net_rate_per_hour = safe_float(_get_value(net_rate_result, "net_rate_per_hour"))
-    inventory_quantity = find_inventory_quantity(
-        data,
-        buffer_code=buffer_code,
-        product_code=product_code,
-        process_from=process_from,
-        process_to=process_to,
-    )
-
-    depletion_minutes = None
-    if net_rate_per_hour > 0:
-        depletion_minutes = inventory_quantity / net_rate_per_hour * 60
-        depletion_status = "decreasing"
-    elif net_rate_per_hour == 0:
-        depletion_status = "stable"
-    else:
-        depletion_status = "increasing"
-
-    return {
-        "buffer_code": buffer_code,
-        "product_code": product_code,
-        "process_from": process_from,
-        "process_to": process_to,
-        "inventory_quantity": inventory_quantity,
-        "net_rate_per_hour": net_rate_per_hour,
-        "depletion_minutes": depletion_minutes,
-        "depletion_status": depletion_status,
-    }
-
-
-def calculate_all_depletion_times(data, net_rate_results):
-    return [
-        calculate_depletion_time(data, net_rate_result)
-        for net_rate_result in (net_rate_results or [])
-    ]
+    def _inventory_quantity(
+        self,
+        snapshot: CutlineSnapshot,
+        buffer_code,
+        product_code,
+        process_from,
+        process_to,
+    ) -> float:
+        total = 0.0
+        for inventory in snapshot.buffer_inventories:
+            if (
+                inventory.buffer_code == buffer_code
+                and inventory.product_code == product_code
+                and inventory.process_from == process_from
+                and inventory.process_to == process_to
+            ):
+                total += safe_float(inventory.inventory_quantity)
+        return total
