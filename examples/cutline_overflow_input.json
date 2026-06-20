@@ -1,0 +1,31 @@
+{
+  "config": { "cutline_lead_minutes": 30 },
+  "product_models": [
+    { "product_code": "HG182T", "wafer_size": "182", "shape_code": "R" },
+    { "product_code": "HG182R", "wafer_size": "182", "shape_code": "R" }
+  ],
+  "buffer_segments": [
+    {
+      "buffer_code": "BUF_ZR_PK",
+      "service_process_codes": ["ZR", "PK"],
+      "max_capacity": 20000
+    }
+  ],
+  "buffer_inventories": [
+    { "buffer_code": "BUF_ZR_PK", "product_code": "HG182T", "process_from": "ZR", "process_to": "PK", "inventory_quantity": 13000 },
+    { "buffer_code": "BUF_ZR_PK", "product_code": "HG182R", "process_from": "ZR", "process_to": "PK", "inventory_quantity": 5000 }
+  ],
+  "machine_statuses": [
+    { "equipment_code": "zr_t1", "process_code": "ZR", "status": "running", "product_code": "HG182T", "input_rate_per_hour": 8000, "output_rate_per_hour": 8000 },
+    { "equipment_code": "pk_t1", "process_code": "PK", "status": "running", "product_code": "HG182T", "input_rate_per_hour": 4000, "output_rate_per_hour": 4000 },
+    { "equipment_code": "zr_r1", "process_code": "ZR", "status": "running", "product_code": "HG182R", "input_rate_per_hour": 2000, "output_rate_per_hour": 2000 },
+    { "equipment_code": "pk_r1", "process_code": "PK", "status": "running", "product_code": "HG182R", "input_rate_per_hour": 10000, "output_rate_per_hour": 10000 }
+  ],
+  "capacity_records": [
+    { "equipment_code": "zr_t1", "product_code": "HG182T", "actual_capacity_per_hour": 8000, "process_time_minutes": 40 },
+    { "equipment_code": "zr_t1", "product_code": "HG182R", "actual_capacity_per_hour": 4000, "process_time_minutes": 40 },
+    { "equipment_code": "zr_r1", "product_code": "HG182R", "actual_capacity_per_hour": 2000, "process_time_minutes": 40 },
+    { "equipment_code": "pk_t1", "product_code": "HG182T", "actual_capacity_per_hour": 4000, "process_time_minutes": 60 },
+    { "equipment_code": "pk_r1", "product_code": "HG182R", "actual_capacity_per_hour": 10000, "process_time_minutes": 60 }
+  ]
+}
