@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common_schema import CutlineEvent
+
 
 class WarningResult(BaseModel):
     """断料或溢满预警结果。"""
@@ -95,6 +97,10 @@ class CutlineEvaluateResponse(BaseModel):
     plans: List[CutlinePlan] = Field(default_factory=list, description="切线方案列表")
     manual_interventions: List[ManualIntervention] = Field(default_factory=list, description="人工介入提示列表")
     return_suggestions: List[ReturnSuggestion] = Field(default_factory=list, description="切回建议列表")
+    tracked_events: List["CutlineEvent"] = Field(
+        default_factory=list,
+        description="回吐给后端续存的被跟踪切线事件（含最新 negative_start_time）",
+    )
 
 
 class MixTraceNotification(BaseModel):

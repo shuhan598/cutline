@@ -175,5 +175,9 @@ class CutlineEvent(BaseModel):
     cut_time: datetime = Field(..., description="切线发生时间")
     previous_product_code: str = Field(..., description="切线前产品型号")
     next_product_code: str = Field(..., description="切线后产品型号")
+    negative_start_time: Optional[datetime] = Field(
+        default=None,
+        description="净消耗速率首次转负时间，由后端跨周期持久化并回吐",
+    )
     event_id: Optional[str] = Field(default=None, description="切线事件 ID")
     source_plan_id: Optional[str] = Field(default=None, description="来源切线方案 ID")
