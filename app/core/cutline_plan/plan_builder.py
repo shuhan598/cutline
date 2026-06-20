@@ -2,11 +2,13 @@
 
 from typing import List, Optional, Tuple
 
+from app.schemas.request_schema import CutlineSnapshot
 from app.schemas.result_schema import (
     CandidateResult,
     DepletionResult,
     ManualInterventionResult,
     NetRateResult,
+    OverflowWarningResult,
     PlanResult,
     StockoutWarningResult,
 )
@@ -79,6 +81,119 @@ class CutlinePlanBuilder:
                 )
 
         return plans, interventions
+
+    def build_overflow(
+        self,
+        snapshot: CutlineSnapshot,
+        warnings: List[OverflowWarningResult],
+        candidate_results: List[CandidateResult],
+        net_rates: List[NetRateResult],
+    ) -> Tuple[List[PlanResult], List[ManualInterventionResult]]:
+        warning_map = {self._key(w): w for w in warnings if w.warning_triggered}
+        net_map = {self._key(n): n for n in net_rates}
+        capacity_map = {
+            segment.buffer_code: segment.max_capacity
+            for segment in snapshot.buffer_segments
+        }
+        segment_inventory = {}
+        for inventory in snapshot.buffer_inventories:
+            segment_inventory[inventory.buffer_code] = segment_inventory.get(
+                inventory.buffer_code, 0.0
+            ) + inventory.inventory_quantity
+
+        plans: List[PlanResult] = []
+        interventions: List[ManualInterventionResult] = []
+
+        for cr in candidate_results:
+            warning = warning_map.get(self._key(cr))
+            if warning is None:
+                continue
+
+            source_net = net_map.get(self._key(cr))
+            remaining = abs(source_net.net_rate_per_hour) if source_net else 0.0
+
+            if not cr.candidate_found or not cr.candidates:
+                interventions.append(
+                    self._overflow_intervention(warning, remaining, cr.candidates)
+                )
+                continue
+
+            pool = sorted(cr.candidates, key=self._utilization_sort_key, reverse=True)
+            selected = []
+            current_source_upstream = (
+                source_net.upstream_output_per_hour if source_net else 0.0
+            )
+            source_downstream = source_net.downstream_input_per_hour if source_net else 0.0
+
+            for machine in pool:
+                target_net = net_map.get(
+                    (
+                        warning.buffer_code,
+                        machine.target_product_code,
+                        warning.process_from,
+                        warning.process_to,
+                    )
+                )
+                contribution = machine.contribution_capacity_per_hour or 0.0
+                if self._switch_in_overflows_target(
+                    warning, target_net, contribution, capacity_map, segment_inventory
+                ):
+                    continue
+                selected.append(machine)
+                current_source_upstream -= machine.current_output_rate_per_hour
+                if source_downstream - current_source_upstream >= 0:
+                    break
+
+            new_source_net = source_downstream - current_source_upstream
+            if selected and new_source_net >= 0:
+                plans.append(
+                    PlanResult(
+                        buffer_code=warning.buffer_code,
+                        product_code=warning.product_code,
+                        process_from=warning.process_from,
+                        process_to=warning.process_to,
+                        warning_type="overflow",
+                        selected_machines=selected,
+                        total_contribution_capacity=sum(
+                            m.contribution_capacity_per_hour or 0.0 for m in selected
+                        ),
+                        remaining_capacity_gap=new_source_net,
+                    )
+                )
+            else:
+                interventions.append(
+                    self._overflow_intervention(warning, max(new_source_net, 0.0), cr.candidates)
+                )
+
+        return plans, interventions
+
+    def _switch_in_overflows_target(
+        self, warning, target_net, contribution, capacity_map, segment_inventory
+    ) -> bool:
+        if target_net is None:
+            return True
+        new_target_net = target_net.net_rate_per_hour - contribution
+        if new_target_net >= 0:
+            return False
+        capacity = capacity_map.get(warning.buffer_code, 0.0)
+        inventory = segment_inventory.get(warning.buffer_code, 0.0)
+        overflow_minutes = (capacity - inventory) / abs(new_target_net) * 60
+        return overflow_minutes <= warning.cutline_lead_minutes
+
+    def _overflow_intervention(self, warning, remaining, candidates) -> ManualInterventionResult:
+        return ManualInterventionResult(
+            buffer_code=warning.buffer_code,
+            product_code=warning.product_code,
+            process_from=warning.process_from,
+            process_to=warning.process_to,
+            warning_type="overflow",
+            required_capacity=remaining,
+            reason="overflow_risk_not_resolved_by_candidate_pool",
+            candidates=candidates,
+        )
+
+    def _utilization_sort_key(self, machine) -> float:
+        return machine.utilization_rate if machine.utilization_rate is not None else -1.0
 
     def _borrow_harms_origin(self, machine, warning, net_map, dep_map) -> bool:
         origin_key = (
