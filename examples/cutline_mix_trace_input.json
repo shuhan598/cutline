@@ -1,0 +1,13 @@
+{
+  "current_time": "2026-06-20T10:00:00",
+  "cutline_event": {
+    "equipment_code": "pk03",
+    "cut_time": "2026-06-20T10:00:00",
+    "previous_product_code": "HG210R",
+    "next_product_code": "HG182T"
+  },
+  "capacity_records": [
+    { "equipment_code": "pk03", "product_code": "HG210R", "actual_capacity_per_hour": 9600, "process_time_minutes": 60 }
+  ],
+  "config": { "agv_delivery_minutes": 5, "mix_basket_count": 2, "basket_capacity": 120, "max_feed_basket_count": 10 }
+}
