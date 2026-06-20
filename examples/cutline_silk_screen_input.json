@@ -1,0 +1,17 @@
+{
+  "current_time": "2026-06-20T10:00:00",
+  "config": { "cutline_lead_minutes": 30, "silk_screen_clear_minutes": 30 },
+  "product_models": [
+    { "product_code": "HG182T", "wafer_size": "182", "shape_code": "R" }
+  ],
+  "buffer_segments": [
+    { "buffer_code": "BUF_ALD_SW", "service_process_codes": ["ALD", "SW"], "max_capacity": 278400 },
+    { "buffer_code": "BUF_OX_ALD", "service_process_codes": ["OX", "ALD"], "max_capacity": 160800 }
+  ],
+  "machine_statuses": [
+    { "equipment_code": "sw01", "process_code": "SW", "status": "running", "product_code": "HG182T", "order_code": "O1", "input_rate_per_hour": 6000, "output_rate_per_hour": 6000 }
+  ],
+  "orders": [
+    { "order_code": "O1", "product_code": "HG182T", "total_quantity": 9000, "completed_quantity": 8000 }
+  ]
+}

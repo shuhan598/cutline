@@ -142,3 +142,18 @@ class ReturnResult(BaseModel):
     negative_duration_minutes: Optional[float] = None
     safety_inventory_quantity: Optional[float] = None
     triggered: bool = False
+
+
+class SilkScreenOrderResult(BaseModel):
+    """丝网订单进度触发的清台准备预警。"""
+
+    equipment_code: str
+    process_code: str
+    product_code: Optional[str] = None
+    order_code: Optional[str] = None
+    warning_type: str = "silk_screen_order"
+    remaining_quantity: float
+    completion_time: datetime
+    preparation_time: datetime
+    silk_screen_clear_minutes: float
+    triggered: bool
