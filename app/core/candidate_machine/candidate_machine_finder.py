@@ -63,6 +63,17 @@ class CandidateMachineFinder:
             if not self._same_size_and_shape(current_model, target_model):
                 continue
 
+            current_output = self._rate_strategy.output_rate(machine)
+            current_capacity = self._actual_capacity(
+                snapshot, machine.equipment_code, machine.product_code
+            )
+            if current_capacity and current_capacity > 0:
+                utilization_rate = current_output / current_capacity
+                idle_rate = 1.0 - utilization_rate
+            else:
+                utilization_rate = None
+                idle_rate = None
+
             candidates.append(
                 CandidateMachine(
                     equipment_code=machine.equipment_code,
@@ -72,10 +83,12 @@ class CandidateMachineFinder:
                     target_product_code=warning.product_code,
                     wafer_size=current_model.wafer_size if current_model else None,
                     shape_code=current_model.shape_code if current_model else None,
-                    current_output_rate_per_hour=self._rate_strategy.output_rate(machine),
+                    current_output_rate_per_hour=current_output,
                     contribution_capacity_per_hour=self._actual_capacity(
                         snapshot, machine.equipment_code, warning.product_code
                     ),
+                    utilization_rate=utilization_rate,
+                    idle_rate=idle_rate,
                     reason="same_process_size_shape_running_machine",
                 )
             )
