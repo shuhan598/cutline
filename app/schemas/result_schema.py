@@ -12,9 +12,14 @@ class NetRateResult(BaseModel):
     """净速率计算结果。"""
 
     buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     process_from: str
     process_to: Optional[str] = None
+    inventory_quantity: float = 0.0
     upstream_output_per_hour: float
     downstream_input_per_hour: float
     net_rate_per_hour: float
@@ -26,6 +31,10 @@ class DepletionResult(BaseModel):
     """耗尽时间计算结果。"""
 
     buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     process_from: str
     process_to: Optional[str] = None
@@ -39,6 +48,10 @@ class StockoutWarningResult(BaseModel):
     """断料预警评估结果。"""
 
     buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     process_from: str
     process_to: Optional[str] = None
@@ -57,6 +70,10 @@ class CandidateMachine(BaseModel):
 
     equipment_code: str
     equipment_name: Optional[str] = None
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     process_code: str
     current_product_code: Optional[str] = None
     target_product_code: str
@@ -73,6 +90,10 @@ class CandidateResult(BaseModel):
     """单个预警的候选机台查找结果。"""
 
     buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     process_from: str
     process_to: Optional[str] = None
@@ -86,6 +107,10 @@ class OverflowWarningResult(BaseModel):
     """段级溢满预警评估结果。"""
 
     buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     process_from: str
     process_to: Optional[str] = None
@@ -103,6 +128,10 @@ class PlanResult(BaseModel):
     """切线方案（断料/溢满共用）。"""
 
     buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     process_from: str
     process_to: Optional[str] = None
@@ -118,6 +147,10 @@ class ManualInterventionResult(BaseModel):
     """未补足/无候选的人工介入结果。"""
 
     buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     process_from: str
     process_to: Optional[str] = None

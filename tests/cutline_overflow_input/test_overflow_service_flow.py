@@ -18,6 +18,8 @@ def test_overflow_warning_surfaced_with_overflow_type():
     assert len(overflow) == 1
     assert overflow[0].product_code == "HG182T"
     assert overflow[0].prediction_minutes == 30
+    assert overflow[0].cycle_code == "CYCLE_S2_01"
+    assert overflow[0].workshop_code == "S2"
 
 
 def test_overflow_plan_surfaced():
@@ -27,3 +29,5 @@ def test_overflow_plan_surfaced():
     selected = overflow_plans[0].selected_machines
     assert selected[0].equipment_code == "zr_t1"
     assert selected[0].target_product_code == "HG182R"
+    assert overflow_plans[0].warning.workshop_code == "S2"
+    assert selected[0].workshop_code == "S2"

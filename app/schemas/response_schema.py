@@ -17,6 +17,10 @@ class WarningResult(BaseModel):
     warning_time: datetime = Field(..., description="预警触发时间")
     warning_type: str = Field(..., description="预警类型，例如：stockout、overflow")
     buffer_code: str = Field(..., description="预警 Buffer 段编码")
+    cycle_code: Optional[str] = Field(default=None, description="预警所属循环编码")
+    cycle_name: Optional[str] = Field(default=None, description="预警所属循环名称")
+    workshop_code: Optional[str] = Field(default=None, description="预警所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="预警所属车间名称")
     upstream_process_code: str = Field(..., description="预警区间上游工序编码")
     downstream_process_code: str = Field(..., description="预警区间下游工序编码")
     product_code: str = Field(..., description="预警产品型号")
@@ -32,6 +36,8 @@ class SelectedMachine(BaseModel):
     """切线方案中选中的机台。"""
 
     equipment_code: str = Field(..., description="机台编码")
+    workshop_code: Optional[str] = Field(default=None, description="机台所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="机台所属车间名称")
     current_product_code: Optional[str] = Field(default=None, description="当前生产产品型号")
     target_product_code: Optional[str] = Field(default=None, description="建议切入目标产品型号")
     wafer_size: Optional[str] = Field(default=None, description="硅片尺寸")

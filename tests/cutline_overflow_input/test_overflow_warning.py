@@ -1,9 +1,19 @@
 from pathlib import Path
+from datetime import datetime
 
 from app.adapters.mock_adapter import MockAdapter
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
 from app.core.warning.overflow_warning import OverflowWarningEvaluator
+from app.schemas.common_schema import (
+    BufferInventoryItem,
+    BufferSegment,
+    CycleMaster,
+    LineMaster,
+    MachineMaster,
+    MachineRuntimeStatus,
+)
+from app.schemas.request_schema import CutlineSnapshot
 
 
 OVERFLOW_INPUT_PATH = Path(__file__).resolve().parents[2] / "examples" / "cutline_overflow_input.json"
@@ -34,3 +44,110 @@ def test_hg182t_overflow_triggers_at_thirty_minutes():
     assert result.segment_capacity == 20000
     assert result.net_rate_per_hour == -4000
     assert result.overflow_minutes == 30
+
+
+def test_overflow_segment_inventory_aggregates_same_workshop_buffer_only():
+    snapshot = CutlineSnapshot(
+        current_time=datetime(2026, 1, 1),
+        config={"cutline_lead_minutes": 30},
+        cycle_masters=[
+            CycleMaster(
+                cycle_code="CYCLE_S2_A",
+                cycle_name="S2 cycle A",
+                workshop_code="S2",
+                workshop_name="S2 workshop",
+            ),
+            CycleMaster(
+                cycle_code="CYCLE_S2_B",
+                cycle_name="S2 cycle B",
+                workshop_code="s2 ",
+                workshop_name="S2 workshop",
+            ),
+            CycleMaster(
+                cycle_code="CYCLE_S1_A",
+                cycle_name="S1 cycle A",
+                workshop_code="S1",
+                workshop_name="S1 workshop",
+            ),
+        ],
+        line_masters=[
+            LineMaster(
+                line_code="LINE_S2",
+                workshop_code="S2",
+                workshop_name="S2 workshop",
+            )
+        ],
+        machine_masters=[
+            MachineMaster(
+                equipment_code="s2_zr",
+                process_code="ZR",
+                line_code="LINE_S2",
+            ),
+            MachineMaster(
+                equipment_code="s2_pk",
+                process_code="PK",
+                line_code="LINE_S2",
+            ),
+        ],
+        machine_statuses=[
+            MachineRuntimeStatus(
+                equipment_code="s2_zr",
+                process_code="ZR",
+                status="running",
+                product_code="HG182T",
+                output_rate_per_hour=8000,
+            ),
+            MachineRuntimeStatus(
+                equipment_code="s2_pk",
+                process_code="PK",
+                status="running",
+                product_code="HG182T",
+                input_rate_per_hour=4000,
+            ),
+        ],
+        buffer_segments=[
+            BufferSegment(
+                buffer_code="BUF_ZR_PK",
+                service_process_codes=["ZR", "PK"],
+                max_capacity=20000,
+            )
+        ],
+        buffer_inventories=[
+            BufferInventoryItem(
+                buffer_code="BUF_ZR_PK",
+                cycle_code="CYCLE_S2_A",
+                product_code="HG182T",
+                process_from="ZR",
+                process_to="PK",
+                inventory_quantity=13000,
+            ),
+            BufferInventoryItem(
+                buffer_code="BUF_ZR_PK",
+                cycle_code="CYCLE_S2_B",
+                product_code="HG182R",
+                process_from="ZR",
+                process_to="PK",
+                inventory_quantity=5000,
+            ),
+            BufferInventoryItem(
+                buffer_code="BUF_ZR_PK",
+                cycle_code="CYCLE_S1_A",
+                product_code="HG182N",
+                process_from="ZR",
+                process_to="PK",
+                inventory_quantity=1000,
+            ),
+        ],
+    )
+    net_rates = NetRateCalculator(RealtimeFirstRateStrategy()).calculate(snapshot)
+
+    result = next(
+        item
+        for item in OverflowWarningEvaluator().evaluate(snapshot, net_rates)
+        if item.cycle_code == "CYCLE_S2_A"
+    )
+
+    assert result.workshop_code == "S2"
+    assert result.segment_inventory == 18000
+    assert result.overflow_minutes == 30
+    assert result.warning_triggered is True

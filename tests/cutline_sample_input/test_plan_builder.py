@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from app.adapters.mock_adapter import MockAdapter
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.cutline_plan.plan_builder import CutlinePlanBuilder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
@@ -21,7 +21,7 @@ def build():
     net_rates = NetRateCalculator(strategy).calculate(snapshot)
     depletions = DepletionTimeCalculator().calculate(snapshot, net_rates)
     warnings = StockoutWarningEvaluator().evaluate(snapshot, depletions)
-    candidates = CandidateMachineFinder(strategy).find(snapshot, warnings)
+    candidates = StockoutCandidateFinder(strategy).find(snapshot, warnings)
     plans, interventions = CutlinePlanBuilder().build_stockout(
         warnings, candidates, net_rates, depletions
     )

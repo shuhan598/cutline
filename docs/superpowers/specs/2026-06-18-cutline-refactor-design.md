@@ -1,4 +1,4 @@
-# 切线算法服务：设计模式与数据封装重构设计
+﻿# 切线算法服务：设计模式与数据封装重构设计
 
 - 日期：2026-06-18
 - 范围：含数据适配入口层的完整骨架（输入适配 → 数据封装 → 算法管道 → 输出封装）
@@ -78,10 +78,10 @@
 NetRateCalculator.calculate(snapshot, rate_strategy)    -> list[NetRateResult]
 DepletionTimeCalculator.calculate(snapshot, net_rates)  -> list[DepletionResult]
 StockoutWarningEvaluator.evaluate(snapshot, depletions) -> list[StockoutWarningResult]
-CandidateMachineFinder.find(snapshot, warnings)         -> list[CandidateResult]
+StockoutCandidateFinder.find(snapshot, warnings)         -> list[CandidateResult]
 ```
 
-各组件只认自己的输入/输出对象，内部不再重复从 `data` 捞数据。`CandidateMachineFinder` 内部保留"按 `depletion_minutes` 升序处理多个预警"的全局排序逻辑。
+各组件只认自己的输入/输出对象，内部不再重复从 `data` 捞数据。`StockoutCandidateFinder` 内部保留"按 `depletion_minutes` 升序处理多个预警"的全局排序逻辑。
 
 ## 7. 速率策略 Strategy
 
@@ -143,7 +143,7 @@ pipeline.run(snapshot) -> 累积四步结果（net_rates / depletions / warnings
 - `app/core/net_rate/net_rate_calculator.py`（→ `NetRateCalculator`，删 `_get_value`/`safe_float`）
 - `app/core/prediction_time/depletion_time/depletion_time_calculator.py`（→ `DepletionTimeCalculator`）
 - `app/core/warning/stockout_warning.py`（→ `StockoutWarningEvaluator`）
-- `app/core/candidate_machine/candidate_machine_finder.py`（→ `CandidateMachineFinder`）
+- `app/core/candidate_machine/stockout_candidate_finder.py`（→ `StockoutCandidateFinder`）
 - `app/core/net_rate/rate_utils.py`（取数逻辑迁入 `rate_strategy.py`、`safe_float` 迁入 `app/utils/`、`_get_value` 删除；文件清空后删除）
 - `app/adapters/snapshot_adapter.py`（实现 dict/JSON → `CutlineSnapshot`）
 - `app/adapters/mock_adapter.py`（实现 examples → `CutlineSnapshot`）

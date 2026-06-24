@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from app.adapters.mock_adapter import MockAdapter
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
 from app.core.prediction_time.depletion_time.depletion_time_calculator import (
@@ -19,7 +19,7 @@ def build_candidates():
     net_rates = NetRateCalculator(strategy).calculate(snapshot)
     depletions = DepletionTimeCalculator().calculate(snapshot, net_rates)
     warnings = StockoutWarningEvaluator().evaluate(snapshot, depletions)
-    return CandidateMachineFinder(strategy).find(snapshot, warnings)
+    return StockoutCandidateFinder(strategy).find(snapshot, warnings)
 
 
 def test_candidate_zr03_idle_rate_is_zero_at_full_utilization():

@@ -34,6 +34,34 @@
       "shape_code": "R"
     }
   ],
+  "cycle_masters": [
+    {
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop"
+    },
+    {
+      "cycle_code": "CYCLE_S1_01",
+      "cycle_name": "S1 cycle",
+      "workshop_code": "S1",
+      "workshop_name": "S1 workshop"
+    }
+  ],
+  "line_masters": [
+    {
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop"
+    },
+    {
+      "line_code": "LINE_S1_01",
+      "line_name": "S1 line",
+      "workshop_code": "S1",
+      "workshop_name": "S1 workshop"
+    }
+  ],
   "buffer_segments": [
     {
       "buffer_code": "BUF_ZR_PK",
@@ -61,6 +89,8 @@
   "buffer_inventories": [
     {
       "buffer_code": "BUF_PK_OX",
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
       "product_code": "HG210R",
       "process_from": "PK",
       "process_to": "OX",
@@ -68,6 +98,8 @@
     },
     {
       "buffer_code": "BUF_ZR_PK",
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
       "product_code": "HG182N",
       "process_from": "ZR",
       "process_to": "PK",
@@ -75,6 +107,8 @@
     },
     {
       "buffer_code": "BUF_ZR_PK",
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
       "product_code": "HG182T",
       "process_from": "ZR",
       "process_to": "PK",
@@ -82,10 +116,126 @@
     },
     {
       "buffer_code": "BUF_ZR_PK",
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
       "product_code": "HG182R",
       "process_from": "ZR",
       "process_to": "PK",
       "inventory_quantity": 5000
+    }
+  ],
+  "machine_masters": [
+    {
+      "equipment_code": "zr_hg182t_target",
+      "equipment_name": "ZR HG182T Target",
+      "process_code": "ZR",
+      "process_name": "ZR",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "zr_hg182r_candidate",
+      "equipment_name": "ZR HG182R Candidate",
+      "process_code": "ZR",
+      "process_name": "ZR",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "zr_hg182r_candidate_2",
+      "equipment_name": "ZR HG182R Candidate 2",
+      "process_code": "ZR",
+      "process_name": "ZR",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "zr_hg182n_target",
+      "equipment_name": "ZR HG182N Target",
+      "process_code": "ZR",
+      "process_name": "ZR",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "zr_hg182r_stopped",
+      "equipment_name": "ZR HG182R Stopped",
+      "process_code": "ZR",
+      "process_name": "ZR",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "zr_hg210r_size_mismatch",
+      "equipment_name": "ZR HG210R Size Mismatch",
+      "process_code": "ZR",
+      "process_name": "ZR",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk_hg182t_downstream",
+      "equipment_name": "PK HG182T Downstream",
+      "process_code": "PK",
+      "process_name": "PK",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk_hg182r_downstream",
+      "equipment_name": "PK HG182R Downstream",
+      "process_code": "PK",
+      "process_name": "PK",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk_hg182n_downstream",
+      "equipment_name": "PK HG182N Downstream",
+      "process_code": "PK",
+      "process_name": "PK",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk_hg210r_target",
+      "equipment_name": "PK HG210R Target",
+      "process_code": "PK",
+      "process_name": "PK",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk_hg210t_candidate",
+      "equipment_name": "PK HG210T Candidate",
+      "process_code": "PK",
+      "process_name": "PK",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk_hg210t_stopped",
+      "equipment_name": "PK HG210T Stopped",
+      "process_code": "PK",
+      "process_name": "PK",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk_hg182r_size_mismatch",
+      "equipment_name": "PK HG182R Size Mismatch",
+      "process_code": "PK",
+      "process_name": "PK",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "ox_hg210r_downstream",
+      "equipment_name": "OX HG210R Downstream",
+      "process_code": "OX",
+      "process_name": "OX",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
     }
   ],
   "machine_statuses": [

@@ -16,6 +16,34 @@
       "shape_code": "R"
     }
   ],
+  "cycle_masters": [
+    {
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop"
+    },
+    {
+      "cycle_code": "CYCLE_S1_01",
+      "cycle_name": "S1 cycle",
+      "workshop_code": "S1",
+      "workshop_name": "S1 workshop"
+    }
+  ],
+  "line_masters": [
+    {
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop"
+    },
+    {
+      "line_code": "LINE_S1_01",
+      "line_name": "S1 line",
+      "workshop_code": "S1",
+      "workshop_name": "S1 workshop"
+    }
+  ],
   "process_route_steps": [
     {
       "process_code": "ZR",
@@ -54,6 +82,8 @@
   "buffer_inventories": [
     {
       "buffer_code": "BUF_ZR_PK",
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
       "product_code": "HG182T",
       "process_from": "ZR",
       "process_from_name": "制绒",
@@ -65,6 +95,8 @@
     },
     {
       "buffer_code": "BUF_ZR_PK",
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
       "product_code": "HG182R",
       "process_from": "ZR",
       "process_from_name": "制绒",
@@ -73,6 +105,56 @@
       "order_code": "MO-HG182R-ZRPK-001",
       "material_code": "MAT-HG182R",
       "inventory_quantity": 20000
+    }
+  ],
+  "machine_masters": [
+    {
+      "equipment_code": "zr01",
+      "equipment_name": "ZR 01",
+      "process_code": "ZR",
+      "process_name": "制绒",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "zr02",
+      "equipment_name": "ZR 02",
+      "process_code": "ZR",
+      "process_name": "制绒",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "zr03",
+      "equipment_name": "ZR 03",
+      "process_code": "ZR",
+      "process_name": "制绒",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk01",
+      "equipment_name": "PK 01",
+      "process_code": "PK",
+      "process_name": "硼扩",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk02",
+      "equipment_name": "PK 02",
+      "process_code": "PK",
+      "process_name": "硼扩",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
+    },
+    {
+      "equipment_code": "pk03",
+      "equipment_name": "PK 03",
+      "process_code": "PK",
+      "process_name": "硼扩",
+      "line_code": "LINE_S2_01",
+      "line_name": "S2 line"
     }
   ],
   "machine_statuses": [

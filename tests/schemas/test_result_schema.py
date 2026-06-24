@@ -24,6 +24,7 @@ def test_net_rate_result_field_names_match_dict_contract():
         product_code="P",
         process_from="ZR",
         process_to="PK",
+        inventory_quantity=1.0,
         upstream_output_per_hour=1.0,
         downstream_input_per_hour=2.0,
         net_rate_per_hour=1.0,
@@ -32,9 +33,14 @@ def test_net_rate_result_field_names_match_dict_contract():
     )
     assert set(result.model_dump()) == {
         "buffer_code",
+        "cycle_code",
+        "cycle_name",
+        "workshop_code",
+        "workshop_name",
         "product_code",
         "process_from",
         "process_to",
+        "inventory_quantity",
         "upstream_output_per_hour",
         "downstream_input_per_hour",
         "net_rate_per_hour",
@@ -60,6 +66,10 @@ def test_stockout_warning_result_has_twelve_contract_fields():
     )
     assert set(result.model_dump()) == {
         "buffer_code",
+        "cycle_code",
+        "cycle_name",
+        "workshop_code",
+        "workshop_name",
         "product_code",
         "process_from",
         "process_to",

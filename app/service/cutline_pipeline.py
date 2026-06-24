@@ -3,8 +3,8 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
 from app.core.candidate_machine.overflow_candidate_finder import OverflowCandidateFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.cutline_plan.plan_builder import CutlinePlanBuilder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RateStrategy, RealtimeFirstRateStrategy
@@ -50,7 +50,7 @@ class CutlinePipeline:
         self._net_rate = NetRateCalculator(strategy)
         self._depletion = DepletionTimeCalculator()
         self._stockout = StockoutWarningEvaluator()
-        self._candidate = CandidateMachineFinder(strategy)
+        self._candidate = StockoutCandidateFinder(strategy)
         self._overflow = OverflowWarningEvaluator()
         self._overflow_candidate = OverflowCandidateFinder(strategy)
         self._plan_builder = CutlinePlanBuilder()

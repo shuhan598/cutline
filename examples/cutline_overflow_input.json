@@ -4,6 +4,14 @@
     { "product_code": "HG182T", "wafer_size": "182", "shape_code": "R" },
     { "product_code": "HG182R", "wafer_size": "182", "shape_code": "R" }
   ],
+  "cycle_masters": [
+    { "cycle_code": "CYCLE_S2_01", "cycle_name": "S2 cycle", "workshop_code": "S2", "workshop_name": "S2 workshop" },
+    { "cycle_code": "CYCLE_S1_01", "cycle_name": "S1 cycle", "workshop_code": "S1", "workshop_name": "S1 workshop" }
+  ],
+  "line_masters": [
+    { "line_code": "LINE_S2_01", "line_name": "S2 line", "workshop_code": "S2", "workshop_name": "S2 workshop" },
+    { "line_code": "LINE_S1_01", "line_name": "S1 line", "workshop_code": "S1", "workshop_name": "S1 workshop" }
+  ],
   "buffer_segments": [
     {
       "buffer_code": "BUF_ZR_PK",
@@ -12,8 +20,14 @@
     }
   ],
   "buffer_inventories": [
-    { "buffer_code": "BUF_ZR_PK", "product_code": "HG182T", "process_from": "ZR", "process_to": "PK", "inventory_quantity": 13000 },
-    { "buffer_code": "BUF_ZR_PK", "product_code": "HG182R", "process_from": "ZR", "process_to": "PK", "inventory_quantity": 5000 }
+    { "buffer_code": "BUF_ZR_PK", "cycle_code": "CYCLE_S2_01", "cycle_name": "S2 cycle", "product_code": "HG182T", "process_from": "ZR", "process_to": "PK", "inventory_quantity": 13000 },
+    { "buffer_code": "BUF_ZR_PK", "cycle_code": "CYCLE_S2_01", "cycle_name": "S2 cycle", "product_code": "HG182R", "process_from": "ZR", "process_to": "PK", "inventory_quantity": 5000 }
+  ],
+  "machine_masters": [
+    { "equipment_code": "zr_t1", "process_code": "ZR", "process_name": "ZR", "line_code": "LINE_S2_01", "line_name": "S2 line" },
+    { "equipment_code": "pk_t1", "process_code": "PK", "process_name": "PK", "line_code": "LINE_S2_01", "line_name": "S2 line" },
+    { "equipment_code": "zr_r1", "process_code": "ZR", "process_name": "ZR", "line_code": "LINE_S2_01", "line_name": "S2 line" },
+    { "equipment_code": "pk_r1", "process_code": "PK", "process_name": "PK", "line_code": "LINE_S2_01", "line_name": "S2 line" }
   ],
   "machine_statuses": [
     { "equipment_code": "zr_t1", "process_code": "ZR", "status": "running", "product_code": "HG182T", "input_rate_per_hour": 8000, "output_rate_per_hour": 8000 },

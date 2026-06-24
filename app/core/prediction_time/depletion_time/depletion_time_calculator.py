@@ -22,6 +22,7 @@ class DepletionTimeCalculator:
     ) -> DepletionResult:
         inventory_quantity = self._inventory_quantity(
             snapshot,
+            net_rate.cycle_code,
             net_rate.buffer_code,
             net_rate.product_code,
             net_rate.process_from,
@@ -40,6 +41,10 @@ class DepletionTimeCalculator:
 
         return DepletionResult(
             buffer_code=net_rate.buffer_code,
+            cycle_code=net_rate.cycle_code,
+            cycle_name=net_rate.cycle_name,
+            workshop_code=net_rate.workshop_code,
+            workshop_name=net_rate.workshop_name,
             product_code=net_rate.product_code,
             process_from=net_rate.process_from,
             process_to=net_rate.process_to,
@@ -52,6 +57,7 @@ class DepletionTimeCalculator:
     def _inventory_quantity(
         self,
         snapshot: CutlineSnapshot,
+        cycle_code,
         buffer_code,
         product_code,
         process_from,
@@ -59,6 +65,8 @@ class DepletionTimeCalculator:
     ) -> float:
         total = 0.0
         for inventory in snapshot.buffer_inventories:
+            if cycle_code is not None and inventory.cycle_code != cycle_code:
+                continue
             if (
                 inventory.buffer_code == buffer_code
                 and inventory.product_code == product_code

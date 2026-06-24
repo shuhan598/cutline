@@ -37,6 +37,10 @@ class StockoutWarningEvaluator:
 
         return StockoutWarningResult(
             buffer_code=depletion.buffer_code,
+            cycle_code=depletion.cycle_code,
+            cycle_name=depletion.cycle_name,
+            workshop_code=depletion.workshop_code,
+            workshop_name=depletion.workshop_name,
             product_code=depletion.product_code,
             process_from=depletion.process_from,
             process_to=depletion.process_to,

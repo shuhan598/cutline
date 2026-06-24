@@ -1,4 +1,4 @@
-# 切线主链剩余模块实施计划（3.3 逐台选取 / 溢满 / 切回 / 丝网）
+﻿# 切线主链剩余模块实施计划（3.3 逐台选取 / 溢满 / 切回 / 丝网）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -15,7 +15,7 @@
 ## 任务依赖顺序
 
 1. Task 1 — 契约与内部结果对象 schema
-2. Task 2 — `CandidateMachineFinder` 填充 idle_rate/utilization_rate
+2. Task 2 — `StockoutCandidateFinder` 填充 idle_rate/utilization_rate
 3. Task 3 — `CutlinePlanBuilder` 断料逐台选取
 4. Task 4 — `OverflowWarningEvaluator` + 溢满 fixture
 5. Task 5 — `OverflowCandidateFinder` 切走候选池
@@ -279,10 +279,10 @@ git commit -m "新增切线主链契约与内部结果对象 schema"
 
 ---
 
-### Task 2: CandidateMachineFinder 填充 idle_rate/utilization_rate
+### Task 2: StockoutCandidateFinder 填充 idle_rate/utilization_rate
 
 **Files:**
-- Modify: `app/core/candidate_machine/candidate_machine_finder.py`
+- Modify: `app/core/candidate_machine/stockout_candidate_finder.py`
 - Test: `tests/cutline_sample_input/test_candidate_idle_rate.py`（新建）
 
 利用率 = 当前产出 / 当前型号静态产能；空闲度 = 1 − 利用率；静态产能缺失或 ≤0 时两者均为 None。
@@ -295,7 +295,7 @@ git commit -m "新增切线主链契约与内部结果对象 schema"
 from pathlib import Path
 
 from app.adapters.mock_adapter import MockAdapter
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
 from app.core.prediction_time.depletion_time.depletion_time_calculator import (
@@ -313,7 +313,7 @@ def build_candidates():
     net_rates = NetRateCalculator(strategy).calculate(snapshot)
     depletions = DepletionTimeCalculator().calculate(snapshot, net_rates)
     warnings = StockoutWarningEvaluator().evaluate(snapshot, depletions)
-    return CandidateMachineFinder(strategy).find(snapshot, warnings)
+    return StockoutCandidateFinder(strategy).find(snapshot, warnings)
 
 
 def test_candidate_zr03_idle_rate_is_zero_at_full_utilization():
@@ -332,7 +332,7 @@ Expected: FAIL（`idle_rate` 为 None，断言不等）
 
 - [ ] **Step 3: 实现 — 在 finder 内计算并填充**
 
-在 `candidate_machine_finder.py` 的 `_for_warning` 构造 `CandidateMachine` 处，先算出利用率/空闲度。把 `CandidateMachine(...)` 调用替换为如下（新增两参数前先计算）：
+在 `stockout_candidate_finder.py` 的 `_for_warning` 构造 `CandidateMachine` 处，先算出利用率/空闲度。把 `CandidateMachine(...)` 调用替换为如下（新增两参数前先计算）：
 
 在 `for machine in snapshot.machine_statuses:` 循环体内、`candidates.append(` 之前插入：
 
@@ -364,7 +364,7 @@ Expected: 新测试 PASS；全量 49 passed
 - [ ] **Step 5: 提交**
 
 ```bash
-git add app/core/candidate_machine/candidate_machine_finder.py tests/cutline_sample_input/test_candidate_idle_rate.py
+git add app/core/candidate_machine/stockout_candidate_finder.py tests/cutline_sample_input/test_candidate_idle_rate.py
 git commit -m "候选机台补充利用率/空闲度字段"
 ```
 
@@ -387,7 +387,7 @@ git commit -m "候选机台补充利用率/空闲度字段"
 from pathlib import Path
 
 from app.adapters.mock_adapter import MockAdapter
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.cutline_plan.plan_builder import CutlinePlanBuilder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
@@ -407,7 +407,7 @@ def build():
     net_rates = NetRateCalculator(strategy).calculate(snapshot)
     depletions = DepletionTimeCalculator().calculate(snapshot, net_rates)
     warnings = StockoutWarningEvaluator().evaluate(snapshot, depletions)
-    candidates = CandidateMachineFinder(strategy).find(snapshot, warnings)
+    candidates = StockoutCandidateFinder(strategy).find(snapshot, warnings)
     plans, interventions = CutlinePlanBuilder().build_stockout(
         warnings, candidates, net_rates, depletions
     )
@@ -1558,7 +1558,7 @@ Expected: FAIL（`AttributeError: 'PipelineResult' object has no attribute 'over
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.candidate_machine.overflow_candidate_finder import OverflowCandidateFinder
 from app.core.cutline_plan.plan_builder import CutlinePlanBuilder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
@@ -1605,7 +1605,7 @@ class CutlinePipeline:
         self._net_rate = NetRateCalculator(strategy)
         self._depletion = DepletionTimeCalculator()
         self._stockout = StockoutWarningEvaluator()
-        self._candidate = CandidateMachineFinder(strategy)
+        self._candidate = StockoutCandidateFinder(strategy)
         self._overflow = OverflowWarningEvaluator()
         self._overflow_candidate = OverflowCandidateFinder(strategy)
         self._plan_builder = CutlinePlanBuilder()

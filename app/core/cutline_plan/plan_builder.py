@@ -2,6 +2,7 @@
 
 from typing import List, Optional, Tuple
 
+from app.core.workshop.workshop_resolver import WorkshopResolver
 from app.schemas.request_schema import CutlineSnapshot
 from app.schemas.result_schema import (
     CandidateResult,
@@ -63,6 +64,10 @@ class CutlinePlanBuilder:
                 plans.append(
                     PlanResult(
                         buffer_code=warning.buffer_code,
+                        cycle_code=warning.cycle_code,
+                        cycle_name=warning.cycle_name,
+                        workshop_code=warning.workshop_code,
+                        workshop_name=warning.workshop_name,
                         product_code=warning.product_code,
                         process_from=warning.process_from,
                         process_to=warning.process_to,
@@ -95,11 +100,8 @@ class CutlinePlanBuilder:
             segment.buffer_code: segment.max_capacity
             for segment in snapshot.buffer_segments
         }
-        segment_inventory = {}
-        for inventory in snapshot.buffer_inventories:
-            segment_inventory[inventory.buffer_code] = segment_inventory.get(
-                inventory.buffer_code, 0.0
-            ) + inventory.inventory_quantity
+        workshop_resolver = WorkshopResolver(snapshot)
+        segment_inventory = self._segment_inventory(snapshot, workshop_resolver)
 
         plans: List[PlanResult] = []
         interventions: List[ManualInterventionResult] = []
@@ -128,6 +130,7 @@ class CutlinePlanBuilder:
             for machine in pool:
                 target_net = net_map.get(
                     (
+                        self._normalize_code(warning.workshop_code),
                         warning.buffer_code,
                         machine.target_product_code,
                         warning.process_from,
@@ -136,7 +139,12 @@ class CutlinePlanBuilder:
                 )
                 contribution = machine.contribution_capacity_per_hour or 0.0
                 if self._switch_in_overflows_target(
-                    warning, target_net, contribution, capacity_map, segment_inventory
+                    warning,
+                    target_net,
+                    contribution,
+                    capacity_map,
+                    segment_inventory,
+                    workshop_resolver,
                 ):
                     continue
                 selected.append(machine)
@@ -149,6 +157,10 @@ class CutlinePlanBuilder:
                 plans.append(
                     PlanResult(
                         buffer_code=warning.buffer_code,
+                        cycle_code=warning.cycle_code,
+                        cycle_name=warning.cycle_name,
+                        workshop_code=warning.workshop_code,
+                        workshop_name=warning.workshop_name,
                         product_code=warning.product_code,
                         process_from=warning.process_from,
                         process_to=warning.process_to,
@@ -168,7 +180,13 @@ class CutlinePlanBuilder:
         return plans, interventions
 
     def _switch_in_overflows_target(
-        self, warning, target_net, contribution, capacity_map, segment_inventory
+        self,
+        warning,
+        target_net,
+        contribution,
+        capacity_map,
+        segment_inventory,
+        workshop_resolver,
     ) -> bool:
         if target_net is None:
             return True
@@ -176,13 +194,38 @@ class CutlinePlanBuilder:
         if new_target_net >= 0:
             return False
         capacity = capacity_map.get(warning.buffer_code, 0.0)
-        inventory = segment_inventory.get(warning.buffer_code, 0.0)
+        inventory = segment_inventory.get(
+            (
+                workshop_resolver.normalize_code(warning.workshop_code),
+                warning.buffer_code,
+            ),
+            0.0,
+        )
         overflow_minutes = (capacity - inventory) / abs(new_target_net) * 60
         return overflow_minutes <= warning.cutline_lead_minutes
+
+    def _segment_inventory(
+        self,
+        snapshot: CutlineSnapshot,
+        workshop_resolver: WorkshopResolver,
+    ) -> dict:
+        totals = {}
+        for inventory in snapshot.buffer_inventories:
+            workshop_code, _ = workshop_resolver.resolve_inventory_workshop(inventory)
+            normalized_workshop = workshop_resolver.normalize_code(workshop_code)
+            if not normalized_workshop:
+                continue
+            key = (normalized_workshop, inventory.buffer_code)
+            totals[key] = totals.get(key, 0.0) + inventory.inventory_quantity
+        return totals
 
     def _overflow_intervention(self, warning, remaining, candidates) -> ManualInterventionResult:
         return ManualInterventionResult(
             buffer_code=warning.buffer_code,
+            cycle_code=warning.cycle_code,
+            cycle_name=warning.cycle_name,
+            workshop_code=warning.workshop_code,
+            workshop_name=warning.workshop_name,
             product_code=warning.product_code,
             process_from=warning.process_from,
             process_to=warning.process_to,
@@ -197,6 +240,7 @@ class CutlinePlanBuilder:
 
     def _borrow_harms_origin(self, machine, warning, net_map, dep_map) -> bool:
         origin_key = (
+            self._normalize_code(warning.workshop_code),
             warning.buffer_code,
             machine.current_product_code,
             warning.process_from,
@@ -222,6 +266,10 @@ class CutlinePlanBuilder:
         )
         return ManualInterventionResult(
             buffer_code=warning.buffer_code,
+            cycle_code=warning.cycle_code,
+            cycle_name=warning.cycle_name,
+            workshop_code=warning.workshop_code,
+            workshop_name=warning.workshop_name,
             product_code=warning.product_code,
             process_from=warning.process_from,
             process_to=warning.process_to,
@@ -235,4 +283,15 @@ class CutlinePlanBuilder:
         return machine.idle_rate if machine.idle_rate is not None else -1.0
 
     def _key(self, item):
-        return (item.buffer_code, item.product_code, item.process_from, item.process_to)
+        return (
+            self._normalize_code(getattr(item, "workshop_code", None)),
+            item.buffer_code,
+            item.product_code,
+            item.process_from,
+            item.process_to,
+        )
+
+    def _normalize_code(self, value: Optional[str]) -> str:
+        if value is None:
+            return ""
+        return value.strip().upper()

@@ -70,6 +70,25 @@ class MachineMaster(BaseModel):
     )
     
 
+class LineMaster(BaseModel):
+    """产线主数据。"""
+
+    line_code: str = Field(..., description="产线编码")
+    line_name: Optional[str] = Field(default=None, description="产线名称")
+    workshop_code: Optional[str] = Field(default=None, description="所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="所属车间名称")
+    status: Optional[str] = Field(default=None, description="数据状态")
+    enable: Optional[str] = Field(default=None, description="使用状态")
+
+
+class CycleMaster(BaseModel):
+    """循环主数据。"""
+
+    cycle_code: str = Field(..., description="循环编码")
+    cycle_name: Optional[str] = Field(default=None, description="循环名称")
+    workshop_code: Optional[str] = Field(default=None, description="所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="所属车间名称")
+
 
 class ProductModel(BaseModel):
     """产品型号基础信息。"""
@@ -122,6 +141,8 @@ class BufferInventoryItem(BaseModel):
     """Buffer 区间库存明细。"""
 
     buffer_code: str = Field(..., description="Buffer 编码")
+    cycle_code: Optional[str] = Field(default=None, description="所属循环编码")
+    cycle_name: Optional[str] = Field(default=None, description="所属循环名称")
     process_from: str = Field(..., description="库存来源（上游）工序编码")
     process_from_name: Optional[str] = Field(default=None, description="库存来源(上游)工序名称")
     process_to: Optional[str] = Field(default=None, description="库存目标（下游）工序编码")

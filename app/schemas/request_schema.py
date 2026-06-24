@@ -11,7 +11,9 @@ from app.schemas.common_schema import (
     AlgorithmConfig,
     BufferInventoryItem,
     BufferSegment,
+    CycleMaster,
     CutlineEvent,
+    LineMaster,
     MachineCapacityRecord,
     MachineMaster,
     MachineRuntimeStatus,
@@ -30,6 +32,8 @@ class CutlineSnapshot(BaseModel):
         description="机台实时状态列表",
     )
     machine_masters: List[MachineMaster] = Field(default_factory=list, description="机台主数据列表")
+    line_masters: List[LineMaster] = Field(default_factory=list,description="产线主数据列表")
+    cycle_masters: List[CycleMaster] = Field(default_factory=list, description="循环主数据列表")
     product_models: List[ProductModel] = Field(default_factory=list, description="产品型号列表")
     process_route_steps: List[ProcessRouteStep] = Field(default_factory=list, description="工艺路线步骤列表")
     buffer_segments: List[BufferSegment] = Field(default_factory=list, description="Buffer 段配置列表")

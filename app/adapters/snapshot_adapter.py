@@ -6,7 +6,7 @@ from app.schemas.request_schema import CutlineSnapshot
 
 
 class SnapshotAdapter:
-    """dict/JSON → CutlineSnapshot。换数据源时只动适配器，不动算法。"""
+    """dict/JSON → CutlineSnapshot。换数据源时只动适配器,不动算法。"""
 
     def to_snapshot(self, payload: dict) -> CutlineSnapshot:
         data = dict(payload)

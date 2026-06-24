@@ -71,9 +71,13 @@ def test_warning_result_exposes_all_contract_fields():
 
     assert set(result.model_dump()) == {
         "buffer_code",
+        "cycle_code",
+        "cycle_name",
         "product_code",
         "process_from",
         "process_to",
+        "workshop_code",
+        "workshop_name",
         "warning_type",
         "warning_triggered",
         "reason",
@@ -84,3 +88,5 @@ def test_warning_result_exposes_all_contract_fields():
         "cutline_lead_minutes",
     }
     assert result.warning_type == "stockout"
+    assert result.cycle_code == "CYCLE_S2_01"
+    assert result.workshop_code == "S2"

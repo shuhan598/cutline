@@ -1,4 +1,4 @@
-# 光伏车间切线算法服务
+﻿# 光伏车间切线算法服务
 
 ## 项目当前阶段说明
 
@@ -88,7 +88,7 @@ depletion_minutes <= cutline_lead_minutes 时触发断料预警
 
 ### 4. 候选机台筛选
 
-对应文件：`app/core/candidate_machine/candidate_machine_finder.py`（`CandidateMachineFinder`）
+对应文件：`app/core/candidate_machine/stockout_candidate_finder.py`（`StockoutCandidateFinder`）
 
 筛选逻辑：
 
@@ -128,7 +128,7 @@ CutlineSnapshot（Pydantic 对象）
     NetRateCalculator.calculate(snapshot)
     → DepletionTimeCalculator.calculate(snapshot, net_rates)
     → StockoutWarningEvaluator.evaluate(snapshot, depletions)
-    → CandidateMachineFinder.find(snapshot, warnings)
+    → StockoutCandidateFinder.find(snapshot, warnings)
 ↓
 CutlineEvaluateResponse
   ├─ warnings：断料预警（已触发）

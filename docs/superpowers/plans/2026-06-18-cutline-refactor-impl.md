@@ -1,4 +1,4 @@
-# 切线算法服务重构（数据封装 + 设计模式）实施计划
+﻿# 切线算法服务重构（数据封装 + 设计模式）实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -9,7 +9,7 @@
 **Tech Stack:** Python 3.13、Pydantic 2.11、pytest。
 
 **对设计 spec 的两点细化（执行者须知）：**
-1. spec 第6节写 `NetRateCalculator.calculate(snapshot, rate_strategy)`；本计划改为**构造注入**策略（`NetRateCalculator(strategy).calculate(snapshot)`），因为 Pipeline 只构建一次组件、复用更自然。`CandidateMachineFinder` 同样构造注入策略。
+1. spec 第6节写 `NetRateCalculator.calculate(snapshot, rate_strategy)`；本计划改为**构造注入**策略（`NetRateCalculator(strategy).calculate(snapshot)`），因为 Pipeline 只构建一次组件、复用更自然。`StockoutCandidateFinder` 同样构造注入策略。
 2. spec 第3节图里写 `CutlineSnapshot(已有 common_schema)`，**实际它在 `app/schemas/request_schema.py`**，import 一律从 `app.schemas.request_schema` 取。
 
 **两个现状坑（已核实，本计划已处理）：**
@@ -30,7 +30,7 @@
 6. Task 6 — `NetRateCalculator` 重构 + 测试改写
 7. Task 7 — `DepletionTimeCalculator` 重构 + 测试改写
 8. Task 8 — `StockoutWarningEvaluator` 重构 + 测试改写
-9. Task 9 — `CandidateMachineFinder` 重构 + 测试改写
+9. Task 9 — `StockoutCandidateFinder` 重构 + 测试改写
 10. Task 10 — `CutlinePipeline` + `CutlineService` 门面 + 全链路测试
 11. Task 11 — 清理：删 `rate_utils.py`、删所有 `_get_value`、删重复 `safe_float`，跑全量
 
@@ -1277,23 +1277,23 @@ git commit -m "重构 StockoutWarningEvaluator 为对象化组件"
 
 ---
 
-### Task 9: 重构 CandidateMachineFinder
+### Task 9: 重构 StockoutCandidateFinder
 
 **Files:**
-- Modify: `app/core/candidate_machine/candidate_machine_finder.py`（整体替换为类，删本文件 `_get_value`；产出速率改用注入的策略）
-- Modify: `tests/cutline_complex_input/test_candidate_machine_finder.py`
+- Modify: `app/core/candidate_machine/stockout_candidate_finder.py`（整体替换为类，删本文件 `_get_value`；产出速率改用注入的策略）
+- Modify: `tests/cutline_complex_input/test_stockout_candidate_finder.py`
 
 保留原"按 `depletion_minutes` 升序处理多个预警"的全局排序逻辑；候选明细的 `wafer_size`/`shape_code` 取自机台当前型号的 ProductModel（与原行为一致）。
 
 - [ ] **Step 1: 改写候选测试为对象 API（先让其失败）**
 
-整体替换 `tests/cutline_complex_input/test_candidate_machine_finder.py`：
+整体替换 `tests/cutline_complex_input/test_stockout_candidate_finder.py`：
 
 ```python
 from pathlib import Path
 
 from app.adapters.mock_adapter import MockAdapter
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
 from app.core.prediction_time.depletion_time.depletion_time_calculator import (
@@ -1314,7 +1314,7 @@ def build_candidates(snapshot):
     net_rates = NetRateCalculator(strategy).calculate(snapshot)
     depletions = DepletionTimeCalculator().calculate(snapshot, net_rates)
     warnings = StockoutWarningEvaluator().evaluate(snapshot, depletions)
-    return CandidateMachineFinder(strategy).find(snapshot, warnings)
+    return StockoutCandidateFinder(strategy).find(snapshot, warnings)
 
 
 def by_product(results, product_code):
@@ -1380,10 +1380,10 @@ def test_hg182t_finds_compatible_zr_candidate_and_excludes_invalid_machines():
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `python -m pytest tests/cutline_complex_input/test_candidate_machine_finder.py -q`
-Expected: FAIL（`ImportError: cannot import name 'CandidateMachineFinder'`）
+Run: `python -m pytest tests/cutline_complex_input/test_stockout_candidate_finder.py -q`
+Expected: FAIL（`ImportError: cannot import name 'StockoutCandidateFinder'`）
 
-- [ ] **Step 3: 实现 — 整体替换 candidate_machine_finder.py**
+- [ ] **Step 3: 实现 — 整体替换 stockout_candidate_finder.py**
 
 ```python
 # 候选机台查找组件：吃 snapshot + list[StockoutWarningResult]，吐 list[CandidateResult]
@@ -1397,7 +1397,7 @@ from app.schemas.result_schema import (
 )
 
 
-class CandidateMachineFinder:
+class StockoutCandidateFinder:
     """为触发的断料预警，按全局耗尽紧迫度顺序查找同工序同尺寸同形状的在产机台。"""
 
     def __init__(self, rate_strategy: RateStrategy):
@@ -1511,14 +1511,14 @@ class CandidateMachineFinder:
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `python -m pytest tests/cutline_complex_input/test_candidate_machine_finder.py -q`
+Run: `python -m pytest tests/cutline_complex_input/test_stockout_candidate_finder.py -q`
 Expected: PASS（4 passed）
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add app/core/candidate_machine/candidate_machine_finder.py tests/cutline_complex_input/test_candidate_machine_finder.py
-git commit -m "重构 CandidateMachineFinder 为对象化组件并复用速率策略"
+git add app/core/candidate_machine/stockout_candidate_finder.py tests/cutline_complex_input/test_stockout_candidate_finder.py
+git commit -m "重构 StockoutCandidateFinder 为对象化组件并复用速率策略"
 ```
 
 ---
@@ -1609,7 +1609,7 @@ Expected: FAIL（`ImportError: cannot import name 'CutlineService'` 或其 evalu
 from dataclasses import dataclass
 from typing import List, Optional
 
-from app.core.candidate_machine.candidate_machine_finder import CandidateMachineFinder
+from app.core.candidate_machine.stockout_candidate_finder import StockoutCandidateFinder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RateStrategy, RealtimeFirstRateStrategy
 from app.core.prediction_time.depletion_time.depletion_time_calculator import (
@@ -1641,7 +1641,7 @@ class CutlinePipeline:
         self._net_rate = NetRateCalculator(strategy)
         self._depletion = DepletionTimeCalculator()
         self._warning = StockoutWarningEvaluator()
-        self._candidate = CandidateMachineFinder(strategy)
+        self._candidate = StockoutCandidateFinder(strategy)
 
     def run(self, snapshot: CutlineSnapshot) -> PipelineResult:
         net_rates = self._net_rate.calculate(snapshot)

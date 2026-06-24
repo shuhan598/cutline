@@ -2,6 +2,7 @@
 
 from typing import List
 
+from app.core.workshop.workshop_resolver import WorkshopResolver
 from app.schemas.request_schema import CutlineSnapshot
 from app.schemas.result_schema import NetRateResult, OverflowWarningResult
 from app.utils.numeric import safe_float
@@ -16,18 +17,25 @@ class OverflowWarningEvaluator:
         net_rates: List[NetRateResult],
     ) -> List[OverflowWarningResult]:
         lead = safe_float(snapshot.config.cutline_lead_minutes)
+        workshop_resolver = WorkshopResolver(snapshot)
         capacity_map = {
             segment.buffer_code: safe_float(segment.max_capacity)
             for segment in snapshot.buffer_segments
         }
-        segment_inventory = self._segment_inventory(snapshot)
+        segment_inventory = self._segment_inventory(snapshot, workshop_resolver)
 
         results = []
         for net_rate in net_rates:
             if net_rate.net_rate_per_hour >= 0:
                 continue
             capacity = capacity_map.get(net_rate.buffer_code, 0.0)
-            inventory = segment_inventory.get(net_rate.buffer_code, 0.0)
+            inventory = segment_inventory.get(
+                (
+                    workshop_resolver.normalize_code(net_rate.workshop_code),
+                    net_rate.buffer_code,
+                ),
+                0.0,
+            )
             consume = abs(net_rate.net_rate_per_hour)
             overflow_minutes = (capacity - inventory) / consume * 60 if consume > 0 else None
 
@@ -41,6 +49,10 @@ class OverflowWarningEvaluator:
             results.append(
                 OverflowWarningResult(
                     buffer_code=net_rate.buffer_code,
+                    cycle_code=net_rate.cycle_code,
+                    cycle_name=net_rate.cycle_name,
+                    workshop_code=net_rate.workshop_code,
+                    workshop_name=net_rate.workshop_name,
                     product_code=net_rate.product_code,
                     process_from=net_rate.process_from,
                     process_to=net_rate.process_to,
@@ -56,10 +68,19 @@ class OverflowWarningEvaluator:
             )
         return results
 
-    def _segment_inventory(self, snapshot: CutlineSnapshot) -> dict:
+    def _segment_inventory(
+        self,
+        snapshot: CutlineSnapshot,
+        workshop_resolver: WorkshopResolver,
+    ) -> dict:
         totals: dict = {}
         for inventory in snapshot.buffer_inventories:
-            totals[inventory.buffer_code] = totals.get(inventory.buffer_code, 0.0) + safe_float(
+            workshop_code, _ = workshop_resolver.resolve_inventory_workshop(inventory)
+            normalized_workshop = workshop_resolver.normalize_code(workshop_code)
+            if not normalized_workshop:
+                continue
+            key = (normalized_workshop, inventory.buffer_code)
+            totals[key] = totals.get(key, 0.0) + safe_float(
                 inventory.inventory_quantity
             )
         return totals
