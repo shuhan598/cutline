@@ -5,7 +5,7 @@ from app.utils.numeric import safe_float
 
 
 class OverflowTimeCalculator:
-    """Calculate overflow prediction time for increasing buffer segments."""
+    """溢满时间计算组件"""
 
     def calculate(
         self,

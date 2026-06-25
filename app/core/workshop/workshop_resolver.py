@@ -13,7 +13,7 @@ from app.schemas.request_schema import CutlineSnapshot
 
 
 class WorkshopResolver:
-    """Resolve workshop ownership through cycle, machine, and line master data."""
+    """通过循环和产线查找车间解析器"""
 
     def __init__(self, snapshot: CutlineSnapshot):
         self._snapshot = snapshot

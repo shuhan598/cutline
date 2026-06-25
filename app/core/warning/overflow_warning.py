@@ -3,7 +3,7 @@ from app.schemas.result_schema import OverflowTimeResult, OverflowWarningResult
 
 
 class OverflowWarningEvaluator:
-    """Evaluate overflow warnings from precomputed overflow times."""
+    """判断溢满警告<=cutline_lead_minutes的组件"""
 
     def evaluate(
         self,
