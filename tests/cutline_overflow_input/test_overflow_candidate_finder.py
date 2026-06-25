@@ -5,6 +5,9 @@ from app.adapters.mock_adapter import MockAdapter
 from app.core.candidate_machine.overflow_candidate_finder import OverflowCandidateFinder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
+from app.core.prediction_time.overflow_time.overflow_time_calculator import (
+    OverflowTimeCalculator,
+)
 from app.core.warning.overflow_warning import OverflowWarningEvaluator
 from app.schemas.common_schema import (
     CycleMaster,
@@ -26,7 +29,8 @@ def build():
     snapshot = MockAdapter().load(OVERFLOW_INPUT_PATH)
     strategy = RealtimeFirstRateStrategy()
     net_rates = NetRateCalculator(strategy).calculate(snapshot)
-    warnings = OverflowWarningEvaluator().evaluate(snapshot, net_rates)
+    overflow_times = OverflowTimeCalculator().calculate(snapshot, net_rates)
+    warnings = OverflowWarningEvaluator().evaluate(snapshot, overflow_times)
     return OverflowCandidateFinder(strategy).find(snapshot, warnings, net_rates)
 
 
@@ -191,6 +195,16 @@ def test_s2_non_silk_overflow_p_can_switch_to_pr_target_r_with_gap():
     assert {candidate.equipment_code for candidate in result.candidates} == {"s2_el_p"}
     assert result.candidates[0].target_product_code == "MODEL_R"
     assert result.candidates[0].workshop_code == "S2"
+
+
+def test_overflow_candidate_utilization_uses_current_overflow_model_capacity():
+    result = _find_overflow(_pr_overflow_snapshot(), [_net_rate("MODEL_R")])
+
+    candidate = result.candidates[0]
+    assert candidate.current_output_rate_per_hour == 100
+    assert candidate.utilization_rate == 100 / 120
+    assert candidate.idle_rate is None
+    assert candidate.contribution_capacity_per_hour == 110
 
 
 def test_current_r_machine_is_not_candidate_when_p_is_overflowing():

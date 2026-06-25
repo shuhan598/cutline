@@ -193,6 +193,8 @@ class CutlineEvent(BaseModel):
     """已确认发生的切线事件。"""
 
     equipment_code: str = Field(..., description="发生切线的机台编码")
+    workshop_code: Optional[str] = Field(default=None, description="切线事件所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="切线事件所属车间名称")
     cut_time: datetime = Field(..., description="切线发生时间")
     previous_product_code: str = Field(..., description="切线前产品型号")
     next_product_code: str = Field(..., description="切线后产品型号")

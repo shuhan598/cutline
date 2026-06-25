@@ -4,6 +4,7 @@ from app.schemas.result_schema import (
     CandidateResult,
     DepletionResult,
     NetRateResult,
+    OverflowTimeResult,
     StockoutWarningResult,
 )
 
@@ -123,3 +124,37 @@ def test_depletion_result_allows_none_minutes():
         depletion_status="stable",
     )
     assert result.depletion_minutes is None
+
+
+def test_overflow_time_result_has_time_fields_without_warning_fields():
+    result = OverflowTimeResult(
+        buffer_code="BUF",
+        product_code="P",
+        process_from="ZR",
+        process_to="PK",
+        segment_inventory=8000.0,
+        segment_capacity=10000.0,
+        net_rate_per_hour=-3000.0,
+        overflow_minutes=40.0,
+        cutline_lead_minutes=60.0,
+    )
+
+    fields = set(result.model_dump())
+
+    assert fields == {
+        "buffer_code",
+        "cycle_code",
+        "cycle_name",
+        "workshop_code",
+        "workshop_name",
+        "product_code",
+        "process_from",
+        "process_to",
+        "segment_inventory",
+        "segment_capacity",
+        "net_rate_per_hour",
+        "overflow_minutes",
+        "cutline_lead_minutes",
+    }
+    assert "warning_triggered" not in fields
+    assert "warning_type" not in fields

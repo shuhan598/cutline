@@ -52,6 +52,8 @@ class MixStartCalculator:
 
         return MixTraceNotification(
             source_equipment_code=event.equipment_code,
+            workshop_code=event.workshop_code,
+            workshop_name=event.workshop_name,
             cut_time=event.cut_time,
             previous_product_code=event.previous_product_code,
             next_product_code=event.next_product_code,

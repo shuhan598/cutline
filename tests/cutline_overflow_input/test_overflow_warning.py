@@ -4,6 +4,9 @@ from datetime import datetime
 from app.adapters.mock_adapter import MockAdapter
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
+from app.core.prediction_time.overflow_time.overflow_time_calculator import (
+    OverflowTimeCalculator,
+)
 from app.core.warning.overflow_warning import OverflowWarningEvaluator
 from app.schemas.common_schema import (
     BufferInventoryItem,
@@ -14,6 +17,7 @@ from app.schemas.common_schema import (
     MachineRuntimeStatus,
 )
 from app.schemas.request_schema import CutlineSnapshot
+from app.schemas.result_schema import OverflowTimeResult
 
 
 OVERFLOW_INPUT_PATH = Path(__file__).resolve().parents[2] / "examples" / "cutline_overflow_input.json"
@@ -22,7 +26,8 @@ OVERFLOW_INPUT_PATH = Path(__file__).resolve().parents[2] / "examples" / "cutlin
 def build_overflow_warnings():
     snapshot = MockAdapter().load(OVERFLOW_INPUT_PATH)
     net_rates = NetRateCalculator(RealtimeFirstRateStrategy()).calculate(snapshot)
-    return OverflowWarningEvaluator().evaluate(snapshot, net_rates), snapshot
+    overflow_times = OverflowTimeCalculator().calculate(snapshot, net_rates)
+    return OverflowWarningEvaluator().evaluate(snapshot, overflow_times), snapshot
 
 
 def by_product(results):
@@ -44,6 +49,38 @@ def test_hg182t_overflow_triggers_at_thirty_minutes():
     assert result.segment_capacity == 20000
     assert result.net_rate_per_hour == -4000
     assert result.overflow_minutes == 30
+
+
+def test_overflow_warning_evaluator_triggers_from_overflow_time_result():
+    snapshot = CutlineSnapshot(
+        current_time=datetime(2026, 1, 1),
+        config={"cutline_lead_minutes": 60},
+    )
+    overflow_time = OverflowTimeResult(
+        buffer_code="BUF_ZR_PK",
+        cycle_code="CYCLE_S2_A",
+        cycle_name="S2 cycle A",
+        workshop_code="S2",
+        workshop_name="S2 workshop",
+        product_code="HG182T",
+        process_from="ZR",
+        process_to="PK",
+        segment_inventory=8000,
+        segment_capacity=10000,
+        net_rate_per_hour=-3000,
+        overflow_minutes=40,
+        cutline_lead_minutes=60,
+    )
+
+    result = OverflowWarningEvaluator().evaluate(snapshot, [overflow_time])[0]
+
+    assert result.warning_type == "overflow"
+    assert result.warning_triggered is True
+    assert result.reason == "overflow_time_within_lead_time"
+    assert result.segment_inventory == 8000
+    assert result.segment_capacity == 10000
+    assert result.net_rate_per_hour == -3000
+    assert result.overflow_minutes == 40
 
 
 def test_overflow_segment_inventory_aggregates_same_workshop_buffer_only():
@@ -143,7 +180,10 @@ def test_overflow_segment_inventory_aggregates_same_workshop_buffer_only():
 
     result = next(
         item
-        for item in OverflowWarningEvaluator().evaluate(snapshot, net_rates)
+        for item in OverflowWarningEvaluator().evaluate(
+            snapshot,
+            OverflowTimeCalculator().calculate(snapshot, net_rates),
+        )
         if item.cycle_code == "CYCLE_S2_A"
     )
 

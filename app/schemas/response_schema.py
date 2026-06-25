@@ -53,6 +53,8 @@ class CutlinePlan(BaseModel):
     """切线推荐方案。"""
 
     plan_id: Optional[str] = Field(default=None, description="切线方案 ID")
+    workshop_code: Optional[str] = Field(default=None, description="切线方案所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="切线方案所属车间名称")
     warning: WarningResult = Field(..., description="触发该方案的预警")
     selected_machines: List[SelectedMachine] = Field(default_factory=list, description="建议切线机台列表")
     total_contribution_capacity: float = Field(default=0, ge=0, description="补充产能合计，单位：片/小时")
@@ -68,6 +70,8 @@ class ManualIntervention(BaseModel):
     """人工介入提示。"""
 
     intervention_id: Optional[str] = Field(default=None, description="人工介入提示 ID")
+    workshop_code: Optional[str] = Field(default=None, description="人工介入所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="人工介入所属车间名称")
     warning: WarningResult = Field(..., description="触发人工介入的预警")
     reason: str = Field(..., description="需要人工介入的原因")
     required_capacity: Optional[float] = Field(default=None, description="仍需补充产能，单位：片/小时")
@@ -81,6 +85,8 @@ class ReturnSuggestion(BaseModel):
     suggestion_id: Optional[str] = Field(default=None, description="切回建议 ID")
     suggestion_time: datetime = Field(..., description="切回建议触发时间")
     equipment_code: str = Field(..., description="建议切回的机台编码")
+    workshop_code: Optional[str] = Field(default=None, description="建议切回机台所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="建议切回机台所属车间名称")
     product_code: str = Field(..., description="当前被补充的产品型号")
     original_product_code: Optional[str] = Field(default=None, description="建议切回的原产品型号")
     buffer_code: Optional[str] = Field(default=None, description="关联 Buffer 段编码")
@@ -114,6 +120,8 @@ class MixTraceNotification(BaseModel):
 
     notification_id: Optional[str] = Field(default=None, description="混料通知 ID")
     source_equipment_code: str = Field(..., description="来源机台编码")
+    workshop_code: Optional[str] = Field(default=None, description="混料通知所属车间编码")
+    workshop_name: Optional[str] = Field(default=None, description="混料通知所属车间名称")
     cut_time: datetime = Field(..., description="切线发生时间")
     previous_product_code: str = Field(..., description="切线前产品型号")
     next_product_code: str = Field(..., description="切线后产品型号")

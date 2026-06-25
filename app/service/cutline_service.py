@@ -105,6 +105,8 @@ class CutlineService:
             warning_time=order.preparation_time,
             warning_type=order.warning_type,
             buffer_code="",
+            workshop_code=getattr(order, "workshop_code", None),
+            workshop_name=getattr(order, "workshop_name", None),
             upstream_process_code=order.process_code,
             downstream_process_code=order.process_code,
             product_code=order.product_code or "",
@@ -158,6 +160,8 @@ class CutlineService:
         return ReturnSuggestion(
             suggestion_time=snapshot.current_time,
             equipment_code=item.equipment_code,
+            workshop_code=getattr(item, "workshop_code", None),
+            workshop_name=getattr(item, "workshop_name", None),
             product_code=item.product_code,
             original_product_code=item.original_product_code,
             buffer_code=item.buffer_code,

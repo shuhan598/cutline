@@ -3,6 +3,7 @@
 from datetime import timedelta
 from typing import List, Set
 
+from app.core.workshop.workshop_resolver import WorkshopResolver
 from app.schemas.request_schema import CutlineSnapshot
 from app.schemas.result_schema import SilkScreenOrderResult
 from app.utils.numeric import safe_float
@@ -27,6 +28,7 @@ class SilkScreenHandler:
         clear_minutes = safe_float(snapshot.config.silk_screen_clear_minutes)
         order_map = {order.order_code: order for order in snapshot.orders}
         current = snapshot.current_time
+        workshop_resolver = WorkshopResolver(snapshot)
 
         results = []
         for machine in snapshot.machine_statuses:
@@ -43,11 +45,16 @@ class SilkScreenHandler:
             remaining = safe_float(order.total_quantity) - safe_float(order.completed_quantity)
             if remaining <= 0:
                 continue
+            machine_workshop_code, machine_workshop_name = (
+                workshop_resolver.resolve_machine_workshop(machine)
+            )
             completion_time = current + timedelta(minutes=remaining / capacity * 60)
             preparation_time = completion_time - timedelta(minutes=clear_minutes)
             results.append(
                 SilkScreenOrderResult(
                     equipment_code=machine.equipment_code,
+                    workshop_code=machine_workshop_code,
+                    workshop_name=machine_workshop_name,
                     process_code=machine.process_code,
                     product_code=machine.product_code,
                     order_code=machine.order_code,

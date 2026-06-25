@@ -6,6 +6,9 @@ from app.core.candidate_machine.overflow_candidate_finder import OverflowCandida
 from app.core.cutline_plan.plan_builder import CutlinePlanBuilder
 from app.core.net_rate.net_rate_calculator import NetRateCalculator
 from app.core.net_rate.rate_strategy import RealtimeFirstRateStrategy
+from app.core.prediction_time.overflow_time.overflow_time_calculator import (
+    OverflowTimeCalculator,
+)
 from app.core.warning.overflow_warning import OverflowWarningEvaluator
 from app.schemas.common_schema import BufferInventoryItem, BufferSegment, CycleMaster
 from app.schemas.request_schema import CutlineSnapshot
@@ -24,7 +27,8 @@ def build():
     snapshot = MockAdapter().load(OVERFLOW_INPUT_PATH)
     strategy = RealtimeFirstRateStrategy()
     net_rates = NetRateCalculator(strategy).calculate(snapshot)
-    warnings = OverflowWarningEvaluator().evaluate(snapshot, net_rates)
+    overflow_times = OverflowTimeCalculator().calculate(snapshot, net_rates)
+    warnings = OverflowWarningEvaluator().evaluate(snapshot, overflow_times)
     candidates = OverflowCandidateFinder(strategy).find(snapshot, warnings, net_rates)
     return CutlinePlanBuilder().build_overflow(snapshot, warnings, candidates, net_rates)
 

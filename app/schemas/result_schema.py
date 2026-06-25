@@ -103,6 +103,24 @@ class CandidateResult(BaseModel):
     candidates: List[CandidateMachine] = Field(default_factory=list)
 
 
+class OverflowTimeResult(BaseModel):
+    """Overflow time calculation result."""
+
+    buffer_code: str
+    cycle_code: Optional[str] = None
+    cycle_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
+    product_code: str
+    process_from: str
+    process_to: Optional[str] = None
+    segment_inventory: float
+    segment_capacity: float
+    net_rate_per_hour: float
+    overflow_minutes: Optional[float] = None
+    cutline_lead_minutes: float
+
+
 class OverflowWarningResult(BaseModel):
     """段级溢满预警评估结果。"""
 
@@ -164,6 +182,8 @@ class ReturnResult(BaseModel):
     """单个被跟踪切线事件的切回判断结果。"""
 
     equipment_code: str
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     product_code: str
     original_product_code: Optional[str] = None
     buffer_code: Optional[str] = None
@@ -181,6 +201,8 @@ class SilkScreenOrderResult(BaseModel):
     """丝网订单进度触发的清台准备预警。"""
 
     equipment_code: str
+    workshop_code: Optional[str] = None
+    workshop_name: Optional[str] = None
     process_code: str
     product_code: Optional[str] = None
     order_code: Optional[str] = None

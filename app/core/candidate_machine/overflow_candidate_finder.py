@@ -71,6 +71,14 @@ class OverflowCandidateFinder:
                     continue
 
                 y_model = model_map.get(target_y)
+                current_output = self._rate_strategy.output_rate(machine)
+                current_capacity = self._actual_capacity(
+                    snapshot, machine.equipment_code, machine.product_code
+                )
+                if current_capacity and current_capacity > 0:
+                    utilization_rate = current_output / current_capacity
+                else:
+                    utilization_rate = None
                 machine_workshop_code, machine_workshop_name = (
                     workshop_scope_checker.resolve_machine_workshop(machine)
                 )
@@ -85,10 +93,11 @@ class OverflowCandidateFinder:
                         target_product_code=target_y,
                         wafer_size=y_model.wafer_size if y_model else None,
                         shape_code=y_model.shape_code if y_model else None,
-                        current_output_rate_per_hour=self._rate_strategy.output_rate(machine),
+                        current_output_rate_per_hour=current_output,
                         contribution_capacity_per_hour=self._actual_capacity(
                             snapshot, machine.equipment_code, target_y
                         ),
+                        utilization_rate=utilization_rate,
                         reason="overflow_switch_away_to_target_with_gap",
                     )
                 )

@@ -11,6 +11,9 @@ from app.core.net_rate.rate_strategy import RateStrategy, RealtimeFirstRateStrat
 from app.core.prediction_time.depletion_time.depletion_time_calculator import (
     DepletionTimeCalculator,
 )
+from app.core.prediction_time.overflow_time.overflow_time_calculator import (
+    OverflowTimeCalculator,
+)
 from app.core.return_judge.return_evaluator import ReturnEvaluator
 from app.core.silk_screen.silk_screen_handler import SilkScreenHandler
 from app.core.warning.overflow_warning import OverflowWarningEvaluator
@@ -51,6 +54,7 @@ class CutlinePipeline:
         self._depletion = DepletionTimeCalculator()
         self._stockout = StockoutWarningEvaluator()
         self._candidate = StockoutCandidateFinder(strategy)
+        self._overflow_time = OverflowTimeCalculator()
         self._overflow = OverflowWarningEvaluator()
         self._overflow_candidate = OverflowCandidateFinder(strategy)
         self._plan_builder = CutlinePlanBuilder()
@@ -64,7 +68,8 @@ class CutlinePipeline:
         warnings = self._stockout.evaluate(snapshot, depletions)
         candidates = self._candidate.find(snapshot, warnings)
 
-        overflow_warnings = self._overflow.evaluate(snapshot, net_rates)
+        overflow_time_results = self._overflow_time.calculate(snapshot, net_rates)
+        overflow_warnings = self._overflow.evaluate(snapshot, overflow_time_results)
         overflow_candidates = self._overflow_candidate.find(
             snapshot, overflow_warnings, net_rates
         )
