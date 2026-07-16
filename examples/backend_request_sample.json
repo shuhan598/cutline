@@ -1,0 +1,113 @@
+{
+  "snapshot_meta": {
+    "run_id": "RUN-20260716-001",
+    "trigger_type": "scheduled",
+    "workshop_id": "WS-01",
+    "snapshot_time": "2026-07-16T08:00:00+08:00",
+    "params_version": 1,
+    "catalog_version": "CAT-20260716",
+    "catalog_loaded_at": "2026-07-16T07:55:00+08:00",
+    "degraded_flags": []
+  },
+  "machine_realtime": [
+    {
+      "machine_code": "M-01",
+      "status": "RUNNING",
+      "order_code": "O-01",
+      "tangent_time": null,
+      "input_quantity": 120.0,
+      "output_quantity": 100.0,
+      "completed_quantity": 300.0,
+      "period_quantity": 100.0,
+      "out_time": null
+    }
+  ],
+  "machine_master": [
+    {
+      "machine_code": "M-01",
+      "machine_name": "一号机台",
+      "process_code": "P-01",
+      "process_name": "制绒"
+    }
+  ],
+  "machine_process_times": [
+    {
+      "machine_code": "M-01",
+      "machine_name": "一号机台",
+      "product_code": "PROD-01",
+      "product_name": "182 单晶组件",
+      "proc_seconds": 90.0,
+      "actual_capacity": 40.5
+    }
+  ],
+  "workshops": [
+    {
+      "workshop_code": "WS-01",
+      "workshop_name": "一号车间"
+    }
+  ],
+  "lines": [
+    {
+      "line_code": "L-01",
+      "line_name": "一号产线",
+      "wafer_spec": "N",
+      "workshop_code": "WS-01",
+      "workshop_name": "一号车间"
+    }
+  ],
+  "machine_lines": [
+    {
+      "machine_code": "M-01",
+      "machine_name": "一号机台",
+      "line_code": "L-01",
+      "line_name": "一号产线",
+      "wafer_spec": "N"
+    }
+  ],
+  "orders": [
+    {
+      "order_code": "O-01",
+      "order_name": "示例订单",
+      "order_status": "IN_PROGRESS",
+      "total_quantity": 1000.0,
+      "piece_source": "A",
+      "estimated_yield": "98.5%",
+      "product_code": "PROD-01",
+      "product_name": "182 单晶组件",
+      "workshop_code": "WS-01",
+      "workshop_name": "一号车间",
+      "produced_quantity": 300.0,
+      "remaining_quantity": 700.0
+    }
+  ],
+  "products": [
+    {
+      "product_code": "PROD-01",
+      "product_name": "182 单晶组件",
+      "wafer_size": "182",
+      "source_grade": "A",
+      "material_code": "MAT-01",
+      "material_name": "单晶硅片"
+    }
+  ],
+  "process_routes": [
+    {
+      "process_code": "P-01",
+      "process_name": "制绒",
+      "sequence": 1,
+      "cache_type": "DIRECT",
+      "workshop_code": "WS-01",
+      "workshop_name": "一号车间",
+      "loop_code": "LOOP-01",
+      "loop_name": "一号循环",
+      "upstream_process_code": null,
+      "upstream_process_name": null,
+      "downstream_process_code": null,
+      "downstream_process_name": null
+    }
+  ],
+  "buffer_realtime": [],
+  "buffer_master": [],
+  "agv_relations": [],
+  "active_cutline_events": []
+}

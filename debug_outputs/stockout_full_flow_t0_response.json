@@ -1,0 +1,77 @@
+{
+  "success": true,
+  "message": "",
+  "warnings": [
+    {
+      "warning_id": null,
+      "warning_time": "2026-06-25T09:50:00",
+      "warning_type": "stockout",
+      "buffer_code": "BUF_ZR_PK",
+      "cycle_code": "CYCLE_S2_01",
+      "cycle_name": "S2 cycle",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop",
+      "upstream_process_code": "ZR",
+      "downstream_process_code": "PK",
+      "product_code": "HG182T",
+      "inventory_quantity": 1600.0,
+      "net_rate": 3200.0,
+      "prediction_minutes": 30.0,
+      "cutline_lead_minutes": 30.0,
+      "capacity_gap": null,
+      "message": null
+    }
+  ],
+  "plans": [
+    {
+      "plan_id": null,
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop",
+      "warning": {
+        "warning_id": null,
+        "warning_time": "2026-06-25T09:50:00",
+        "warning_type": "stockout",
+        "buffer_code": "BUF_ZR_PK",
+        "cycle_code": "CYCLE_S2_01",
+        "cycle_name": "S2 cycle",
+        "workshop_code": "S2",
+        "workshop_name": "S2 workshop",
+        "upstream_process_code": "ZR",
+        "downstream_process_code": "PK",
+        "product_code": "HG182T",
+        "inventory_quantity": null,
+        "net_rate": null,
+        "prediction_minutes": null,
+        "cutline_lead_minutes": null,
+        "capacity_gap": null,
+        "message": null
+      },
+      "selected_machines": [
+        {
+          "equipment_code": "zr03",
+          "workshop_code": "S2",
+          "workshop_name": "S2 workshop",
+          "current_product_code": "HG182R",
+          "target_product_code": "HG182T",
+          "wafer_size": "182",
+          "shape_code": "R",
+          "process_code": "ZR",
+          "utilization_rate": 1.0,
+          "idle_rate": 0.0,
+          "actual_capacity": null,
+          "contribution_capacity": 8000.0
+        }
+      ],
+      "total_contribution_capacity": 8000.0,
+      "remaining_capacity_gap": -4800.0,
+      "cutline_start_time": null,
+      "expected_return_time": null,
+      "requires_silk_screen_clear": false,
+      "silk_screen_clear_minutes": null,
+      "message": null
+    }
+  ],
+  "manual_interventions": [],
+  "return_suggestions": [],
+  "tracked_events": []
+}

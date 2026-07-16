@@ -1,0 +1,591 @@
+from copy import deepcopy
+from datetime import datetime
+
+import pytest
+
+import app.service.cutline_pipeline as pipeline_module
+from app.adapters.snapshot_adapter import SnapshotConversionError
+from app.core.candidate_machine.errors import CandidateMachineCalculationError
+from app.schemas.request_schema import AlgorithmSnapshot
+from app.schemas.request_schema import CutlineAlgorithmRequest
+from app.schemas.response_schema import CutlineAlgorithmResponse
+from app.schemas import result_schema as result
+from app.service.cutline_pipeline import CutlinePipeline
+from app.service.cutline_service import CutlineService
+from tests.adapters import test_snapshot_adapter as adapter_helpers
+
+
+NOW = datetime(2026, 7, 16, 12, 0)
+REAL_NOW = datetime(2026, 7, 16, 8, 30)
+
+
+def test_cutline_service_does_not_expose_legacy_evaluate_entrypoint():
+    assert not hasattr(CutlineService, "evaluate")
+
+
+def test_cutline_pipeline_does_not_expose_legacy_run_entrypoint():
+    assert not hasattr(CutlinePipeline, "run")
+
+
+def test_cutline_pipeline_module_does_not_expose_legacy_result_type():
+    assert not hasattr(pipeline_module, "PipelineResult")
+
+
+def empty_request() -> CutlineAlgorithmRequest:
+    return CutlineAlgorithmRequest.model_validate(
+        {
+            "snapshot_meta": {
+                "run_id": "run-1",
+                "trigger_type": "manual",
+                "workshop_id": "S1",
+                "snapshot_time": NOW,
+                "params_version": 1,
+                "catalog_version": "catalog-1",
+                "catalog_loaded_at": NOW,
+                "degraded_flags": [],
+            },
+            "machine_realtime": [],
+            "machine_master": [],
+            "machine_process_times": [],
+            "workshops": [],
+            "lines": [],
+            "machine_lines": [],
+            "orders": [],
+            "products": [],
+            "process_routes": [],
+            "buffer_realtime": [],
+            "buffer_master": [],
+            "agv_relations": [],
+            "active_cutline_events": [],
+        }
+    )
+
+
+def empty_snapshot(*, active_cutline_events=None) -> AlgorithmSnapshot:
+    return AlgorithmSnapshot(
+        current_time=NOW,
+        workshops=[],
+        lines=[],
+        machine_lines=[],
+        machine_runtimes=[],
+        machine_masters=[],
+        machine_product_capacities=[],
+        orders=[],
+        products=[],
+        process_routes=[],
+        buffer_masters=[],
+        buffer_process_relations=[],
+        buffer_order_inventories=[],
+        agv_relations=[],
+        active_cutline_events=active_cutline_events or [],
+    )
+
+
+class StaticAdapter:
+    def __init__(self, snapshot=None):
+        self.snapshot = snapshot if snapshot is not None else empty_snapshot()
+        self.requests = []
+
+    def to_algorithm_snapshot(self, request):
+        self.requests.append(request)
+        return self.snapshot
+
+
+class ResultPipeline:
+    def __init__(self, value):
+        self.value = value
+        self.snapshots = []
+
+    def evaluate_algorithm(self, snapshot):
+        self.snapshots.append(snapshot)
+        return self.value
+
+    def run(self, snapshot):
+        raise AssertionError("legacy run must not be called")
+
+
+def _machine_runtime(code, order_code, input_quantity, output_quantity):
+    return {
+        "machine_code": code,
+        "status": "running",
+        "order_code": order_code,
+        "tangent_time": None,
+        "input_quantity": float(input_quantity),
+        "output_quantity": float(output_quantity),
+        "completed_quantity": 0,
+        "period_quantity": 0,
+        "out_time": None,
+    }
+
+
+def _machine_master(code, process_code, process_name=None):
+    return {
+        "machine_code": code,
+        "machine_name": code,
+        "process_code": process_code,
+        "process_name": process_name or process_code,
+    }
+
+
+def _machine_line(code):
+    return {
+        "machine_code": code,
+        "machine_name": code,
+        "line_code": "L1",
+        "line_name": "L1",
+        "wafer_spec": "N",
+    }
+
+
+def _order(code, name, product_code, *, total=200000, produced=0):
+    return {
+        "order_code": code,
+        "order_name": name,
+        "order_status": "RUNNING",
+        "total_quantity": total,
+        "piece_source": "A",
+        "estimated_yield": "99%",
+        "product_code": product_code,
+        "product_name": product_code,
+        "workshop_code": "S1",
+        "workshop_name": "Workshop",
+        "produced_quantity": produced,
+        "remaining_quantity": total - produced,
+    }
+
+
+def _product(code):
+    return {
+        "product_code": code,
+        "product_name": code,
+        "wafer_size": "182",
+        "source_grade": "A",
+        "material_code": f"MAT-{code}",
+        "material_name": f"MAT-{code}",
+    }
+
+
+def _process_route(code, sequence, upstream, downstream):
+    return {
+        "process_code": code,
+        "process_name": code,
+        "sequence": sequence,
+        "cache_type": "BUFFER",
+        "workshop_code": "S1",
+        "workshop_name": "Workshop",
+        "loop_code": "LOOP1",
+        "loop_name": "Loop",
+        "upstream_process_code": upstream,
+        "upstream_process_name": upstream,
+        "downstream_process_code": downstream,
+        "downstream_process_name": downstream,
+    }
+
+
+def _buffer_master(code):
+    return {
+        "buffer_code": code,
+        "buffer_name": code,
+        "buffer_type": "LINE",
+        "buffer_type_title": "Line",
+        "max_capacity": 200000,
+        "safety_low": 50,
+        "served_process_codes": ["P01", "P02"],
+        "served_process_names": ["P01", "P02"],
+        "loop_code": "LOOP1",
+        "loop_name": "Loop",
+    }
+
+
+def _snapshot_meta():
+    return {
+        "run_id": "real-service-scenario",
+        "trigger_type": "manual",
+        "workshop_id": "S1",
+        "snapshot_time": REAL_NOW,
+        "params_version": 1,
+        "catalog_version": "catalog-1",
+        "catalog_loaded_at": REAL_NOW,
+        "degraded_flags": [],
+    }
+
+
+def _real_flow_payload():
+    machine_codes = ["M-CAND", "M-SRC-DOWN", "M-TGT-UP", "M-TGT-DOWN"]
+    return {
+        "snapshot_meta": _snapshot_meta(),
+        "machine_realtime": [
+            _machine_runtime("M-CAND", "ORD-SOURCE", 200, 200),
+            _machine_runtime("M-SRC-DOWN", "ORD-SOURCE", 200, 0),
+            _machine_runtime("M-TGT-UP", "ORD-TARGET", 0, 0),
+            _machine_runtime("M-TGT-DOWN", "ORD-TARGET", 200, 0),
+        ],
+        "machine_master": [
+            _machine_master("M-CAND", "P01"),
+            _machine_master("M-SRC-DOWN", "P02"),
+            _machine_master("M-TGT-UP", "P01"),
+            _machine_master("M-TGT-DOWN", "P02"),
+        ],
+        "machine_process_times": [
+            {
+                "machine_code": "M-CAND",
+                "machine_name": "M-CAND",
+                "product_code": "PROD-SOURCE",
+                "product_name": "PROD-SOURCE",
+                "proc_seconds": 3600.0,
+                "actual_capacity": 400,
+            }
+        ],
+        "workshops": [
+            {"workshop_code": "S1", "workshop_name": "Workshop"}
+        ],
+        "lines": [
+            {
+                "line_code": "L1",
+                "line_name": "L1",
+                "wafer_spec": "N",
+                "workshop_code": "S1",
+                "workshop_name": "Workshop",
+            }
+        ],
+        "machine_lines": [_machine_line(code) for code in machine_codes],
+        "orders": [
+            _order("ORD-SOURCE", "Source", "PROD-SOURCE"),
+            _order("ORD-TARGET", "Target", "PROD-TARGET"),
+        ],
+        "products": [_product("PROD-SOURCE"), _product("PROD-TARGET")],
+        "process_routes": [
+            _process_route("P01", 1, None, "P02"),
+            _process_route("P02", 2, "P01", None),
+        ],
+        "buffer_realtime": [
+            {
+                "main_id": "source-inventory",
+                "buffer_code": "BUF-SOURCE",
+                "bound_source_name": "Source",
+                "current_quantity": 100000,
+                "current_utilization_rate": 0.5,
+            },
+            {
+                "main_id": "target-inventory",
+                "buffer_code": "BUF-TARGET",
+                "bound_source_name": "Target",
+                "current_quantity": 100,
+                "current_utilization_rate": 0.1,
+            },
+        ],
+        "buffer_master": [
+            _buffer_master("BUF-SOURCE"),
+            _buffer_master("BUF-TARGET"),
+        ],
+        "agv_relations": [],
+        "active_cutline_events": [],
+    }
+
+
+def _silk_payload():
+    return {
+        "snapshot_meta": _snapshot_meta(),
+        "machine_realtime": [
+            _machine_runtime("M-SILK", "ORD-SILK", 0, 5000)
+        ],
+        "machine_master": [
+            _machine_master("M-SILK", "SW", process_name="丝网")
+        ],
+        "machine_process_times": [],
+        "workshops": [
+            {"workshop_code": "S1", "workshop_name": "Workshop"}
+        ],
+        "lines": [
+            {
+                "line_code": "L1",
+                "line_name": "L1",
+                "wafer_spec": "N",
+                "workshop_code": "S1",
+                "workshop_name": "Workshop",
+            }
+        ],
+        "machine_lines": [_machine_line("M-SILK")],
+        "orders": [
+            _order(
+                "ORD-SILK",
+                "Silk",
+                "PROD-SILK",
+                total=100000,
+                produced=80000,
+            )
+        ],
+        "products": [_product("PROD-SILK")],
+        "process_routes": [],
+        "buffer_realtime": [],
+        "buffer_master": [],
+        "agv_relations": [],
+        "active_cutline_events": [],
+    }
+
+
+def _evaluate_real_payload(payload, *, pipeline=None):
+    request = CutlineAlgorithmRequest.model_validate(payload)
+    service = CutlineService(pipeline) if pipeline is not None else CutlineService()
+    return service.evaluate_algorithm(request)
+
+
+def test_evaluate_algorithm_calls_adapter_pipeline_and_mapper_in_order():
+    request = empty_request()
+    snapshot = object()
+    result_value = result.AlgorithmEvaluateResult(calculation_time=NOW)
+    response = CutlineAlgorithmResponse(calculation_time=NOW)
+    calls = []
+
+    class Adapter:
+        def to_algorithm_snapshot(self, received):
+            calls.append(("adapter", received))
+            return snapshot
+
+    class Pipeline:
+        def evaluate_algorithm(self, received):
+            calls.append(("pipeline", received))
+            return result_value
+
+    class Mapper:
+        def to_response(self, received):
+            calls.append(("mapper", received))
+            return response
+
+    service = CutlineService(
+        pipeline=Pipeline(),
+        adapter=Adapter(),
+        mapper=Mapper(),
+    )
+
+    actual = service.evaluate_algorithm(request)
+
+    assert actual is response
+    assert calls == [
+        ("adapter", request),
+        ("pipeline", snapshot),
+        ("mapper", result_value),
+    ]
+
+
+def test_real_empty_request_runs_the_real_adapter_pipeline_mapper_chain():
+    request = empty_request()
+    original = request.model_dump()
+
+    response = CutlineService().evaluate_algorithm(request)
+
+    assert isinstance(response, CutlineAlgorithmResponse)
+    assert response.calculation_time == NOW
+    assert request.model_dump() == original
+    assert "config" not in request.model_fields
+
+
+def test_evaluate_algorithm_does_not_use_legacy_pipeline_run():
+    value = result.AlgorithmEvaluateResult(calculation_time=NOW)
+    pipeline = ResultPipeline(value)
+
+    response = CutlineService(
+        pipeline,
+        adapter=StaticAdapter(),
+    ).evaluate_algorithm(empty_request())
+
+    assert isinstance(response, CutlineAlgorithmResponse)
+    assert len(pipeline.snapshots) == 1
+
+
+def test_historical_active_event_from_request_reaches_pipeline_snapshot():
+    payload = deepcopy(adapter_helpers._payload())
+    payload["active_cutline_events"] = [
+        {
+            "event_id": "CUT-HISTORY-MC-001",
+            "plan_id": "PLAN-HISTORY",
+            "machine_code": "MC-001",
+            "source_order_code": "ORD-001",
+            "target_order_code": "ORD-002",
+            "workshop_code": "S1",
+            "source_buffer_code": "BUF-001",
+            "target_buffer_code": "BUF-002",
+            "upstream_process_code": "PROC-01",
+            "downstream_process_code": "PROC-02",
+            "source_wafer_size": "182",
+            "source_wafer_spec": "N",
+            "target_wafer_size": "182",
+            "target_wafer_spec": "N",
+            "cutline_start_time": "2026-07-15T08:00:00Z",
+        }
+    ]
+    request = CutlineAlgorithmRequest.model_validate(payload)
+    pipeline = ResultPipeline(
+        result.AlgorithmEvaluateResult(
+            calculation_time=request.snapshot_meta.snapshot_time
+        )
+    )
+
+    CutlineService(pipeline).evaluate_algorithm(request)
+
+    assert pipeline.snapshots[0].active_cutline_events[0].event_id == (
+        "CUT-HISTORY-MC-001"
+    )
+
+
+def test_snapshot_conversion_error_propagates_unchanged():
+    expected = SnapshotConversionError("bad backend snapshot")
+
+    class FailingAdapter:
+        def to_algorithm_snapshot(self, request):
+            raise expected
+
+    with pytest.raises(SnapshotConversionError) as captured:
+        CutlineService(
+            pipeline=ResultPipeline(
+                result.AlgorithmEvaluateResult(calculation_time=NOW)
+            ),
+            adapter=FailingAdapter(),
+        ).evaluate_algorithm(empty_request())
+
+    assert captured.value is expected
+
+
+@pytest.mark.parametrize(
+    "expected",
+    [RuntimeError("core failed"), ValueError("map failed")],
+)
+def test_pipeline_and_mapper_exceptions_propagate_unchanged(expected):
+    value = result.AlgorithmEvaluateResult(calculation_time=NOW)
+
+    class FailingPipeline(ResultPipeline):
+        def evaluate_algorithm(self, snapshot):
+            if isinstance(expected, RuntimeError):
+                raise expected
+            return value
+
+    class FailingMapper:
+        def to_response(self, received):
+            raise expected
+
+    mapper = None if isinstance(expected, RuntimeError) else FailingMapper()
+    with pytest.raises(type(expected)) as captured:
+        CutlineService(
+            pipeline=FailingPipeline(value),
+            adapter=StaticAdapter(),
+            mapper=mapper,
+        ).evaluate_algorithm(empty_request())
+
+    assert captured.value is expected
+
+
+def test_automatic_plan_response_preserves_mixing_and_matching_new_event_ids():
+    response = _evaluate_real_payload(_real_flow_payload())
+
+    assert isinstance(response, CutlineAlgorithmResponse)
+    assert len(response.cutline_decisions) == 1
+    assert len(response.mixing_trace_records) == 1
+    assert len(response.new_active_cutline_events) == 1
+    plan = response.cutline_decisions[0].plan
+    assert plan is not None
+    assert plan.plan_id == response.mixing_trace_records[0].plan_id
+    assert plan.plan_id == response.new_active_cutline_events[0].plan_id
+    assert response.mixing_trace_records[0].cutline_event_id == (
+        response.new_active_cutline_events[0].event_id
+    )
+
+
+def test_manual_intervention_response_has_no_mixing_or_new_events():
+    payload = _real_flow_payload()
+    payload["machine_realtime"][0]["status"] = "idle"
+
+    response = _evaluate_real_payload(payload)
+
+    assert len(response.cutline_decisions) == 1
+    assert response.cutline_decisions[0].manual_intervention is not None
+    assert response.mixing_trace_records == []
+    assert response.mixing_trace_failures == []
+    assert response.new_active_cutline_events == []
+
+
+def test_historical_event_return_and_updated_event_are_both_returned():
+    payload = _real_flow_payload()
+    payload["machine_realtime"][2]["output_quantity"] = 200.0
+    payload["machine_realtime"][3]["input_quantity"] = 0.0
+    payload["buffer_realtime"][1]["current_quantity"] = 1000
+    payload["active_cutline_events"] = [
+        {
+            "event_id": "CUT-HISTORICAL-M-CAND",
+            "plan_id": "PLAN-HISTORICAL",
+            "machine_code": "M-CAND",
+            "source_order_code": "ORD-SOURCE",
+            "target_order_code": "ORD-TARGET",
+            "workshop_code": "S1",
+            "source_buffer_code": "BUF-SOURCE",
+            "target_buffer_code": "BUF-TARGET",
+            "upstream_process_code": "P01",
+            "downstream_process_code": "P02",
+            "source_wafer_size": "182",
+            "source_wafer_spec": "N",
+            "target_wafer_size": "182",
+            "target_wafer_spec": "N",
+            "cutline_start_time": datetime(2026, 7, 16, 7, 0),
+            "negative_start_time": datetime(2026, 7, 16, 7, 59),
+            "status": "active",
+        }
+    ]
+
+    response = _evaluate_real_payload(payload)
+
+    assert len(response.return_results) == 1
+    assert len(response.updated_active_cutline_events) == 1
+    assert response.return_results[0].event_id == "CUT-HISTORICAL-M-CAND"
+    assert response.return_results[0].return_recommended is True
+    assert response.updated_active_cutline_events[0].event_id == (
+        response.return_results[0].event_id
+    )
+    assert response.updated_active_cutline_events[0].status == (
+        "return_recommended"
+    )
+    assert response.new_active_cutline_events == []
+
+
+def test_silk_result_is_returned_without_any_buffer_warning():
+    response = _evaluate_real_payload(_silk_payload())
+
+    assert response.stockout_warnings == []
+    assert response.overflow_warnings == []
+    assert len(response.silk_screen_results) == 1
+    assert response.silk_screen_results[0].current_order_code == "ORD-SILK"
+    assert response.silk_screen_results[0].machine_codes == ["M-SILK"]
+
+
+def test_mixing_failure_stays_in_failures_and_is_not_duplicated_as_error():
+    payload = _real_flow_payload()
+    payload["machine_process_times"] = []
+
+    response = _evaluate_real_payload(payload)
+
+    assert response.cutline_decisions[0].plan is not None
+    assert len(response.new_active_cutline_events) == 1
+    assert response.mixing_trace_records == []
+    assert len(response.mixing_trace_failures) == 1
+    assert response.mixing_trace_failures[0].reason == (
+        "process_duration_not_found"
+    )
+    assert response.errors == []
+
+
+def test_partial_pipeline_error_is_returned_alongside_other_results(monkeypatch):
+    pipeline = CutlinePipeline()
+    monkeypatch.setattr(
+        pipeline._candidate,
+        "find_algorithm",
+        lambda snapshot, warnings: (_ for _ in ()).throw(
+            CandidateMachineCalculationError("candidate boundary failed")
+        ),
+    )
+
+    response = _evaluate_real_payload(_real_flow_payload(), pipeline=pipeline)
+
+    assert len(response.stockout_warnings) == 1
+    assert response.stockout_warnings[0].buffer_code == "BUF-TARGET"
+    assert len(response.errors) == 1
+    assert response.errors[0].stage == "stockout_candidate"
+    assert response.errors[0].reason == "candidate_machine_calculation_error"
+    assert response.errors[0].message == "candidate boundary failed"

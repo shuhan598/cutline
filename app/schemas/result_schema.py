@@ -3,212 +3,629 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.common_schema import AlgorithmActiveCutlineEvent
 
-class NetRateResult(BaseModel):
-    """净速率计算结果。"""
-
-    buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    inventory_quantity: float = 0.0
-    upstream_output_per_hour: float
-    downstream_input_per_hour: float
-    net_rate_per_hour: float
-    upstream_equipment_codes: List[str] = Field(default_factory=list)
-    downstream_equipment_codes: List[str] = Field(default_factory=list)
-
-
-class DepletionResult(BaseModel):
-    """耗尽时间计算结果。"""
+class AlgorithmIntervalNetRateResult(BaseModel):
+    """新版算法按 Buffer、订单、规格和具体工序区间计算的净消耗速率。"""
 
     buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    inventory_quantity: float
-    net_rate_per_hour: float
-    depletion_minutes: Optional[float] = None
-    depletion_status: str
+    order_code: str
+    wafer_size: str
+    wafer_spec: str
+    workshop_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    current_quantity: float
+    upstream_output_rate: float
+    downstream_input_rate: float
+    net_consumption_rate: float
 
 
-class StockoutWarningResult(BaseModel):
-    """断料预警评估结果。"""
+class AlgorithmReturnResult(BaseModel):
+    """新版活动切线事件在当前快照时刻的切回判断结果。"""
 
-    buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    warning_type: str
-    warning_triggered: bool
-    reason: str
-    inventory_quantity: float
-    net_rate_per_hour: float
-    depletion_minutes: Optional[float] = None
-    depletion_status: str
-    cutline_lead_minutes: float
+    event_id: str
+    machine_code: str
+    source_order_code: str
+    target_order_code: str
+    workshop_code: str
+    source_buffer_code: str
+    target_buffer_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    target_wafer_size: str
+    target_wafer_spec: str
+    current_time: datetime
+    cutline_start_time: datetime
+    previous_negative_start_time: datetime | None
+    updated_negative_start_time: datetime | None
+    cutline_duration_minutes: float
+    negative_duration_minutes: float
+    net_consumption_rate: float
+    current_quantity: float
+    stability_window_minutes: float
+    stockout_warning_lead_minutes: float
+    safe_inventory_quantity: float
+    condition_net_rate_met: bool
+    condition_stability_met: bool
+    condition_inventory_met: bool
+    return_recommended: bool
+    previous_status: Literal[
+        "active",
+        "return_recommended",
+        "returned",
+        "cancelled",
+    ]
+    updated_status: Literal["active", "return_recommended"]
+    reason: Literal[
+        "net_rate_not_negative",
+        "stability_window_not_met",
+        "inventory_not_above_safe_level",
+        "all_return_conditions_met",
+    ]
 
 
-class CandidateMachine(BaseModel):
-    """候选机台明细。"""
+class AlgorithmSilkScreenTransitionResult(BaseModel):
+    """新版丝网当前订单的完工与清台准备预测结果。"""
 
-    equipment_code: str
-    equipment_name: Optional[str] = None
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
+    workshop_code: str
     process_code: str
-    current_product_code: Optional[str] = None
+    process_name: str
+    current_order_code: str
+    current_product_code: str
+    machine_codes: list[str]
+    total_quantity: float = Field(..., ge=0)
+    produced_quantity: float = Field(..., ge=0)
+    remaining_quantity: float = Field(..., ge=0)
+    current_order_output_rate: float = Field(..., ge=0)
+    remaining_production_hours: float | None = Field(default=None, ge=0)
+    current_time: datetime
+    estimated_finish_time: datetime | None = None
+    silk_screen_clear_minutes: float = Field(..., gt=0)
+    clearance_prepare_time: datetime | None = None
+    prepare_clearance: bool
+    reason: Literal[
+        "not_yet_time_to_prepare",
+        "clearance_preparation_required",
+        "current_order_completed",
+        "current_order_capacity_unavailable",
+    ]
+    message: str
+    next_order_code: str | None = None
+
+
+class AlgorithmDepletionTimeResult(BaseModel):
+    """新版算法按订单区间计算的断料时间。"""
+
+    buffer_code: str
+    order_code: str
+    wafer_size: str
+    wafer_spec: str
+    workshop_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    current_quantity: float = Field(..., ge=0)
+    upstream_output_rate: float = Field(..., ge=0)
+    downstream_input_rate: float = Field(..., ge=0)
+    net_consumption_rate: float
+    depletion_minutes: float | None = Field(..., ge=0)
+
+
+class AlgorithmOrderGrowthDetail(BaseModel):
+    """单个订单对物理 Buffer 库存增长速率的贡献明细。"""
+
+    order_code: str
+    wafer_size: str
+    wafer_spec: str
+    current_quantity: float = Field(..., ge=0)
+    upstream_output_rate: float = Field(..., ge=0)
+    downstream_input_rate: float = Field(..., ge=0)
+    net_consumption_rate: float
+    growth_rate: float
+
+
+class AlgorithmBufferOverflowTimeResult(BaseModel):
+    """新版算法按物理 Buffer 汇总计算的溢满时间。"""
+
+    buffer_code: str
+    workshop_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    max_capacity: float = Field(..., gt=0)
+    total_inventory: float = Field(..., ge=0)
+    remaining_capacity: float
+    buffer_growth_rate: float
+    overflow_minutes: float | None = Field(..., ge=0)
+    order_growth_details: list[AlgorithmOrderGrowthDetail] = Field(
+        default_factory=list
+    )
+
+
+class AlgorithmStockoutWarningResult(BaseModel):
+    """新版算法按订单工序区间生成的断料预警。"""
+
+    warning_type: Literal["stockout"] = "stockout"
+    warning_time: datetime
+    buffer_code: str
+    order_code: str
+    wafer_size: str
+    wafer_spec: str
+    workshop_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    current_quantity: float = Field(..., ge=0)
+    upstream_output_rate: float = Field(..., ge=0)
+    downstream_input_rate: float = Field(..., ge=0)
+    net_consumption_rate: float
+    depletion_minutes: float = Field(..., ge=0)
+    stockout_warning_lead_minutes: float = Field(..., gt=0)
+
+
+class AlgorithmOverflowWarningResult(BaseModel):
+    """新版算法按物理 Buffer 生成的溢满预警。"""
+
+    warning_type: Literal["overflow"] = "overflow"
+    warning_time: datetime
+    buffer_code: str
+    workshop_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    max_capacity: float = Field(..., gt=0)
+    total_inventory: float = Field(..., ge=0)
+    remaining_capacity: float
+    buffer_growth_rate: float
+    overflow_minutes: float = Field(..., ge=0)
+    overflow_warning_lead_minutes: float = Field(..., gt=0)
+    order_growth_details: list[AlgorithmOrderGrowthDetail] = Field(
+        default_factory=list
+    )
+
+
+class AlgorithmStockoutCandidateMachine(BaseModel):
+    """新版断料预警的单台候选机台。"""
+
+    machine_code: str
+    machine_name: str
+    status: str
+    workshop_code: str
+    process_code: str
+    process_name: str
+    current_order_code: str
+    current_product_code: str
+    current_wafer_size: str
+    current_wafer_spec: str
+    current_source_grade: str
+    target_order_code: str
     target_product_code: str
-    wafer_size: Optional[str] = None
-    shape_code: Optional[str] = None
-    current_output_rate_per_hour: float
-    contribution_capacity_per_hour: Optional[float] = None
-    utilization_rate: Optional[float] = None
-    idle_rate: Optional[float] = None
-    reason: str
+    target_wafer_size: str
+    target_wafer_spec: str
+    target_source_grade: str
+    input_quantity_30m: float = Field(..., ge=0)
+    output_quantity_30m: float = Field(..., ge=0)
+    current_output_rate_per_hour: float = Field(..., ge=0)
+    contribution_capacity: float = Field(..., ge=0)
+    utilization_rate: float
+    idle_rate: float
 
 
-class CandidateResult(BaseModel):
-    """单个预警的候选机台查找结果。"""
+class AlgorithmStockoutCandidateResult(BaseModel):
+    """新版断料预警的候选机台筛选结果。"""
 
+    warning_type: Literal["stockout"] = "stockout"
+    workshop_code: str
     buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    candidate_found: bool
-    candidate_status: str
-    reason: Optional[str] = None
-    candidates: List[CandidateMachine] = Field(default_factory=list)
+    warning_order_code: str
+    target_product_code: str
+    target_wafer_size: str
+    target_wafer_spec: str
+    target_source_grade: str
+    upstream_process_code: str
+    downstream_process_code: str
+    capacity_gap: float
+    candidates: list[AlgorithmStockoutCandidateMachine] = Field(
+        default_factory=list
+    )
 
 
-class OverflowTimeResult(BaseModel):
-    """Overflow time calculation result."""
+class AlgorithmOverflowTargetOption(BaseModel):
+    """新版溢满来源机台可切入的单个目标订单。"""
 
-    buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    segment_inventory: float
-    segment_capacity: float
-    net_rate_per_hour: float
-    overflow_minutes: Optional[float] = None
-    cutline_lead_minutes: float
+    target_order_code: str
+    target_product_code: str
+    target_wafer_size: str
+    target_wafer_spec: str
+    target_source_grade: str
+    target_buffer_code: str | None = None
+    target_workshop_code: str | None = None
+    target_upstream_process_code: str | None = None
+    target_downstream_process_code: str | None = None
+    capacity_gap: float
+    estimated_contribution_capacity: float = Field(..., ge=0)
 
 
-class OverflowWarningResult(BaseModel):
-    """段级溢满预警评估结果。"""
+class AlgorithmOverflowCandidateMachine(BaseModel):
+    """新版溢满预警的单台来源候选机台。"""
 
-    buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    warning_type: str = "overflow"
-    warning_triggered: bool
-    reason: str
-    segment_inventory: float
-    segment_capacity: float
-    net_rate_per_hour: float
-    overflow_minutes: Optional[float] = None
-    cutline_lead_minutes: float
-
-
-class PlanResult(BaseModel):
-    """切线方案（断料/溢满共用）。"""
-
-    buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    warning_type: str
-    selected_machines: List[CandidateMachine] = Field(default_factory=list)
-    total_contribution_capacity: float = 0.0
-    remaining_capacity_gap: Optional[float] = None
-    requires_silk_screen_clear: bool = False
-    silk_screen_clear_minutes: Optional[float] = None
-
-
-class ManualInterventionResult(BaseModel):
-    """未补足/无候选的人工介入结果。"""
-
-    buffer_code: str
-    cycle_code: Optional[str] = None
-    cycle_name: Optional[str] = None
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    process_from: str
-    process_to: Optional[str] = None
-    warning_type: str
-    required_capacity: float
-    reason: str
-    candidates: List[CandidateMachine] = Field(default_factory=list)
-
-
-class ReturnResult(BaseModel):
-    """单个被跟踪切线事件的切回判断结果。"""
-
-    equipment_code: str
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
-    product_code: str
-    original_product_code: Optional[str] = None
-    buffer_code: Optional[str] = None
-    process_from: Optional[str] = None
-    process_to: Optional[str] = None
-    net_rate_per_hour: Optional[float] = None
-    inventory_quantity: Optional[float] = None
-    negative_start_time: Optional[datetime] = None
-    negative_duration_minutes: Optional[float] = None
-    safety_inventory_quantity: Optional[float] = None
-    triggered: bool = False
-
-
-class SilkScreenOrderResult(BaseModel):
-    """丝网订单进度触发的清台准备预警。"""
-
-    equipment_code: str
-    workshop_code: Optional[str] = None
-    workshop_name: Optional[str] = None
+    machine_code: str
+    machine_name: str
+    status: str
+    workshop_code: str
     process_code: str
-    product_code: Optional[str] = None
-    order_code: Optional[str] = None
-    warning_type: str = "silk_screen_order"
-    remaining_quantity: float
-    completion_time: datetime
-    preparation_time: datetime
-    silk_screen_clear_minutes: float
-    triggered: bool
+    process_name: str
+    current_order_code: str
+    current_product_code: str
+    current_wafer_size: str
+    current_wafer_spec: str
+    current_source_grade: str
+    input_quantity_30m: float = Field(..., ge=0)
+    output_quantity_30m: float = Field(..., ge=0)
+    current_output_rate_per_hour: float = Field(..., ge=0)
+    reduced_capacity: float = Field(..., ge=0)
+    utilization_rate: float
+    idle_rate: float
+    target_options: list[AlgorithmOverflowTargetOption] = Field(
+        default_factory=list
+    )
+
+
+class AlgorithmOverflowCandidateResult(BaseModel):
+    """新版物理 Buffer 溢满预警的候选机台筛选结果。"""
+
+    warning_type: Literal["overflow"] = "overflow"
+    workshop_code: str
+    buffer_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    source_order_code: str
+    source_product_code: str
+    source_wafer_size: str
+    source_wafer_spec: str
+    source_source_grade: str
+    source_growth_rate: float
+    source_net_consumption_rate: float
+    candidates: list[AlgorithmOverflowCandidateMachine] = Field(
+        default_factory=list
+    )
+
+
+class AlgorithmRejectedMachineEvaluation(BaseModel):
+    """新版逐台模拟中未通过影响校验的机台诊断结果。"""
+
+    machine_code: str
+    reason: str
+    source_order_code: str
+    target_order_code: str | None = None
+    source_buffer_code: str | None = None
+    target_buffer_code: str | None = None
+    source_net_rate_before: float | None = None
+    source_net_rate_after: float | None = None
+    source_depletion_minutes_after: float | None = Field(default=None, ge=0)
+    target_net_rate_before: float | None = None
+    target_net_rate_after: float | None = None
+    target_overflow_minutes_after: float | None = Field(default=None, ge=0)
+    message: str | None = None
+
+
+class AlgorithmSelectedMachineEvaluation(BaseModel):
+    """新版逐台模拟中通过全部影响校验的单台机台结果。"""
+
+    machine_code: str
+    source_order_code: str
+    target_order_code: str
+    source_buffer_code: str
+    target_buffer_code: str
+    process_code: str
+    workshop_code: str
+    wafer_size: str
+    source_wafer_spec: str
+    target_wafer_spec: str
+    contribution_capacity: float | None = Field(default=None, ge=0)
+    reduced_capacity: float | None = Field(default=None, ge=0)
+    utilization_rate: float
+    idle_rate: float
+    source_net_rate_before: float
+    source_net_rate_after: float
+    source_depletion_minutes_after: float | None = Field(default=None, ge=0)
+    target_net_rate_before: float
+    target_net_rate_after: float
+    target_overflow_minutes_after: float | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_capacity_kind(self):
+        has_contribution = self.contribution_capacity is not None
+        has_reduction = self.reduced_capacity is not None
+        if has_contribution == has_reduction:
+            raise ValueError(
+                "selected machine must provide exactly one capacity kind"
+            )
+        return self
+
+
+class AlgorithmStockoutSelectionResult(BaseModel):
+    """新版断料候选逐台影响模拟和累计选机结果。"""
+
+    warning_type: Literal["stockout"] = "stockout"
+    workshop_code: str
+    buffer_code: str
+    order_code: str
+    wafer_size: str
+    wafer_spec: str
+    upstream_process_code: str
+    downstream_process_code: str
+    initial_capacity_gap: float
+    total_contribution_capacity: float = Field(..., ge=0)
+    remaining_capacity_gap: float = Field(..., ge=0)
+    selected_machines: list[AlgorithmSelectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+    rejected_machines: list[AlgorithmRejectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+    risk_resolved: bool
+    failure_reason: str | None = None
+
+    @model_validator(mode="after")
+    def validate_selection_state(self):
+        if any(
+            item.contribution_capacity is None
+            for item in self.selected_machines
+        ):
+            raise ValueError(
+                "stockout selected machines require contribution capacity"
+            )
+        if self.risk_resolved and self.remaining_capacity_gap > 0:
+            raise ValueError(
+                "resolved stockout selection cannot have a remaining capacity gap"
+            )
+        if not self.risk_resolved and self.remaining_capacity_gap <= 0:
+            raise ValueError(
+                "unresolved stockout selection requires a remaining capacity gap"
+            )
+        self._validate_failure_reason()
+        return self
+
+    def _validate_failure_reason(self) -> None:
+        if self.risk_resolved and self.failure_reason is not None:
+            raise ValueError("resolved selection cannot have a failure reason")
+        if not self.risk_resolved and not self.failure_reason:
+            raise ValueError("unresolved selection requires a failure reason")
+
+
+class AlgorithmOverflowSelectionResult(BaseModel):
+    """新版溢满候选逐台影响模拟和累计选机结果。"""
+
+    warning_type: Literal["overflow"] = "overflow"
+    workshop_code: str
+    buffer_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    source_order_code: str
+    source_wafer_size: str
+    source_wafer_spec: str
+    initial_growth_rate: float
+    total_reduced_capacity: float = Field(..., ge=0)
+    remaining_growth_rate: float
+    updated_overflow_minutes: float | None = Field(default=None, ge=0)
+    selected_machines: list[AlgorithmSelectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+    rejected_machines: list[AlgorithmRejectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+    risk_resolved: bool
+    failure_reason: str | None = None
+
+    @model_validator(mode="after")
+    def validate_selection_state(self):
+        if any(
+            item.reduced_capacity is None
+            for item in self.selected_machines
+        ):
+            raise ValueError(
+                "overflow selected machines require reduced capacity"
+            )
+        if self.risk_resolved and self.failure_reason is not None:
+            raise ValueError("resolved selection cannot have a failure reason")
+        if not self.risk_resolved and not self.failure_reason:
+            raise ValueError("unresolved selection requires a failure reason")
+        return self
+
+
+class AlgorithmStockoutCutlinePlan(BaseModel):
+    """风险完全解除后生成的新版断料正式切线方案。"""
+
+    plan_id: str
+    warning_type: Literal["stockout"] = "stockout"
+    calculation_time: datetime
+    workshop_code: str
+    buffer_code: str
+    order_code: str
+    wafer_size: str
+    wafer_spec: str
+    upstream_process_code: str
+    downstream_process_code: str
+    initial_capacity_gap: float
+    total_contribution_capacity: float = Field(..., ge=0)
+    remaining_capacity_gap: float = Field(..., ge=0)
+    selected_machines: list[AlgorithmSelectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+    risk_resolved: Literal[True] = True
+    manual_intervention_required: Literal[False] = False
+
+
+class AlgorithmOverflowCutlinePlan(BaseModel):
+    """风险完全解除后生成的新版溢满正式切线方案。"""
+
+    plan_id: str
+    warning_type: Literal["overflow"] = "overflow"
+    calculation_time: datetime
+    workshop_code: str
+    buffer_code: str
+    source_order_code: str
+    source_wafer_size: str
+    source_wafer_spec: str
+    upstream_process_code: str
+    downstream_process_code: str
+    initial_growth_rate: float
+    total_reduced_capacity: float = Field(..., ge=0)
+    remaining_growth_rate: float
+    updated_overflow_minutes: float | None = Field(default=None, ge=0)
+    selected_machines: list[AlgorithmSelectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+    risk_resolved: Literal[True] = True
+    manual_intervention_required: Literal[False] = False
+
+
+class AlgorithmManualInterventionResult(BaseModel):
+    """新版风险未完全解除时输出的人工介入诊断结果。"""
+
+    warning_type: Literal["stockout", "overflow"]
+    warning_time: datetime
+    workshop_code: str
+    buffer_code: str
+    order_code: str | None = None
+    source_order_code: str | None = None
+    wafer_size: str
+    wafer_spec: str
+    upstream_process_code: str
+    downstream_process_code: str
+    manual_intervention_required: Literal[True] = True
+    risk_resolved: Literal[False] = False
+    reason: str
+    initial_risk_value: float
+    remaining_risk_value: float
+    evaluated_candidate_count: int = Field(..., ge=0)
+    passed_candidate_count: int = Field(..., ge=0)
+    rejected_candidate_count: int = Field(..., ge=0)
+    passed_machines: list[AlgorithmSelectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+    rejected_machines: list[AlgorithmRejectedMachineEvaluation] = Field(
+        default_factory=list
+    )
+
+
+class AlgorithmCutlineDecisionResult(BaseModel):
+    """新版正式方案与人工介入二选一的统一决策结果。"""
+
+    plan: AlgorithmStockoutCutlinePlan | AlgorithmOverflowCutlinePlan | None
+    manual_intervention: AlgorithmManualInterventionResult | None
+
+    @model_validator(mode="after")
+    def validate_exactly_one_result(self):
+        if (self.plan is None) == (self.manual_intervention is None):
+            raise ValueError(
+                "exactly one of plan or manual_intervention must be present"
+            )
+        return self
+
+
+AlgorithmCutlinePlan = AlgorithmStockoutCutlinePlan | AlgorithmOverflowCutlinePlan
+
+
+class AlgorithmMixingComposition(BaseModel):
+    """单个切线前后产品在预计混料中的片数组成。"""
+
+    order_code: str
+    product_code: str
+    sequence: int = Field(..., ge=1)
+    estimated_pieces: int = Field(..., ge=0)
+
+
+class AlgorithmMixingTraceRecord(BaseModel):
+    """正式切线方案中单台机台的精简混料追溯记录。"""
+
+    mix_trace_id: str
+    plan_id: str
+    cutline_event_id: str
+    machine_code: str
+    workshop_code: str
+    process_code: str
+    process_name: str
+    source_order_code: str
+    target_order_code: str
+    source_product_code: str
+    target_product_code: str
+    mix_start_time: datetime
+    mixed_basket_start_index: int = Field(..., ge=1)
+    mixed_basket_end_index: int = Field(..., ge=1)
+    mixed_basket_count: int = Field(..., ge=1)
+    estimated_total_mixed_pieces: int = Field(..., ge=1)
+    compositions: list[AlgorithmMixingComposition]
+    notification_status: Literal["scheduled", "due"]
+
+
+class AlgorithmMixingTraceFailure(BaseModel):
+    """正式方案中单台机台无法生成混料追溯记录的原因。"""
+
+    plan_id: str
+    cutline_event_id: str
+    machine_code: str
+    source_order_code: str
+    target_order_code: str
+    reason: str
+    message: str
+
+
+class AlgorithmMixingTraceBatchResult(BaseModel):
+    """一份正式切线方案中所有机台的混料追溯计算结果。"""
+
+    records: list[AlgorithmMixingTraceRecord] = Field(default_factory=list)
+    failures: list[AlgorithmMixingTraceFailure] = Field(default_factory=list)
+
+
+class AlgorithmPipelineError(BaseModel):
+    """新版算法单个阶段或单条预警的可隔离执行错误。"""
+
+    stage: str
+    warning_type: str | None = None
+    warning_key: str | None = None
+    reason: str
+    message: str
+
+
+class AlgorithmEvaluateResult(BaseModel):
+    """承接所有新版算法模块产物的统一总结果。"""
+
+    calculation_time: datetime
+    net_rate_results: list[AlgorithmIntervalNetRateResult] = Field(
+        default_factory=list
+    )
+    depletion_results: list[AlgorithmDepletionTimeResult] = Field(
+        default_factory=list
+    )
+    overflow_time_results: list[AlgorithmBufferOverflowTimeResult] = Field(
+        default_factory=list
+    )
+    stockout_warnings: list[AlgorithmStockoutWarningResult] = Field(
+        default_factory=list
+    )
+    overflow_warnings: list[AlgorithmOverflowWarningResult] = Field(
+        default_factory=list
+    )
+    cutline_decisions: list[AlgorithmCutlineDecisionResult] = Field(
+        default_factory=list
+    )
+    return_results: list[AlgorithmReturnResult] = Field(default_factory=list)
+    new_active_cutline_events: list[AlgorithmActiveCutlineEvent] = Field(
+        default_factory=list
+    )
+    updated_active_cutline_events: list[AlgorithmActiveCutlineEvent] = Field(
+        default_factory=list
+    )
+    silk_screen_results: list[AlgorithmSilkScreenTransitionResult] = Field(
+        default_factory=list
+    )
+    mixing_trace_records: list[AlgorithmMixingTraceRecord] = Field(
+        default_factory=list
+    )
+    mixing_trace_failures: list[AlgorithmMixingTraceFailure] = Field(
+        default_factory=list
+    )
+    errors: list[AlgorithmPipelineError] = Field(default_factory=list)

@@ -1,0 +1,13 @@
+{
+  "calculation_time": "2026-07-16T08:00:00+08:00",
+  "stockout_warnings": [],
+  "overflow_warnings": [],
+  "cutline_decisions": [],
+  "return_results": [],
+  "silk_screen_results": [],
+  "mixing_trace_records": [],
+  "mixing_trace_failures": [],
+  "new_active_cutline_events": [],
+  "updated_active_cutline_events": [],
+  "errors": []
+}

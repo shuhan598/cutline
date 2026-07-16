@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "message": "",
+  "warnings": [],
+  "plans": [],
+  "manual_interventions": [],
+  "return_suggestions": [
+    {
+      "suggestion_id": null,
+      "suggestion_time": "2026-06-25T10:40:00",
+      "equipment_code": "zr03",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop",
+      "product_code": "HG182T",
+      "original_product_code": "HG182R",
+      "buffer_code": "BUF_ZR_PK",
+      "upstream_process_code": "ZR",
+      "downstream_process_code": "PK",
+      "negative_start_time": "2026-06-25T10:10:00",
+      "negative_duration_minutes": 30.0,
+      "inventory_quantity": 6000.0,
+      "safety_inventory_quantity": 2000.0,
+      "net_rate": -4000.0,
+      "message": null
+    }
+  ],
+  "tracked_events": [
+    {
+      "equipment_code": "zr03",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop",
+      "cut_time": "2026-06-25T10:00:00",
+      "previous_product_code": "HG182R",
+      "next_product_code": "HG182T",
+      "negative_start_time": "2026-06-25T10:10:00",
+      "event_id": null,
+      "source_plan_id": null
+    }
+  ]
+}

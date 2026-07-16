@@ -1,77 +1,46 @@
-# 耗尽时间计算组件：吃 snapshot + list[NetRateResult]，吐 list[DepletionResult]
+# 断料时间组件：输入 AlgorithmIntervalNetRateResult 列表，输出 AlgorithmDepletionTimeResult 列表
 
-from app.schemas.request_schema import CutlineSnapshot
-from app.schemas.result_schema import DepletionResult, NetRateResult
-from app.utils.numeric import safe_float
+from app.schemas.result_schema import (
+    AlgorithmDepletionTimeResult,
+    AlgorithmIntervalNetRateResult,
+)
 
 
 class DepletionTimeCalculator:
     """按净速率与区间库存推算耗尽时间（分钟）。"""
 
-    def calculate(
+    def calculate_algorithm(
         self,
-        snapshot: CutlineSnapshot,
-        net_rates: list[NetRateResult],
-    ) -> list[DepletionResult]:
-        return [self._for_segment(snapshot, net_rate) for net_rate in net_rates]
+        net_rate_results: list[AlgorithmIntervalNetRateResult],
+    ) -> list[AlgorithmDepletionTimeResult]:
+        return [
+            self._for_algorithm_interval(net_rate)
+            for net_rate in net_rate_results
+        ]
 
-    def _for_segment(
+    def _for_algorithm_interval(
         self,
-        snapshot: CutlineSnapshot,
-        net_rate: NetRateResult,
-    ) -> DepletionResult:
-        inventory_quantity = self._inventory_quantity(
-            snapshot,
-            net_rate.cycle_code,
-            net_rate.buffer_code,
-            net_rate.product_code,
-            net_rate.process_from,
-            net_rate.process_to,
-        )
-        net_rate_per_hour = safe_float(net_rate.net_rate_per_hour)
-
+        net_rate: AlgorithmIntervalNetRateResult,
+    ) -> AlgorithmDepletionTimeResult:
         depletion_minutes = None
-        if net_rate_per_hour > 0:
-            depletion_minutes = inventory_quantity / net_rate_per_hour * 60
-            depletion_status = "decreasing"
-        elif net_rate_per_hour == 0:
-            depletion_status = "stable"
-        else:
-            depletion_status = "increasing"
+        if net_rate.net_consumption_rate > 0:
+            depletion_minutes = (
+                net_rate.current_quantity
+                / net_rate.net_consumption_rate
+                * 60
+            )
 
-        return DepletionResult(
+        return AlgorithmDepletionTimeResult(
             buffer_code=net_rate.buffer_code,
-            cycle_code=net_rate.cycle_code,
-            cycle_name=net_rate.cycle_name,
+            order_code=net_rate.order_code,
+            wafer_size=net_rate.wafer_size,
+            wafer_spec=net_rate.wafer_spec,
             workshop_code=net_rate.workshop_code,
-            workshop_name=net_rate.workshop_name,
-            product_code=net_rate.product_code,
-            process_from=net_rate.process_from,
-            process_to=net_rate.process_to,
-            inventory_quantity=inventory_quantity,
-            net_rate_per_hour=net_rate_per_hour,
+            upstream_process_code=net_rate.upstream_process_code,
+            downstream_process_code=net_rate.downstream_process_code,
+            current_quantity=net_rate.current_quantity,
+            upstream_output_rate=net_rate.upstream_output_rate,
+            downstream_input_rate=net_rate.downstream_input_rate,
+            net_consumption_rate=net_rate.net_consumption_rate,
             depletion_minutes=depletion_minutes,
-            depletion_status=depletion_status,
         )
-
-    def _inventory_quantity(
-        self,
-        snapshot: CutlineSnapshot,
-        cycle_code,
-        buffer_code,
-        product_code,
-        process_from,
-        process_to,
-    ) -> float:
-        total = 0.0
-        for inventory in snapshot.buffer_inventories:
-            if cycle_code is not None and inventory.cycle_code != cycle_code:
-                continue
-            if (
-                inventory.buffer_code == buffer_code
-                and inventory.product_code == product_code
-                and inventory.process_from == process_from
-                and inventory.process_to == process_to
-            ):
-                total += safe_float(inventory.inventory_quantity)
-        return total

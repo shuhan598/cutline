@@ -1,45 +1,106 @@
-from app.schemas.request_schema import CutlineSnapshot
-from app.schemas.result_schema import OverflowTimeResult, OverflowWarningResult
+from app.core.warning.errors import WarningEvaluationError
+from app.schemas.request_schema import AlgorithmSnapshot
+from app.schemas.result_schema import (
+    AlgorithmBufferOverflowTimeResult,
+    AlgorithmOverflowWarningResult,
+)
+from app.utils.numeric import safe_float
 
 
 class OverflowWarningEvaluator:
-    """判断溢满警告<=cutline_lead_minutes的组件"""
+    """判断溢满警告是否进入 overflow_warning_lead_minutes 窗口。"""
 
-    def evaluate(
+    def evaluate_algorithm(
         self,
-        snapshot: CutlineSnapshot,
-        overflow_times: list[OverflowTimeResult],
-    ) -> list[OverflowWarningResult]:
-        results = []
-        for overflow_time in overflow_times:
-            if (
-                overflow_time.overflow_minutes is not None
-                and overflow_time.overflow_minutes <= overflow_time.cutline_lead_minutes
-            ):
-                triggered = True
-                reason = "overflow_time_within_lead_time"
-            else:
-                triggered = False
-                reason = "overflow_time_beyond_lead_time"
+        snapshot: AlgorithmSnapshot,
+        overflow_results: list[AlgorithmBufferOverflowTimeResult],
+    ) -> list[AlgorithmOverflowWarningResult]:
+        overflow_warning_lead_minutes = safe_float(
+            snapshot.config.overflow_warning_lead_minutes
+        )
+        if overflow_warning_lead_minutes <= 0:
+            raise WarningEvaluationError(
+                "overflow warning lead cannot be zero, negative, or non-finite"
+            )
 
-            results.append(
-                OverflowWarningResult(
-                    buffer_code=overflow_time.buffer_code,
-                    cycle_code=overflow_time.cycle_code,
-                    cycle_name=overflow_time.cycle_name,
-                    workshop_code=overflow_time.workshop_code,
-                    workshop_name=overflow_time.workshop_name,
-                    product_code=overflow_time.product_code,
-                    process_from=overflow_time.process_from,
-                    process_to=overflow_time.process_to,
+        warnings: list[AlgorithmOverflowWarningResult] = []
+        seen_buffer_codes: set[str] = set()
+        for overflow in overflow_results:
+            self._validate_algorithm_overflow(overflow)
+            if overflow.buffer_code in seen_buffer_codes:
+                raise WarningEvaluationError(
+                    f"{overflow.buffer_code} duplicate overflow warning input"
+                )
+            seen_buffer_codes.add(overflow.buffer_code)
+
+            if (
+                overflow.overflow_minutes is None
+                or overflow.overflow_minutes
+                > overflow_warning_lead_minutes
+            ):
+                continue
+
+            warnings.append(
+                AlgorithmOverflowWarningResult(
                     warning_type="overflow",
-                    warning_triggered=triggered,
-                    reason=reason,
-                    segment_inventory=overflow_time.segment_inventory,
-                    segment_capacity=overflow_time.segment_capacity,
-                    net_rate_per_hour=overflow_time.net_rate_per_hour,
-                    overflow_minutes=overflow_time.overflow_minutes,
-                    cutline_lead_minutes=overflow_time.cutline_lead_minutes,
+                    warning_time=snapshot.current_time,
+                    buffer_code=overflow.buffer_code,
+                    workshop_code=overflow.workshop_code,
+                    upstream_process_code=overflow.upstream_process_code,
+                    downstream_process_code=overflow.downstream_process_code,
+                    max_capacity=overflow.max_capacity,
+                    total_inventory=overflow.total_inventory,
+                    remaining_capacity=overflow.remaining_capacity,
+                    buffer_growth_rate=overflow.buffer_growth_rate,
+                    overflow_minutes=overflow.overflow_minutes,
+                    overflow_warning_lead_minutes=(
+                        overflow_warning_lead_minutes
+                    ),
+                    order_growth_details=[
+                        detail.model_copy(deep=True)
+                        for detail in overflow.order_growth_details
+                    ],
                 )
             )
-        return results
+
+        return sorted(
+            warnings,
+            key=lambda warning: (
+                warning.overflow_minutes,
+                warning.workshop_code,
+                warning.buffer_code,
+                warning.upstream_process_code,
+                warning.downstream_process_code,
+            ),
+        )
+
+    def _validate_algorithm_overflow(
+        self,
+        overflow: AlgorithmBufferOverflowTimeResult,
+    ) -> None:
+        context = (
+            f"workshop={getattr(overflow, 'workshop_code', None)}, "
+            f"buffer={overflow.buffer_code}, "
+            f"interval={getattr(overflow, 'upstream_process_code', None)}"
+            f"->{getattr(overflow, 'downstream_process_code', None)}"
+        )
+        required_codes = (
+            "workshop_code",
+            "buffer_code",
+            "upstream_process_code",
+            "downstream_process_code",
+        )
+        for field_name in required_codes:
+            value = getattr(overflow, field_name, None)
+            if not isinstance(value, str) or not value.strip():
+                raise WarningEvaluationError(
+                    f"{context} missing or blank {field_name}"
+                )
+
+        if (
+            overflow.overflow_minutes is not None
+            and overflow.overflow_minutes < 0
+        ):
+            raise WarningEvaluationError(
+                f"{context} overflow minutes cannot be negative"
+            )

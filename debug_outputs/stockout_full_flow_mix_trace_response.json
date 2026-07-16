@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "message": "",
+  "notifications": [
+    {
+      "notification_id": null,
+      "source_equipment_code": "zr03",
+      "workshop_code": "S2",
+      "workshop_name": "S2 workshop",
+      "cut_time": "2026-06-25T10:00:00",
+      "previous_product_code": "HG182R",
+      "next_product_code": "HG182T",
+      "mix_start_time": "2026-06-25T10:24:12",
+      "mix_basket_count": 2,
+      "estimated_total_quantity": 240.0,
+      "product_compositions": [
+        {
+          "product_code": "HG182R",
+          "sequence_no": 1,
+          "estimated_quantity": 120.0
+        },
+        {
+          "product_code": "HG182T",
+          "sequence_no": 2,
+          "estimated_quantity": 120.0
+        }
+      ],
+      "status": "arrived",
+      "message": null
+    }
+  ]
+}

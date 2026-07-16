@@ -1,179 +1,276 @@
 # 溢满切走候选池：在产工序i、生产预警型号X、存在同尺寸同形状且有缺口的目标型号Y
 
-from typing import List
-
-from app.core.candidate_machine.product_compatibility import ProductCompatibilityChecker
-from app.core.candidate_machine.workshop_scope import WorkshopScopeChecker
-from app.core.net_rate.rate_strategy import RateStrategy
-from app.core.workshop.workshop_resolver import WorkshopResolver
-from app.schemas.request_schema import CutlineSnapshot
+from app.core.candidate_machine.candidate_context import CandidateContext
+from app.core.candidate_machine.errors import CandidateMachineCalculationError
+from app.core.candidate_machine.machine_load import (
+    calculate_hourly_output,
+    calculate_runtime_load,
+)
+from app.core.candidate_machine.product_compatibility import (
+    is_source_grade_compatible,
+    is_wafer_spec_compatible,
+)
+from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (
-    CandidateMachine,
-    CandidateResult,
-    NetRateResult,
-    OverflowWarningResult,
+    AlgorithmIntervalNetRateResult,
+    AlgorithmOrderGrowthDetail,
+    AlgorithmOverflowCandidateMachine,
+    AlgorithmOverflowCandidateResult,
+    AlgorithmOverflowTargetOption,
+    AlgorithmOverflowWarningResult,
 )
 
 
 class OverflowCandidateFinder:
     """为触发的溢满预警查找可切走的在产机台及其目标型号Y。"""
 
-    def __init__(self, rate_strategy: RateStrategy):
-        self._rate_strategy = rate_strategy
-
-    def find(
+    def find_algorithm(
         self,
-        snapshot: CutlineSnapshot,
-        warnings: List[OverflowWarningResult],
-        net_rates: List[NetRateResult],
-    ) -> List[CandidateResult]:
-        triggered = [w for w in warnings if w.warning_triggered]
-        model_map = {m.product_code: m for m in snapshot.product_models}
-        workshop_resolver = WorkshopResolver(snapshot)
-        gap_map = {
-            (
-                workshop_resolver.normalize_code(n.workshop_code),
-                n.buffer_code,
-                n.product_code,
-                n.process_from,
-                n.process_to,
-            ): n.net_rate_per_hour
-            for n in net_rates
-        }
-        compatibility_checker = ProductCompatibilityChecker(snapshot)
-        workshop_scope_checker = WorkshopScopeChecker(snapshot)
-
-        results = []
-        for warning in triggered:
-            warning_workshop_code, warning_workshop_name = (
-                workshop_scope_checker.resolve_warning_workshop(warning)
+        snapshot: AlgorithmSnapshot,
+        warnings: list[AlgorithmOverflowWarningResult],
+        interval_results: list[AlgorithmIntervalNetRateResult] | None = None,
+    ) -> list[AlgorithmOverflowCandidateResult]:
+        context = CandidateContext(snapshot)
+        return [
+            self._for_algorithm_warning(
+                warning,
+                context,
+                interval_results or [],
             )
-            candidates = []
-            for machine in snapshot.machine_statuses:
-                if machine.status != "running":
-                    continue
-                if machine.process_code != warning.process_from:
-                    continue
-                if machine.product_code != warning.product_code:
-                    continue
-                if not workshop_scope_checker.is_same_workshop(machine, warning):
-                    continue
+            for warning in warnings
+        ]
 
-                target_y = self._first_target_with_gap(
-                    warning,
-                    model_map,
-                    gap_map,
-                    compatibility_checker,
-                    machine,
-                    workshop_resolver.normalize_code(warning_workshop_code),
-                )
-                if target_y is None:
-                    continue
-
-                y_model = model_map.get(target_y)
-                current_output = self._rate_strategy.output_rate(machine)
-                current_capacity = self._actual_capacity(
-                    snapshot, machine.equipment_code, machine.product_code
-                )
-                if current_capacity and current_capacity > 0:
-                    utilization_rate = current_output / current_capacity
-                else:
-                    utilization_rate = None
-                machine_workshop_code, machine_workshop_name = (
-                    workshop_scope_checker.resolve_machine_workshop(machine)
-                )
-                candidates.append(
-                    CandidateMachine(
-                        equipment_code=machine.equipment_code,
-                        equipment_name=machine.equipment_name,
-                        workshop_code=machine_workshop_code,
-                        workshop_name=machine_workshop_name,
-                        process_code=machine.process_code,
-                        current_product_code=machine.product_code,
-                        target_product_code=target_y,
-                        wafer_size=y_model.wafer_size if y_model else None,
-                        shape_code=y_model.shape_code if y_model else None,
-                        current_output_rate_per_hour=current_output,
-                        contribution_capacity_per_hour=self._actual_capacity(
-                            snapshot, machine.equipment_code, target_y
-                        ),
-                        utilization_rate=utilization_rate,
-                        reason="overflow_switch_away_to_target_with_gap",
-                    )
-                )
-
-            if candidates:
-                results.append(
-                    CandidateResult(
-                        buffer_code=warning.buffer_code,
-                        cycle_code=warning.cycle_code,
-                        cycle_name=warning.cycle_name,
-                        workshop_code=warning_workshop_code,
-                        workshop_name=warning_workshop_name,
-                        product_code=warning.product_code,
-                        process_from=warning.process_from,
-                        process_to=warning.process_to,
-                        candidate_found=True,
-                        candidate_status="candidate_found",
-                        reason=None,
-                        candidates=candidates,
-                    )
-                )
-            else:
-                results.append(
-                    CandidateResult(
-                        buffer_code=warning.buffer_code,
-                        cycle_code=warning.cycle_code,
-                        cycle_name=warning.cycle_name,
-                        workshop_code=warning_workshop_code,
-                        workshop_name=warning_workshop_name,
-                        product_code=warning.product_code,
-                        process_from=warning.process_from,
-                        process_to=warning.process_to,
-                        candidate_found=False,
-                        candidate_status="manual_intervention_required",
-                        reason="no_target_model_with_capacity_gap",
-                        candidates=[],
-                    )
-                )
-        return results
-
-    def _first_target_with_gap(
+    def _for_algorithm_warning(
         self,
-        warning,
-        model_map,
-        gap_map,
-        compatibility_checker,
-        machine,
-        warning_workshop_code,
-    ):
-        source_model = model_map.get(warning.product_code)
-        if source_model is None:
-            return None
-        for product_code, model in model_map.items():
-            if product_code == warning.product_code:
+        warning: AlgorithmOverflowWarningResult,
+        context: CandidateContext,
+        interval_results: list[AlgorithmIntervalNetRateResult],
+    ) -> AlgorithmOverflowCandidateResult:
+        context.validate_warning_relation(warning)
+        source_detail = self._select_source_detail(warning)
+        source_order, source_product = context.order_product(
+            source_detail.order_code
+        )
+        if source_product.wafer_size != source_detail.wafer_size:
+            raise CandidateMachineCalculationError(
+                f"{source_order.order_code} source detail wafer_size "
+                f"{source_detail.wafer_size} does not match source product "
+                f"wafer_size {source_product.wafer_size}"
+            )
+
+        candidates: list[AlgorithmOverflowCandidateMachine] = []
+        for runtime in context.runtime_by_machine_code.values():
+            if runtime.status != "running":
                 continue
-            if not compatibility_checker.is_compatible(
-                machine,
-                source_model,
-                model,
+            if runtime.current_order_code != source_detail.order_code:
+                continue
+
+            _, machine, line = context.machine_context(runtime.machine_code)
+            if line.workshop_code != warning.workshop_code:
+                continue
+            if machine.process_code != warning.upstream_process_code:
+                continue
+            if line.wafer_spec != source_detail.wafer_spec:
+                continue
+
+            hourly_output = calculate_hourly_output(
+                runtime.output_quantity_30m
+            )
+            target_options = self._algorithm_target_options(
+                warning=warning,
+                source_detail=source_detail,
+                source_product=source_product,
+                machine=machine,
+                line=line,
+                hourly_output=hourly_output,
+                context=context,
+                interval_results=interval_results,
+            )
+            if not target_options:
+                continue
+
+            utilization_rate, idle_rate = calculate_runtime_load(
+                input_quantity_30m=runtime.input_quantity_30m,
+                output_quantity_30m=runtime.output_quantity_30m,
+            )
+            candidates.append(
+                AlgorithmOverflowCandidateMachine(
+                    machine_code=runtime.machine_code,
+                    machine_name=machine.machine_name,
+                    status=runtime.status,
+                    workshop_code=line.workshop_code,
+                    process_code=machine.process_code,
+                    process_name=machine.process_name,
+                    current_order_code=source_order.order_code,
+                    current_product_code=source_product.product_code,
+                    current_wafer_size=source_product.wafer_size,
+                    current_wafer_spec=line.wafer_spec,
+                    current_source_grade=source_product.source_grade,
+                    input_quantity_30m=runtime.input_quantity_30m,
+                    output_quantity_30m=runtime.output_quantity_30m,
+                    current_output_rate_per_hour=hourly_output,
+                    reduced_capacity=hourly_output,
+                    utilization_rate=utilization_rate,
+                    idle_rate=idle_rate,
+                    target_options=target_options,
+                )
+            )
+
+        candidates.sort(
+            key=lambda candidate: (
+                -candidate.utilization_rate,
+                candidate.machine_code,
+            )
+        )
+        return AlgorithmOverflowCandidateResult(
+            warning_type="overflow",
+            workshop_code=warning.workshop_code,
+            buffer_code=warning.buffer_code,
+            upstream_process_code=warning.upstream_process_code,
+            downstream_process_code=warning.downstream_process_code,
+            source_order_code=source_order.order_code,
+            source_product_code=source_product.product_code,
+            source_wafer_size=source_product.wafer_size,
+            source_wafer_spec=source_detail.wafer_spec,
+            source_source_grade=source_product.source_grade,
+            source_growth_rate=source_detail.growth_rate,
+            source_net_consumption_rate=(
+                source_detail.net_consumption_rate
+            ),
+            candidates=candidates,
+        )
+
+    def _select_source_detail(
+        self,
+        warning: AlgorithmOverflowWarningResult,
+    ) -> AlgorithmOrderGrowthDetail:
+        positive_details = [
+            detail
+            for detail in warning.order_growth_details
+            if detail.growth_rate > 0
+        ]
+        if not positive_details:
+            raise CandidateMachineCalculationError(
+                f"{warning.buffer_code} has no positive growth source order"
+            )
+        return min(
+            positive_details,
+            key=lambda detail: (
+                -detail.growth_rate,
+                detail.order_code,
+            ),
+        )
+
+    def _algorithm_target_options(
+        self,
+        *,
+        warning: AlgorithmOverflowWarningResult,
+        source_detail: AlgorithmOrderGrowthDetail,
+        source_product,
+        machine,
+        line,
+        hourly_output: float,
+        context: CandidateContext,
+        interval_results: list[AlgorithmIntervalNetRateResult],
+    ) -> list[AlgorithmOverflowTargetOption]:
+        options: list[AlgorithmOverflowTargetOption] = []
+        for target_detail in warning.order_growth_details:
+            if target_detail.order_code == source_detail.order_code:
+                continue
+            if target_detail.net_consumption_rate <= 0:
+                continue
+
+            target_order, target_product = context.order_product(
+                target_detail.order_code
+            )
+            if target_product.wafer_size != target_detail.wafer_size:
+                raise CandidateMachineCalculationError(
+                    f"{target_order.order_code} target detail wafer_size "
+                    f"{target_detail.wafer_size} does not match target "
+                    f"product wafer_size {target_product.wafer_size}"
+                )
+            if target_order.workshop_code != warning.workshop_code:
+                continue
+            if target_product.wafer_size != source_product.wafer_size:
+                continue
+            if not is_wafer_spec_compatible(
+                current_wafer_spec=line.wafer_spec,
+                target_wafer_spec=target_detail.wafer_spec,
+                workshop_code=line.workshop_code,
+                process_name=machine.process_name,
             ):
                 continue
-            net = gap_map.get(
-                (
-                    warning_workshop_code,
-                    warning.buffer_code,
-                    product_code,
-                    warning.process_from,
-                    warning.process_to,
+            if not is_source_grade_compatible(
+                current_source_grade=source_product.source_grade,
+                target_source_grade=target_product.source_grade,
+            ):
+                continue
+
+            target_interval = self._unique_target_interval(
+                warning=warning,
+                target_detail=target_detail,
+                interval_results=interval_results,
+            )
+
+            options.append(
+                AlgorithmOverflowTargetOption(
+                    target_order_code=target_order.order_code,
+                    target_product_code=target_product.product_code,
+                    target_wafer_size=target_product.wafer_size,
+                    target_wafer_spec=target_detail.wafer_spec,
+                    target_source_grade=target_product.source_grade,
+                    target_buffer_code=(
+                        target_interval.buffer_code
+                        if target_interval is not None
+                        else None
+                    ),
+                    target_workshop_code=(
+                        target_interval.workshop_code
+                        if target_interval is not None
+                        else None
+                    ),
+                    target_upstream_process_code=(
+                        target_interval.upstream_process_code
+                        if target_interval is not None
+                        else None
+                    ),
+                    target_downstream_process_code=(
+                        target_interval.downstream_process_code
+                        if target_interval is not None
+                        else None
+                    ),
+                    capacity_gap=target_detail.net_consumption_rate,
+                    estimated_contribution_capacity=hourly_output,
                 )
             )
-            if net is not None and net > 0:
-                return product_code
-        return None
 
-    def _actual_capacity(self, snapshot: CutlineSnapshot, equipment_code, product_code):
-        for record in snapshot.capacity_records:
-            if record.equipment_code == equipment_code and record.product_code == product_code:
-                return record.actual_capacity_per_hour
-        return None
+        options.sort(
+            key=lambda option: (
+                -option.capacity_gap,
+                option.target_order_code,
+            )
+        )
+        return options
+
+    def _unique_target_interval(
+        self,
+        *,
+        warning: AlgorithmOverflowWarningResult,
+        target_detail: AlgorithmOrderGrowthDetail,
+        interval_results: list[AlgorithmIntervalNetRateResult],
+    ) -> AlgorithmIntervalNetRateResult | None:
+        matches = [
+            interval
+            for interval in interval_results
+            if interval.order_code == target_detail.order_code
+            and interval.wafer_size == target_detail.wafer_size
+            and interval.wafer_spec == target_detail.wafer_spec
+            and interval.workshop_code == warning.workshop_code
+            and interval.upstream_process_code
+            == warning.upstream_process_code
+            and interval.net_consumption_rate
+            == target_detail.net_consumption_rate
+        ]
+        if len(matches) != 1:
+            return None
+        return matches[0]
