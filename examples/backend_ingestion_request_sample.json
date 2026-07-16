@@ -1,0 +1,161 @@
+{
+  "snapshot_meta": {
+    "run_id": "RUN-001",
+    "trigger_type": "manual",
+    "workshop_id": "WS-01",
+    "snapshot_time": "2026-07-14T08:00:00+08:00",
+    "params_version": 1,
+    "catalog_version": "catalog-1",
+    "catalog_loaded_at": "2026-07-14T07:55:00+08:00",
+    "degraded_flags": []
+  },
+  "machine_realtime": [
+    {
+      "machine_code": "M-01",
+      "status": "RUNNING",
+      "order_code": "O-01",
+      "tangent_time": null,
+      "input_quantity": 12,
+      "output_quantity": 10.5,
+      "completed_quantity": 100
+    }
+  ],
+  "machine_master": [
+    {
+      "machine_code": "M-01",
+      "machine_name": "机台一",
+      "process_code": "P-01",
+      "process_name": "工序一"
+    }
+  ],
+  "machine_process_times": [
+    {
+      "machine_code": "M-01",
+      "machine_name": "机台一",
+      "product_code": "PROD-01",
+      "product_name": "产品一",
+      "proc_seconds": 90,
+      "actual_capacity": 120.5
+    }
+  ],
+  "workshops": [
+    {
+      "workshop_code": "WS-01",
+      "workshop_name": "一车间"
+    }
+  ],
+  "lines": [
+    {
+      "line_code": "L-01",
+      "line_name": "一号线",
+      "wafer_spec": "182",
+      "workshop_code": "WS-01",
+      "workshop_name": "一车间"
+    }
+  ],
+  "machine_lines": [
+    {
+      "machine_code": "M-01",
+      "machine_name": "机台一",
+      "line_code": "L-01",
+      "line_name": "一号线",
+      "wafer_spec": "182"
+    }
+  ],
+  "orders": [
+    {
+      "order_code": "O-01",
+      "order_status": "RUNNING",
+      "total_quantity": 1000,
+      "piece_source": "A",
+      "estimated_yield": "98%",
+      "product_code": "PROD-01",
+      "product_name": "产品一",
+      "workshop_code": "WS-01",
+      "workshop_name": "一车间",
+      "produced_quantity": 100.5,
+      "remaining_quantity": 899.5
+    }
+  ],
+  "products": [
+    {
+      "product_code": "PROD-01",
+      "product_name": "产品一",
+      "wafer_size": "182",
+      "source_grade": "A",
+      "material_code": "MAT-01",
+      "material_name": "物料一"
+    }
+  ],
+  "process_routes": [
+    {
+      "process_code": "P-01",
+      "process_name": "工序一",
+      "sequence": 1,
+      "cache_type": "BUFFER",
+      "workshop_code": "WS-01",
+      "workshop_name": "一车间",
+      "loop_code": "LOOP-01",
+      "loop_name": "主循环",
+      "upstream_process_code": null,
+      "upstream_process_name": null,
+      "downstream_process_code": "P-02",
+      "downstream_process_name": "工序二"
+    },
+    {
+      "process_code": "P-02",
+      "process_name": "工序二",
+      "sequence": 2,
+      "cache_type": "BUFFER",
+      "workshop_code": "WS-01",
+      "workshop_name": "一车间",
+      "loop_code": "LOOP-01",
+      "loop_name": "主循环",
+      "upstream_process_code": "P-01",
+      "upstream_process_name": "工序一",
+      "downstream_process_code": null,
+      "downstream_process_name": null
+    }
+  ],
+  "buffer_realtime": [
+    {
+      "main_id": "MAIN-01",
+      "buffer_code": "B-01",
+      "bound_source_name": "AUTO-01",
+      "current_quantity": 250,
+      "current_utilization_rate": 0.25
+    }
+  ],
+  "buffer_master": [
+    {
+      "buffer_code": "B-01",
+      "buffer_name": "一号缓存",
+      "buffer_type": "PROCESS",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 1000,
+      "safety_low": 100,
+      "served_process_codes": [
+        "P-01",
+        "P-02"
+      ],
+      "served_process_names": [
+        "工序一",
+        "工序二"
+      ],
+      "loop_code": "LOOP-01",
+      "loop_name": "主循环"
+    }
+  ],
+  "agv_relations": [
+    {
+      "buffer_code": "B-01",
+      "machine_code": "M-01",
+      "line_code": "L-01",
+      "line_name": "一号线",
+      "last_line_code": "L-00",
+      "last_line_name": "原路线",
+      "process_code": "P-01",
+      "process_name": "工序一"
+    }
+  ]
+}
