@@ -33,7 +33,7 @@ class AlgorithmReturnResult(BaseModel):
     source_order_code: str
     target_order_code: str
     workshop_code: str
-    source_buffer_code: str
+    source_buffer_code: str | None
     target_buffer_code: str
     upstream_process_code: str
     downstream_process_code: str

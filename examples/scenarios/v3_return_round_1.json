@@ -1,6 +1,6 @@
 {
   "snapshot_meta": {
-    "run_id": "RUN-V3-STOCKOUT-AUTO",
+    "run_id": "RUN-V3-RETURN-ROUND-1",
     "trigger_type": "manual_test",
     "workshop_id": "S2",
     "snapshot_time": "2026-07-17T08:00:00+08:00",

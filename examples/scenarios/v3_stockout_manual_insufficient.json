@@ -1,6 +1,6 @@
 {
   "snapshot_meta": {
-    "run_id": "RUN-V3-STOCKOUT-AUTO",
+    "run_id": "RUN-V3-STOCKOUT-MANUAL-INSUFFICIENT",
     "trigger_type": "manual_test",
     "workshop_id": "S2",
     "snapshot_time": "2026-07-17T08:00:00+08:00",
@@ -48,10 +48,10 @@
       "status": "运行",
       "order_code": "ORD-S2-002",
       "tangent_time": null,
-      "input_quantity": 300.0,
-      "output_quantity": 300.0,
-      "completed_quantity": 300.0,
-      "period_quantity": 300.0,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "completed_quantity": 100.0,
+      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {

@@ -27,6 +27,7 @@ from app.schemas.common_schema import (
     AlgorithmWorkshop,
 )
 from app.schemas.request_schema import (
+    ActiveCutlineEventRequest,
     AlgorithmSnapshot,
     CutlineAlgorithmRequest,
 )
@@ -612,7 +613,7 @@ class SnapshotAdapter:
 
     def _convert_active_cutline_events(
         self,
-        source: Iterable[AlgorithmActiveCutlineEvent],
+        source: Iterable[ActiveCutlineEventRequest],
         *,
         snapshot_time: datetime,
         machine_by_code: dict[str, AlgorithmMachineMaster],
@@ -654,12 +655,6 @@ class SnapshotAdapter:
                     "workshop",
                 ),
                 (
-                    "source_buffer_code",
-                    event.source_buffer_code,
-                    buffer_by_code,
-                    "buffer",
-                ),
-                (
                     "target_buffer_code",
                     event.target_buffer_code,
                     buffer_by_code,
@@ -698,7 +693,23 @@ class SnapshotAdapter:
                 event.cutline_start_time,
                 snapshot_time,
             )
-            result.append(event.model_copy(deep=True))
+            result.append(
+                AlgorithmActiveCutlineEvent(
+                    event_id=event.event_id,
+                    machine_code=event.machine_code,
+                    source_order_code=event.source_order_code,
+                    target_order_code=event.target_order_code,
+                    workshop_code=event.workshop_code,
+                    target_buffer_code=event.target_buffer_code,
+                    upstream_process_code=event.upstream_process_code,
+                    downstream_process_code=event.downstream_process_code,
+                    target_wafer_size=event.target_wafer_size,
+                    target_wafer_spec=event.target_wafer_spec,
+                    cutline_start_time=event.cutline_start_time,
+                    negative_start_time=event.negative_start_time,
+                    status="active",
+                )
+            )
 
         return result
 

@@ -1,6 +1,6 @@
 {
   "snapshot_meta": {
-    "run_id": "RUN-V3-STOCKOUT-AUTO",
+    "run_id": "RUN-V3-OVERFLOW-WARNING",
     "trigger_type": "manual_test",
     "workshop_id": "S2",
     "snapshot_time": "2026-07-17T08:00:00+08:00",
@@ -38,9 +38,9 @@
       "order_code": "ORD-S2-001",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
+      "output_quantity": 150.0,
+      "completed_quantity": 150.0,
+      "period_quantity": 150.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -48,10 +48,10 @@
       "status": "运行",
       "order_code": "ORD-S2-002",
       "tangent_time": null,
-      "input_quantity": 300.0,
-      "output_quantity": 300.0,
-      "completed_quantity": 300.0,
-      "period_quantity": 300.0,
+      "input_quantity": 200.0,
+      "output_quantity": 200.0,
+      "completed_quantity": 200.0,
+      "period_quantity": 200.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -59,7 +59,7 @@
       "status": "运行",
       "order_code": "ORD-S2-001",
       "tangent_time": null,
-      "input_quantity": 300.0,
+      "input_quantity": 100.0,
       "output_quantity": 100.0,
       "completed_quantity": 100.0,
       "period_quantity": 100.0,
@@ -1657,8 +1657,8 @@
       "main_id": "INV-310110302-ORD-S2-001",
       "buffer_code": "310110302",
       "bound_source_name": "至上",
-      "current_quantity": 100.0,
-      "current_utilization_rate": 0.001
+      "current_quantity": 450.0,
+      "current_utilization_rate": 0.45
     },
     {
       "main_id": "INV-310110303-ORD-S2-001",
@@ -1720,8 +1720,8 @@
       "main_id": "INV-310110302-ORD-S2-002",
       "buffer_code": "310110302",
       "bound_source_name": "至上支援单",
-      "current_quantity": 2000.0,
-      "current_utilization_rate": 0.02
+      "current_quantity": 450.0,
+      "current_utilization_rate": 0.45
     }
   ],
   "buffer_master": [
@@ -1748,7 +1748,7 @@
       "buffer_name": "制绒-碱抛Buffer",
       "buffer_type": "PROCESS",
       "buffer_type_title": "工序缓存",
-      "max_capacity": 100000.0,
+      "max_capacity": 1000.0,
       "safety_low": 100.0,
       "served_process_codes": [
         "制绒",

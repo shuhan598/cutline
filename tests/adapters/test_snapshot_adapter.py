@@ -662,24 +662,17 @@ def test_duplicate_master_codes_fail():
 def _active_cutline_event(**overrides) -> dict:
     event = {
         "event_id": "EVENT-001",
-        "plan_id": "PLAN-001",
         "machine_code": "MC-001",
         "source_order_code": "ORD-001",
         "target_order_code": "ORD-002",
         "workshop_code": "S1",
-        "source_buffer_code": "BUF-001",
         "target_buffer_code": "BUF-002",
         "upstream_process_code": "PROC-01",
         "downstream_process_code": "PROC-02",
-        "source_wafer_size": "182",
-        "source_wafer_spec": "N",
         "target_wafer_size": "182",
         "target_wafer_spec": "N",
         "cutline_start_time": "2026-07-15T08:00:00Z",
         "negative_start_time": "2026-07-15T08:10:00Z",
-        "status": "active",
-        "contribution_capacity": 288,
-        "warning_type": "stockout",
     }
     event.update(overrides)
     return event
@@ -694,8 +687,20 @@ def test_active_cutline_event_is_deep_copied_without_mutating_request():
     snapshot = snapshot_adapter_module.SnapshotAdapter().to_algorithm_snapshot(request)
 
     assert request.active_cutline_events[0].model_dump() == request_event_before
-    assert snapshot.active_cutline_events == request.active_cutline_events
-    assert snapshot.active_cutline_events[0] is not request.active_cutline_events[0]
+    internal_event = snapshot.active_cutline_events[0]
+    assert internal_event.event_id == request.active_cutline_events[0].event_id
+    assert internal_event.machine_code == request.active_cutline_events[0].machine_code
+    assert internal_event.negative_start_time == (
+        request.active_cutline_events[0].negative_start_time
+    )
+    assert internal_event.status == "active"
+    assert internal_event.plan_id is None
+    assert internal_event.source_buffer_code is None
+    assert internal_event.source_wafer_size is None
+    assert internal_event.source_wafer_spec is None
+    assert internal_event.contribution_capacity is None
+    assert internal_event.warning_type is None
+    assert internal_event is not request.active_cutline_events[0]
     assert snapshot.config.cutline_execution_delay_minutes == 0
 
 
@@ -703,7 +708,7 @@ def test_active_cutline_event_ids_must_be_unique_within_request():
     payload = _payload()
     payload["active_cutline_events"] = [
         _active_cutline_event(),
-        _active_cutline_event(plan_id="PLAN-002"),
+        _active_cutline_event(),
     ]
 
     _assert_conversion_error(payload, "EVENT-001.*event_id.*duplicate")
@@ -716,7 +721,6 @@ def test_active_cutline_event_ids_must_be_unique_within_request():
         ("source_order_code", "MISSING-SOURCE-ORDER", "order"),
         ("target_order_code", "MISSING-TARGET-ORDER", "order"),
         ("workshop_code", "MISSING-WORKSHOP", "workshop"),
-        ("source_buffer_code", "MISSING-SOURCE-BUFFER", "buffer"),
         ("target_buffer_code", "MISSING-TARGET-BUFFER", "buffer"),
         ("upstream_process_code", "MISSING-UPSTREAM", "process route"),
         ("downstream_process_code", "MISSING-DOWNSTREAM", "process route"),

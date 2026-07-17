@@ -26,20 +26,17 @@ DATASET_FIELDS = (
 def active_cutline_event_payload():
     return {
         "event_id": "CUT-PLAN-1-M1",
-        "plan_id": "PLAN-1",
         "machine_code": "M1",
         "source_order_code": "ORD-A",
         "target_order_code": "ORD-B",
         "workshop_code": "S1",
-        "source_buffer_code": "BUF-A",
         "target_buffer_code": "BUF-B",
         "upstream_process_code": "P1",
         "downstream_process_code": "P2",
-        "source_wafer_size": "182",
-        "source_wafer_spec": "N",
         "target_wafer_size": "182",
         "target_wafer_spec": "R",
         "cutline_start_time": "2026-07-16T12:00:00Z",
+        "negative_start_time": None,
     }
 
 
@@ -97,7 +94,60 @@ def test_request_accepts_existing_active_cutline_events(payload):
 
     event = request.active_cutline_events[0]
     assert event.event_id == "CUT-PLAN-1-M1"
-    assert event.status == "active"
+    assert event.negative_start_time is None
+    assert set(event.model_fields) == {
+        "event_id",
+        "machine_code",
+        "source_order_code",
+        "target_order_code",
+        "workshop_code",
+        "target_buffer_code",
+        "upstream_process_code",
+        "downstream_process_code",
+        "target_wafer_size",
+        "target_wafer_spec",
+        "cutline_start_time",
+        "negative_start_time",
+    }
+    assert "status" not in event.model_fields
+
+
+@pytest.mark.parametrize(
+    "removed_field",
+    (
+        "plan_id",
+        "source_buffer_code",
+        "source_wafer_size",
+        "source_wafer_spec",
+        "contribution_capacity",
+        "warning_type",
+        "status",
+        "return_recommended_time",
+    ),
+)
+def test_request_active_event_rejects_removed_backend_fields(
+    payload,
+    removed_field,
+):
+    event = active_cutline_event_payload()
+    event[removed_field] = "obsolete"
+    payload["active_cutline_events"] = [event]
+
+    with pytest.raises(ValidationError) as error:
+        CutlineAlgorithmRequest.model_validate(payload)
+
+    assert error.value.errors()[0]["type"] == "extra_forbidden"
+
+
+def test_request_active_event_requires_explicit_negative_start_time(payload):
+    event = active_cutline_event_payload()
+    del event["negative_start_time"]
+    payload["active_cutline_events"] = [event]
+
+    with pytest.raises(ValidationError) as error:
+        CutlineAlgorithmRequest.model_validate(payload)
+
+    assert error.value.errors()[0]["type"] == "missing"
 
 
 def test_request_has_no_config_field(payload):

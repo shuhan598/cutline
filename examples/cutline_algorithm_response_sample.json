@@ -1,13 +1,27 @@
 {
-  "calculation_time": "2026-07-16T08:00:00+08:00",
+  "calculation_time": "2026-07-17T08:00:00+08:00",
   "stockout_warnings": [],
   "overflow_warnings": [],
   "cutline_decisions": [],
-  "return_results": [],
-  "silk_screen_results": [],
+  "return_recommendations": [],
+  "silk_screen_results": [
+    {
+      "workshop_code": "S2",
+      "current_order_code": "ORD-S2-001",
+      "machine_codes": [
+        "EA021"
+      ],
+      "calculation_time": "2026-07-17T08:00:00+08:00",
+      "silk_screen_clear_minutes": 30.0,
+      "remaining_production_hours": 500.0,
+      "prepare_clearance": false,
+      "reason": "not_yet_time_to_prepare",
+      "message": "当前订单尚未进入清台准备提醒窗口。"
+    }
+  ],
   "mixing_trace_records": [],
-  "mixing_trace_failures": [],
   "new_active_cutline_events": [],
   "updated_active_cutline_events": [],
+  "closed_active_cutline_event_ids": [],
   "errors": []
 }

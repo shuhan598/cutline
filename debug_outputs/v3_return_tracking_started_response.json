@@ -1,5 +1,5 @@
 {
-  "calculation_time": "2026-07-17T08:00:00+08:00",
+  "calculation_time": "2026-07-17T08:05:00+08:00",
   "stockout_warnings": [],
   "overflow_warnings": [],
   "cutline_decisions": [],
@@ -11,7 +11,7 @@
       "machine_codes": [
         "EA021"
       ],
-      "calculation_time": "2026-07-17T08:00:00+08:00",
+      "calculation_time": "2026-07-17T08:05:00+08:00",
       "silk_screen_clear_minutes": 30.0,
       "remaining_production_hours": 500.0,
       "prepare_clearance": false,
@@ -21,7 +21,12 @@
   ],
   "mixing_trace_records": [],
   "new_active_cutline_events": [],
-  "updated_active_cutline_events": [],
+  "updated_active_cutline_events": [
+    {
+      "event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
+      "negative_start_time": "2026-07-17T08:05:00+08:00"
+    }
+  ],
   "closed_active_cutline_event_ids": [],
   "errors": []
 }

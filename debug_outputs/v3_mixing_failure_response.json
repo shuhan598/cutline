@@ -14,9 +14,9 @@
       "downstream_process_code": "碱抛",
       "current_quantity": 100.0,
       "upstream_output_rate": 200.0,
-      "downstream_input_rate": 600.0,
-      "net_consumption_rate": 400.0,
-      "depletion_minutes": 15.0,
+      "downstream_input_rate": 1200.0,
+      "net_consumption_rate": 1000.0,
+      "depletion_minutes": 6.0,
       "stockout_warning_lead_minutes": 30.0
     }
   ],
@@ -35,12 +35,25 @@
         "wafer_spec": "N",
         "upstream_process_code": "制绒",
         "downstream_process_code": "碱抛",
-        "initial_capacity_gap": 400.0,
-        "total_contribution_capacity": 600.0,
+        "initial_capacity_gap": 1000.0,
+        "total_contribution_capacity": 1200.0,
         "remaining_capacity_gap": 0.0,
         "selected_machines": [
           {
             "machine_code": "EA004",
+            "source_order_code": "ORD-S2-002",
+            "target_order_code": "ORD-S2-001",
+            "source_buffer_code": "310110302",
+            "target_buffer_code": "310110302",
+            "process_code": "制绒",
+            "workshop_code": "S2",
+            "wafer_size": "182",
+            "source_wafer_spec": "N",
+            "target_wafer_spec": "N",
+            "contribution_capacity": 600.0
+          },
+          {
+            "machine_code": "EA023",
             "source_order_code": "ORD-S2-002",
             "target_order_code": "ORD-S2-001",
             "source_buffer_code": "310110302",
@@ -74,10 +87,10 @@
   ],
   "mixing_trace_records": [
     {
-      "mix_trace_id": "MIX-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
+      "mix_trace_id": "MIX-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA023",
       "plan_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
-      "cutline_event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
-      "machine_code": "EA004",
+      "cutline_event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA023",
+      "machine_code": "EA023",
       "workshop_code": "S2",
       "process_code": "制绒",
       "process_name": "制绒",
@@ -121,9 +134,30 @@
       "target_wafer_spec": "N",
       "cutline_start_time": "2026-07-17T08:00:00+08:00",
       "negative_start_time": null
+    },
+    {
+      "event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA023",
+      "machine_code": "EA023",
+      "source_order_code": "ORD-S2-002",
+      "target_order_code": "ORD-S2-001",
+      "workshop_code": "S2",
+      "target_buffer_code": "310110302",
+      "upstream_process_code": "制绒",
+      "downstream_process_code": "碱抛",
+      "target_wafer_size": "182",
+      "target_wafer_spec": "N",
+      "cutline_start_time": "2026-07-17T08:00:00+08:00",
+      "negative_start_time": null
     }
   ],
   "updated_active_cutline_events": [],
   "closed_active_cutline_event_ids": [],
-  "errors": []
+  "errors": [
+    {
+      "stage": "mixing_trace",
+      "machine_code": "EA004",
+      "reason": "process_duration_not_found",
+      "message": "process duration for EA004/PROD-S2-N-SUPPORT was not found"
+    }
+  ]
 }
