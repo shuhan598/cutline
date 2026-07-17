@@ -110,7 +110,7 @@ class MachineLineRequest(RequestModel):
 
 class OrderRequest(RequestModel):
     order_code: str = Field(..., description="订单编码")
-    order_name: str | None = Field(default=None,description="订单名称，例如：至上；甲方暂未提供时允许为空",)
+    order_name: str = Field(..., description="订单名称，例如：至上；不能为空")
     order_status: str = Field(..., description="订单状态")
     total_quantity: float = Field(..., ge=0, description="订单计划生产的总数量")
     piece_source: str = Field(..., description="订单片源")

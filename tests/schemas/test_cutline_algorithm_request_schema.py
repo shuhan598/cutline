@@ -62,7 +62,7 @@ def payload():
         "workshops": [{"workshop_code": "S1", "workshop_name": None}],
         "lines": [{"line_code": "L1", "line_name": "产线1", "wafer_spec": "182", "workshop_code": "S1", "workshop_name": "车间1"}],
         "machine_lines": [{"machine_code": "M1", "machine_name": "机台1", "line_code": "L1", "line_name": "产线1", "wafer_spec": "182"}],
-        "orders": [{"order_code": "O1", "order_status": "open", "total_quantity": 10, "piece_source": "A", "estimated_yield": "99%", "product_code": "PR1", "product_name": "产品1", "workshop_code": "S1", "workshop_name": "车间1", "produced_quantity": 1, "remaining_quantity": 9}],
+        "orders": [{"order_code": "O1", "order_name": "source", "order_status": "open", "total_quantity": 10, "piece_source": "A", "estimated_yield": "99%", "product_code": "PR1", "product_name": "产品1", "workshop_code": "S1", "workshop_name": "车间1", "produced_quantity": 1, "remaining_quantity": 9}],
         "products": [{"product_code": "PR1", "product_name": "产品1", "wafer_size": "182", "source_grade": "A", "material_code": "MAT1", "material_name": "物料1"}],
         "process_routes": [{"process_code": "P1", "process_name": "工序1", "sequence": 1, "cache_type": "BUFFER", "workshop_code": "S1", "workshop_name": "车间1", "loop_code": "LOOP1", "loop_name": "循环1", "upstream_process_code": None, "upstream_process_name": None, "downstream_process_code": None, "downstream_process_name": None}],
         "buffer_realtime": [{"main_id": None, "buffer_code": "B1", "bound_source_name": "source", "current_quantity": 0, "current_utilization_rate": 0}],
@@ -186,14 +186,20 @@ def test_empty_order_code_is_allowed(payload):
     assert request.machine_realtime[0].order_code == ""
 
 
-def test_order_name_is_nullable_and_declared_on_request_model(payload):
+def test_order_name_is_required_and_non_nullable_on_request_model(payload):
     request = CutlineAlgorithmRequest.model_validate(payload)
-    assert request.orders[0].order_name is None
+    assert request.orders[0].order_name == "source"
 
-    payload["orders"][0]["order_name"] = "至上"
-    request = CutlineAlgorithmRequest.model_validate(payload)
-    assert request.orders[0].order_name == "至上"
+    del payload["orders"][0]["order_name"]
+    with pytest.raises(ValidationError) as missing_error:
+        CutlineAlgorithmRequest.model_validate(payload)
+    assert missing_error.value.errors()[0]["loc"] == ("orders", 0, "order_name")
+    assert missing_error.value.errors()[0]["type"] == "missing"
 
+    payload["orders"][0]["order_name"] = None
+    with pytest.raises(ValidationError) as null_error:
+        CutlineAlgorithmRequest.model_validate(payload)
+    assert null_error.value.errors()[0]["loc"] == ("orders", 0, "order_name")
 
 def test_order_request_still_forbids_unknown_fields(payload):
     payload["orders"][0]["unexpected"] = True

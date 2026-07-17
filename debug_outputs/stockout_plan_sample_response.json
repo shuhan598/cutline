@@ -1,0 +1,132 @@
+{
+  "calculation_time": "2026-07-16T08:30:00+08:00",
+  "stockout_warnings": [
+    {
+      "warning_type": "stockout",
+      "warning_time": "2026-07-16T08:30:00+08:00",
+      "buffer_code": "BUF-ZR-PK",
+      "order_code": "O-T",
+      "wafer_size": "182",
+      "wafer_spec": "N",
+      "workshop_code": "WS-S1",
+      "upstream_process_code": "P-ZR",
+      "downstream_process_code": "P-PK",
+      "current_quantity": 100.0,
+      "upstream_output_rate": 200.0,
+      "downstream_input_rate": 600.0,
+      "net_consumption_rate": 400.0,
+      "depletion_minutes": 15.0,
+      "stockout_warning_lead_minutes": 30.0
+    }
+  ],
+  "overflow_warnings": [],
+  "cutline_decisions": [
+    {
+      "plan": {
+        "plan_id": "stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T",
+        "warning_type": "stockout",
+        "calculation_time": "2026-07-16T08:30:00+08:00",
+        "workshop_code": "WS-S1",
+        "buffer_code": "BUF-ZR-PK",
+        "order_code": "O-T",
+        "wafer_size": "182",
+        "wafer_spec": "N",
+        "upstream_process_code": "P-ZR",
+        "downstream_process_code": "P-PK",
+        "initial_capacity_gap": 400.0,
+        "total_contribution_capacity": 600.0,
+        "remaining_capacity_gap": 0.0,
+        "selected_machines": [
+          {
+            "machine_code": "ZR-02",
+            "source_order_code": "O-R",
+            "target_order_code": "O-T",
+            "source_buffer_code": "BUF-ZR-PK",
+            "target_buffer_code": "BUF-ZR-PK",
+            "process_code": "P-ZR",
+            "workshop_code": "WS-S1",
+            "wafer_size": "182",
+            "source_wafer_spec": "N",
+            "target_wafer_spec": "N",
+            "contribution_capacity": 600.0,
+            "reduced_capacity": null,
+            "utilization_rate": 1.0,
+            "idle_rate": 0.0,
+            "source_net_rate_before": -400.0,
+            "source_net_rate_after": 200.0,
+            "source_depletion_minutes_after": 600.0,
+            "target_net_rate_before": 400.0,
+            "target_net_rate_after": -200.0,
+            "target_overflow_minutes_after": null
+          }
+        ],
+        "risk_resolved": true,
+        "manual_intervention_required": false
+      },
+      "manual_intervention": null
+    }
+  ],
+  "return_results": [],
+  "silk_screen_results": [],
+  "mixing_trace_records": [
+    {
+      "mix_trace_id": "MIX-stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T-ZR-02",
+      "plan_id": "stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T",
+      "cutline_event_id": "CUT-stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T-ZR-02",
+      "machine_code": "ZR-02",
+      "workshop_code": "WS-S1",
+      "process_code": "P-ZR",
+      "process_name": "制绒",
+      "source_order_code": "O-R",
+      "target_order_code": "O-T",
+      "source_product_code": "PROD-R",
+      "target_product_code": "PROD-T",
+      "mix_start_time": "2026-07-16T10:37:00+08:00",
+      "mixed_basket_start_index": 1,
+      "mixed_basket_end_index": 10,
+      "mixed_basket_count": 10,
+      "estimated_total_mixed_pieces": 1200,
+      "compositions": [
+        {
+          "order_code": "O-R",
+          "product_code": "PROD-R",
+          "sequence": 1,
+          "estimated_pieces": 600
+        },
+        {
+          "order_code": "O-T",
+          "product_code": "PROD-T",
+          "sequence": 2,
+          "estimated_pieces": 600
+        }
+      ],
+      "notification_status": "scheduled"
+    }
+  ],
+  "mixing_trace_failures": [],
+  "new_active_cutline_events": [
+    {
+      "event_id": "CUT-stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T-ZR-02",
+      "plan_id": "stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T",
+      "machine_code": "ZR-02",
+      "source_order_code": "O-R",
+      "target_order_code": "O-T",
+      "workshop_code": "WS-S1",
+      "source_buffer_code": "BUF-ZR-PK",
+      "target_buffer_code": "BUF-ZR-PK",
+      "upstream_process_code": "P-ZR",
+      "downstream_process_code": "P-PK",
+      "source_wafer_size": "182",
+      "source_wafer_spec": "N",
+      "target_wafer_size": "182",
+      "target_wafer_spec": "N",
+      "cutline_start_time": "2026-07-16T08:30:00+08:00",
+      "negative_start_time": null,
+      "status": "active",
+      "contribution_capacity": 600.0,
+      "warning_type": "stockout"
+    }
+  ],
+  "updated_active_cutline_events": [],
+  "errors": []
+}

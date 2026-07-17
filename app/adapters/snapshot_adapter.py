@@ -256,7 +256,7 @@ class SnapshotAdapter:
             result.append(
                 AlgorithmMachineRuntime(
                     machine_code=item.machine_code,
-                    status=item.status,
+                    status=self._map_machine_status(item.status),
                     current_order_code=current_order_code,
                     tangent_time=item.tangent_time,
                     input_quantity_30m=item.input_quantity,
@@ -266,6 +266,13 @@ class SnapshotAdapter:
                 )
             )
         return result
+
+    @staticmethod
+    def _map_machine_status(status: str) -> str:
+        normalized = status.strip()
+        if normalized == "运行" or normalized.casefold() == "running":
+            return "running"
+        return "stopped"
 
     def _validate_runtime_machine_lines(
         self,

@@ -415,8 +415,15 @@ def test_order_wafer_spec_cannot_be_inferred_without_current_runtime():
     snapshot = _snapshot()
     snapshot.machine_runtimes = []
 
-    _assert_calculation_error(snapshot, "ORD-001.*wafer_spec")
+    _assert_calculation_error(snapshot, "ORD-001.*wafer_spec.*no running machine")
 
+
+def test_order_wafer_spec_cannot_be_inferred_from_stopped_runtime():
+    snapshot = _snapshot()
+    for runtime in snapshot.machine_runtimes:
+        runtime.status = "stopped"
+
+    _assert_calculation_error(snapshot, "ORD-001.*wafer_spec.*no running machine")
 
 @pytest.mark.parametrize(
     ("upstream_output", "downstream_input", "expected"),

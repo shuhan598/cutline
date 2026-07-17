@@ -136,11 +136,13 @@ class NetRateCalculator:
         wafer_specs = {
             line_by_code[machine_line_by_code[runtime.machine_code].line_code].wafer_spec
             for runtime in machine_runtimes
-            if runtime.current_order_code == order_code
+            if self._is_running(runtime) and runtime.current_order_code == order_code
         }
         if not wafer_specs:
             raise NetRateCalculationError(
-                f"Order {order_code} wafer_spec cannot be determined"
+                f"Order {order_code} wafer_spec cannot be determined: "
+                "no running machine is currently producing this order; "
+                "expected inference chain is machine -> line -> wafer_spec"
             )
         if len(wafer_specs) > 1:
             values = ", ".join(sorted(wafer_specs))

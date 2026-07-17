@@ -234,7 +234,20 @@ def test_snapshot_time_is_used_as_current_time():
 def test_blank_machine_order_code_becomes_none():
     assert _convert().machine_runtimes[0].current_order_code is None
 
+@pytest.mark.parametrize("backend_status", ["运行", "running", "RUNNING", " Running "])
+def test_running_backend_machine_status_maps_to_algorithm_running(backend_status):
+    payload = _payload()
+    payload["machine_realtime"][0]["status"] = backend_status
 
+    assert _convert(payload).machine_runtimes[0].status == "running"
+
+
+@pytest.mark.parametrize("backend_status", ["停机", "异常", "idle", ""])
+def test_non_running_backend_machine_status_maps_to_algorithm_stopped(backend_status):
+    payload = _payload()
+    payload["machine_realtime"][0]["status"] = backend_status
+
+    assert _convert(payload).machine_runtimes[0].status == "stopped"
 def test_nonblank_machine_order_code_is_trimmed_and_preserved():
     payload = _payload()
     payload["machine_realtime"][0]["order_code"] = " ORD-001 "
@@ -312,8 +325,8 @@ def test_backend_remaining_quantity_just_above_tolerance_fails():
     _assert_conversion_error(payload, "ORD-001.*remaining")
 
 
-@pytest.mark.parametrize("order_name", [None, "", "   "])
-def test_blank_order_name_fails(order_name):
+@pytest.mark.parametrize("order_name", ["", "   "])
+def test_blank_order_name_fails_in_adapter(order_name):
     payload = _payload()
     payload["orders"][0]["order_name"] = order_name
 
