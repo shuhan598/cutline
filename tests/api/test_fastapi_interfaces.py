@@ -228,3 +228,25 @@ def test_cutline_evaluate_delegates_to_cutline_service():
     assert response.json()["calculation_time"] == "2026-07-18T12:00:00"
     assert len(calls) == 1
     assert isinstance(calls[0], CutlineAlgorithmRequest)
+
+def test_stub_algo_run_delegates_synchronously_to_cutline_service():
+    app = create_app()
+    calls = []
+
+    class StubService:
+        def evaluate_algorithm(self, request: CutlineAlgorithmRequest):
+            calls.append(request)
+            return CutlineAlgorithmResponse(
+                calculation_time=datetime(2026, 7, 18, 12, 30)
+            )
+
+    app.dependency_overrides[get_cutline_service] = StubService
+    client = TestClient(app)
+
+    response = client.post("/stub/algo/run", json=cutline_payload())
+
+    assert response.status_code == 200
+    assert response.json()["calculation_time"] == "2026-07-18T12:30:00"
+    assert len(calls) == 1
+    assert isinstance(calls[0], CutlineAlgorithmRequest)
+

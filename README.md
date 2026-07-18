@@ -10,7 +10,7 @@ CutlineAlgorithmRequest
   -> CutlineAlgorithmResponse
 ```
 
-算法输出建议和计算结果，不直接控制机台，也不写数据库。`app/api/` 与 `app/main.py` 目前没有可供外部调用的实际 HTTP 路由。
+算法输出建议和计算结果，不直接控制机台，也不写数据库。当前对后端提供同步 HTTP 接口 `POST /stub/algo/run`：后端提交 `CutlineAlgorithmRequest` JSON，同一次请求直接返回 `CutlineAlgorithmResponse` JSON。
 
 ## 请求与内部配置
 
@@ -86,3 +86,4 @@ pytest -q
 ```powershell
 pytest -q tests/test_current_examples.py
 ```
+

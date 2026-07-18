@@ -38,9 +38,17 @@ def validate_backend_request(
     return _backend_validator.validate(request)
 
 
+@router.post("/stub/algo/run", response_model=CutlineAlgorithmResponse)
+def run_stub_algorithm_request(
+    request: CutlineAlgorithmRequest,
+    service: CutlineService = Depends(get_cutline_service),
+) -> CutlineAlgorithmResponse:
+    return service.evaluate_algorithm(request)
+
 @router.post("/cutline/evaluate", response_model=CutlineAlgorithmResponse)
 def evaluate_cutline_request(
     request: CutlineAlgorithmRequest,
     service: CutlineService = Depends(get_cutline_service),
 ) -> CutlineAlgorithmResponse:
     return service.evaluate_algorithm(request)
+

@@ -2,7 +2,7 @@
 
 > 更新时间：2026-07-17
 >
-> 本文档描述后端传给算法服务的请求 JSON。当前项目尚未提供正式 HTTP 路由；本文档中的 HTTP 路径是建议接口契约。
+> 本文档描述后端传给算法服务的请求 JSON。当前正式同步 HTTP 路由为 `POST /stub/algo/run`。
 
 ## 1. 输入 JSON 是哪一块
 
@@ -12,10 +12,10 @@
 app.schemas.request_schema.CutlineAlgorithmRequest
 ```
 
-建议 HTTP 契约：
+HTTP 契约：
 
 ```http
-POST /api/cutline/evaluate
+POST /stub/algo/run
 Content-Type: application/json
 ```
 
@@ -379,3 +379,4 @@ new_active_cutline_events=1
 mixing_trace_records=1
 errors=0
 ```
+
