@@ -13,10 +13,10 @@
       ],
       "calculation_time": "2026-07-17T08:00:00+08:00",
       "silk_screen_clear_minutes": 30.0,
-      "remaining_production_hours": 500.0,
-      "prepare_clearance": false,
-      "reason": "not_yet_time_to_prepare",
-      "message": "当前订单尚未进入清台准备提醒窗口。"
+      "remaining_production_hours": 0.25,
+      "prepare_clearance": true,
+      "reason": "clearance_preparation_required",
+      "message": "当前订单已进入预计完工前清台准备窗口，请操作员准备清台。"
     }
   ],
   "mixing_trace_records": [],

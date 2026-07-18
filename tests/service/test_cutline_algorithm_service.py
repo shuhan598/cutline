@@ -398,20 +398,17 @@ def test_historical_active_event_from_request_reaches_pipeline_snapshot():
     payload["active_cutline_events"] = [
         {
             "event_id": "CUT-HISTORY-MC-001",
-            "plan_id": "PLAN-HISTORY",
             "machine_code": "MC-001",
             "source_order_code": "ORD-001",
             "target_order_code": "ORD-002",
             "workshop_code": "S1",
-            "source_buffer_code": "BUF-001",
             "target_buffer_code": "BUF-002",
             "upstream_process_code": "PROC-01",
             "downstream_process_code": "PROC-02",
-            "source_wafer_size": "182",
-            "source_wafer_spec": "N",
             "target_wafer_size": "182",
             "target_wafer_spec": "N",
             "cutline_start_time": "2026-07-15T08:00:00Z",
+            "negative_start_time": None,
         }
     ]
     request = CutlineAlgorithmRequest.model_validate(payload)
@@ -426,6 +423,8 @@ def test_historical_active_event_from_request_reaches_pipeline_snapshot():
     assert pipeline.snapshots[0].active_cutline_events[0].event_id == (
         "CUT-HISTORY-MC-001"
     )
+    assert pipeline.snapshots[0].active_cutline_events[0].status == "active"
+    assert pipeline.snapshots[0].active_cutline_events[0].plan_id is None
 
 
 def test_snapshot_conversion_error_propagates_unchanged():
@@ -484,7 +483,10 @@ def test_automatic_plan_response_preserves_mixing_and_matching_new_event_ids():
     plan = response.cutline_decisions[0].plan
     assert plan is not None
     assert plan.plan_id == response.mixing_trace_records[0].plan_id
-    assert plan.plan_id == response.new_active_cutline_events[0].plan_id
+    assert response.new_active_cutline_events[0].event_id == (
+        f"CUT-{plan.plan_id}-M-CAND"
+    )
+    assert "plan_id" not in response.new_active_cutline_events[0].model_dump()
     assert response.mixing_trace_records[0].cutline_event_id == (
         response.new_active_cutline_events[0].event_id
     )
@@ -499,11 +501,11 @@ def test_manual_intervention_response_has_no_mixing_or_new_events():
     assert len(response.cutline_decisions) == 1
     assert response.cutline_decisions[0].manual_intervention is not None
     assert response.mixing_trace_records == []
-    assert response.mixing_trace_failures == []
+    assert "mixing_trace_failures" not in response.model_fields
     assert response.new_active_cutline_events == []
 
 
-def test_historical_event_return_and_updated_event_are_both_returned():
+def test_historical_event_recommendation_closes_without_returning_update():
     payload = _real_flow_payload()
     payload["machine_realtime"][2]["output_quantity"] = 200.0
     payload["machine_realtime"][3]["input_quantity"] = 0.0
@@ -511,37 +513,31 @@ def test_historical_event_return_and_updated_event_are_both_returned():
     payload["active_cutline_events"] = [
         {
             "event_id": "CUT-HISTORICAL-M-CAND",
-            "plan_id": "PLAN-HISTORICAL",
             "machine_code": "M-CAND",
             "source_order_code": "ORD-SOURCE",
             "target_order_code": "ORD-TARGET",
             "workshop_code": "S1",
-            "source_buffer_code": "BUF-SOURCE",
             "target_buffer_code": "BUF-TARGET",
             "upstream_process_code": "P01",
             "downstream_process_code": "P02",
-            "source_wafer_size": "182",
-            "source_wafer_spec": "N",
             "target_wafer_size": "182",
             "target_wafer_spec": "N",
             "cutline_start_time": datetime(2026, 7, 16, 7, 0),
             "negative_start_time": datetime(2026, 7, 16, 7, 59),
-            "status": "active",
         }
     ]
 
     response = _evaluate_real_payload(payload)
 
-    assert len(response.return_results) == 1
-    assert len(response.updated_active_cutline_events) == 1
-    assert response.return_results[0].event_id == "CUT-HISTORICAL-M-CAND"
-    assert response.return_results[0].return_recommended is True
-    assert response.updated_active_cutline_events[0].event_id == (
-        response.return_results[0].event_id
+    assert len(response.return_recommendations) == 1
+    assert response.return_recommendations[0].event_id == (
+        "CUT-HISTORICAL-M-CAND"
     )
-    assert response.updated_active_cutline_events[0].status == (
-        "return_recommended"
-    )
+    assert response.closed_active_cutline_event_ids == [
+        "CUT-HISTORICAL-M-CAND"
+    ]
+    assert response.updated_active_cutline_events == []
+    assert "return_results" not in response.model_fields
     assert response.new_active_cutline_events == []
 
 
@@ -555,7 +551,7 @@ def test_silk_result_is_returned_without_any_buffer_warning():
     assert response.silk_screen_results[0].machine_codes == ["M-SILK"]
 
 
-def test_mixing_failure_stays_in_failures_and_is_not_duplicated_as_error():
+def test_mixing_failure_is_mapped_once_to_errors():
     payload = _real_flow_payload()
     payload["machine_process_times"] = []
 
@@ -564,11 +560,11 @@ def test_mixing_failure_stays_in_failures_and_is_not_duplicated_as_error():
     assert response.cutline_decisions[0].plan is not None
     assert len(response.new_active_cutline_events) == 1
     assert response.mixing_trace_records == []
-    assert len(response.mixing_trace_failures) == 1
-    assert response.mixing_trace_failures[0].reason == (
-        "process_duration_not_found"
-    )
-    assert response.errors == []
+    assert "mixing_trace_failures" not in response.model_fields
+    assert len(response.errors) == 1
+    assert response.errors[0].stage == "mixing_trace"
+    assert response.errors[0].reason == "process_duration_not_found"
+    assert response.errors[0].machine_code == "M-CAND"
 
 
 def test_partial_pipeline_error_is_returned_alongside_other_results(monkeypatch):

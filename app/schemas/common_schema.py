@@ -82,17 +82,30 @@ class AlgorithmActiveCutlineEvent(AlgorithmModel):
     """新版算法跨轮传入的单台机台活动切线跟踪事件。"""
 
     event_id: str = Field(..., min_length=1, description="活动切线事件唯一标识")
-    plan_id: str = Field(..., min_length=1, description="来源正式切线方案标识")
+    plan_id: str | None = Field(
+        default=None,
+        min_length=1,
+        description="仅内部新事件保留的来源正式切线方案标识",
+    )
     machine_code: str = Field(..., description="当前被借用的机台编码")
     source_order_code: str = Field(..., description="切线前生产的原订单编码")
     target_order_code: str = Field(..., description="切线后支援的目标订单编码")
     workshop_code: str = Field(..., description="活动切线事件所属车间编码")
-    source_buffer_code: str = Field(..., description="原订单产能借出对应的Buffer编码")
+    source_buffer_code: str | None = Field(
+        default=None,
+        description="仅内部新事件保留的原订单产能借出Buffer编码",
+    )
     target_buffer_code: str = Field(..., description="切回判断监测的目标Buffer编码")
     upstream_process_code: str = Field(..., description="目标区间上游工序编码")
     downstream_process_code: str = Field(..., description="目标区间下游工序编码")
-    source_wafer_size: str = Field(..., description="原订单硅片尺寸")
-    source_wafer_spec: str = Field(..., description="原订单硅片规格")
+    source_wafer_size: str | None = Field(
+        default=None,
+        description="仅内部新事件保留的原订单硅片尺寸",
+    )
+    source_wafer_spec: str | None = Field(
+        default=None,
+        description="仅内部新事件保留的原订单硅片规格",
+    )
     target_wafer_size: str = Field(..., description="目标订单硅片尺寸")
     target_wafer_spec: str = Field(..., description="目标订单硅片规格")
     cutline_start_time: datetime = Field(..., description="机台实际开始执行切线的时间")

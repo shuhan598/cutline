@@ -179,6 +179,26 @@ class AgvRelationRequest(RequestModel):
     process_name: str | None = Field(..., description="路线更改后对应的工序名称，缺失时为 null")
 
 
+class ActiveCutlineEventRequest(RequestModel):
+    """后端保存并在下一轮回传的最小活动切线跟踪事件。"""
+
+    event_id: str = Field(..., min_length=1, description="活动切线事件唯一标识")
+    machine_code: str = Field(..., description="当前被借用的机台编码")
+    source_order_code: str = Field(..., description="切线前生产的原订单编码")
+    target_order_code: str = Field(..., description="切线后支援的目标订单编码")
+    workshop_code: str = Field(..., description="活动切线事件所属车间编码")
+    target_buffer_code: str = Field(..., description="切回判断监测的目标Buffer编码")
+    upstream_process_code: str = Field(..., description="目标区间上游工序编码")
+    downstream_process_code: str = Field(..., description="目标区间下游工序编码")
+    target_wafer_size: str = Field(..., description="目标订单硅片尺寸")
+    target_wafer_spec: str = Field(..., description="目标订单硅片规格")
+    cutline_start_time: datetime = Field(..., description="机台实际开始执行切线的时间")
+    negative_start_time: datetime | None = Field(
+        ...,
+        description="目标区间净消耗速率连续小于0的开始时间",
+    )
+
+
 class CutlineAlgorithmRequest(RequestModel):
     snapshot_meta: SnapshotMetaRequest = Field(..., description="算法运行上下文、版本和降级标记")
     machine_realtime: list[MachineRealtimeRequest] = Field(..., description="机台实时状态及当前统计周期数量")
@@ -193,7 +213,7 @@ class CutlineAlgorithmRequest(RequestModel):
     buffer_realtime: list[BufferRealtimeRequest] = Field(..., description="Buffer 当前实时库存及占用率")
     buffer_master: list[BufferMasterRequest] = Field(..., description="Buffer 容量、安全库存、服务工序及所属循环信息")
     agv_relations: list[AgvRelationRequest] = Field(..., description="AGV 调度路线、切线前路线及更改后工序关系")
-    active_cutline_events: list[AlgorithmActiveCutlineEvent] = Field(
+    active_cutline_events: list[ActiveCutlineEventRequest] = Field(
         default_factory=list,
         description="后端保存并在本轮重新传入的活动切线事件列表",
     )

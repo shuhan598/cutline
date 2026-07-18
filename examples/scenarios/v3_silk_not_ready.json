@@ -1,6 +1,6 @@
 {
   "snapshot_meta": {
-    "run_id": "RUN-V3-STOCKOUT-AUTO",
+    "run_id": "RUN-V3-SILK-NOT-READY",
     "trigger_type": "manual_test",
     "workshop_id": "S2",
     "snapshot_time": "2026-07-17T08:00:00+08:00",
@@ -45,21 +45,21 @@
     },
     {
       "machine_code": "EA004",
-      "status": "运行",
-      "order_code": "ORD-S2-002",
+      "status": "异常",
+      "order_code": "",
       "tangent_time": null,
-      "input_quantity": 300.0,
-      "output_quantity": 300.0,
-      "completed_quantity": 300.0,
-      "period_quantity": 300.0,
-      "out_time": "2026-07-17T07:55:00+08:00"
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "completed_quantity": 0.0,
+      "period_quantity": 0.0,
+      "out_time": null
     },
     {
       "machine_code": "EA005",
       "status": "运行",
       "order_code": "ORD-S2-001",
       "tangent_time": null,
-      "input_quantity": 300.0,
+      "input_quantity": 100.0,
       "output_quantity": 100.0,
       "completed_quantity": 100.0,
       "period_quantity": 100.0,
@@ -67,14 +67,14 @@
     },
     {
       "machine_code": "EA006",
-      "status": "运行",
-      "order_code": "ORD-S2-002",
+      "status": "异常",
+      "order_code": "",
       "tangent_time": null,
-      "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
-      "out_time": "2026-07-17T07:55:00+08:00"
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "completed_quantity": 0.0,
+      "period_quantity": 0.0,
+      "out_time": null
     },
     {
       "machine_code": "EA007",
@@ -1657,8 +1657,8 @@
       "main_id": "INV-310110302-ORD-S2-001",
       "buffer_code": "310110302",
       "bound_source_name": "至上",
-      "current_quantity": 100.0,
-      "current_utilization_rate": 0.001
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
     },
     {
       "main_id": "INV-310110303-ORD-S2-001",
@@ -1715,13 +1715,6 @@
       "bound_source_name": "至上",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
-    },
-    {
-      "main_id": "INV-310110302-ORD-S2-002",
-      "buffer_code": "310110302",
-      "bound_source_name": "至上支援单",
-      "current_quantity": 2000.0,
-      "current_utilization_rate": 0.02
     }
   ],
   "buffer_master": [

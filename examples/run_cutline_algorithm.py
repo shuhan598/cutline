@@ -13,11 +13,15 @@ from app.schemas.request_schema import CutlineAlgorithmRequest
 from app.service.cutline_service import CutlineService
 
 
-REQUEST_PATH = ROOT_DIR / "examples" / "backend_request_sample.json"
+DEFAULT_REQUEST_PATH = ROOT_DIR / "examples" / "backend_request_sample.json"
 
 
 def main() -> None:
-    with REQUEST_PATH.open(encoding="utf-8") as file:
+    sys.stdout.reconfigure(encoding="utf-8")
+    if len(sys.argv) > 2:
+        raise SystemExit("usage: python examples/run_cutline_algorithm.py [request.json]")
+    request_path = Path(sys.argv[1]) if len(sys.argv) == 2 else DEFAULT_REQUEST_PATH
+    with request_path.open(encoding="utf-8") as file:
         request = CutlineAlgorithmRequest.model_validate(json.load(file))
 
     response = CutlineService().evaluate_algorithm(request)

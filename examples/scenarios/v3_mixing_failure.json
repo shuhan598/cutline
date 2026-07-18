@@ -1,6 +1,6 @@
 {
   "snapshot_meta": {
-    "run_id": "RUN-V3-STOCKOUT-AUTO",
+    "run_id": "RUN-V3-MIXING-FAILURE",
     "trigger_type": "manual_test",
     "workshop_id": "S2",
     "snapshot_time": "2026-07-17T08:00:00+08:00",
@@ -59,7 +59,7 @@
       "status": "运行",
       "order_code": "ORD-S2-001",
       "tangent_time": null,
-      "input_quantity": 300.0,
+      "input_quantity": 600.0,
       "output_quantity": 100.0,
       "completed_quantity": 100.0,
       "period_quantity": 100.0,
@@ -255,12 +255,12 @@
     {
       "machine_code": "EA023",
       "status": "运行",
-      "order_code": "ORD-S2-003",
+      "order_code": "ORD-S2-002",
       "tangent_time": null,
-      "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
+      "input_quantity": 300.0,
+      "output_quantity": 300.0,
+      "completed_quantity": 300.0,
+      "period_quantity": 300.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -523,14 +523,6 @@
       "machine_name": "EA004制绒机",
       "product_code": "PROD-S2-N-TARGET",
       "product_name": "182N至上产品",
-      "proc_seconds": 120.0,
-      "actual_capacity": 200.0
-    },
-    {
-      "machine_code": "EA004",
-      "machine_name": "EA004制绒机",
-      "product_code": "PROD-S2-N-SUPPORT",
-      "product_name": "182N支援产品",
       "proc_seconds": 120.0,
       "actual_capacity": 200.0
     },
@@ -1385,9 +1377,9 @@
     {
       "machine_code": "EA023",
       "machine_name": "EA023制绒机",
-      "line_code": "S2-SW2A",
-      "line_name": "SW2A",
-      "wafer_spec": "R"
+      "line_code": "S2-SW1A",
+      "line_name": "SW1A",
+      "wafer_spec": "N"
     },
     {
       "machine_code": "EA024",

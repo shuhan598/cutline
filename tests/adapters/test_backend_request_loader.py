@@ -75,7 +75,7 @@ def test_load_json_file_reads_utf8_json(tmp_path: Path):
 
     request = BackendRequestLoader().load_json_file(path)
 
-    assert request.workshops[0].workshop_name == "一车间"
+    assert request.workshops[0].workshop_name == "S2车间"
 
 
 def test_load_json_file_wraps_file_and_syntax_errors(tmp_path: Path):

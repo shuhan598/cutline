@@ -1,9 +1,9 @@
 {
   "snapshot_meta": {
-    "run_id": "RUN-V3-STOCKOUT-AUTO",
+    "run_id": "RUN-V3-RETURN-ROUND-2",
     "trigger_type": "manual_test",
     "workshop_id": "S2",
-    "snapshot_time": "2026-07-17T08:00:00+08:00",
+    "snapshot_time": "2026-07-17T08:26:00+08:00",
     "params_version": 3,
     "catalog_version": "V3-FAKE-CATALOG-001",
     "catalog_loaded_at": "2026-07-17T07:55:00+08:00",
@@ -38,9 +38,9 @@
       "order_code": "ORD-S2-001",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
+      "output_quantity": 300.0,
+      "completed_quantity": 300.0,
+      "period_quantity": 300.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -59,7 +59,7 @@
       "status": "运行",
       "order_code": "ORD-S2-001",
       "tangent_time": null,
-      "input_quantity": 300.0,
+      "input_quantity": 100.0,
       "output_quantity": 100.0,
       "completed_quantity": 100.0,
       "period_quantity": 100.0,
@@ -1657,7 +1657,7 @@
       "main_id": "INV-310110302-ORD-S2-001",
       "buffer_code": "310110302",
       "bound_source_name": "至上",
-      "current_quantity": 100.0,
+      "current_quantity": 1000.0,
       "current_utilization_rate": 0.001
     },
     {
@@ -2148,5 +2148,20 @@
       "process_name": "制绒"
     }
   ],
-  "active_cutline_events": []
+  "active_cutline_events": [
+    {
+      "event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
+      "machine_code": "EA004",
+      "source_order_code": "ORD-S2-002",
+      "target_order_code": "ORD-S2-001",
+      "workshop_code": "S2",
+      "target_buffer_code": "310110302",
+      "upstream_process_code": "制绒",
+      "downstream_process_code": "碱抛",
+      "target_wafer_size": "182",
+      "target_wafer_spec": "N",
+      "cutline_start_time": "2026-07-17T08:00:00+08:00",
+      "negative_start_time": "2026-07-17T08:05:00+08:00"
+    }
+  ]
 }

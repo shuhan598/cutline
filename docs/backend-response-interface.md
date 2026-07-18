@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 切线算法对外输出接口文档
 
 > 更新时间：2026-07-17
@@ -29,6 +30,13 @@ app.schemas.response_schema.CutlineAlgorithmResponse
 - 不是任何算法中间计算对象。
 
 代码链路：
+=======
+# 切线算法后端请求与响应接口
+
+## 1. 正式调用链
+
+当前仓库没有 HTTP 路由。后端调用入口及唯一正式数据链为：
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
 
 ```text
 CutlineAlgorithmRequest
@@ -38,6 +46,7 @@ CutlineAlgorithmRequest
   -> CutlineAlgorithmResponse
 ```
 
+<<<<<<< HEAD
 相关代码：
 
 - `app/service/cutline_service.py`
@@ -69,23 +78,30 @@ CutlineAlgorithmResponse
 - 响应样例：`debug_outputs/stockout_plan_sample_response.json`
 
 ## 3. 响应顶层结构
+=======
+后端只应接收 `CutlineAlgorithmResponse`，不得依赖内部
+`AlgorithmEvaluateResult` 的净速率、候选排序或模拟诊断字段。
+
+## 2. 顶层响应
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
 
 ```json
 {
-  "calculation_time": "2026-07-16T08:30:00+08:00",
+  "calculation_time": "2026-07-17T08:00:00+08:00",
   "stockout_warnings": [],
   "overflow_warnings": [],
   "cutline_decisions": [],
-  "return_results": [],
+  "return_recommendations": [],
   "silk_screen_results": [],
   "mixing_trace_records": [],
-  "mixing_trace_failures": [],
   "new_active_cutline_events": [],
   "updated_active_cutline_events": [],
+  "closed_active_cutline_event_ids": [],
   "errors": []
 }
 ```
 
+<<<<<<< HEAD
 | 字段 | 类型 | 用途 | 是否建议前端展示 | 后端是否需要保存 |
 |---|---|---|---|---|
 | `calculation_time` | datetime | 本次计算时间 | 是 | 可选 |
@@ -189,26 +205,48 @@ CutlineAlgorithmResponse
 ```json
 {
   "plan_id": "stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T",
+=======
+响应分为三类：
+
+1. 甲方业务结果：`stockout_warnings`、`overflow_warnings`、
+   `cutline_decisions`、`return_recommendations`、`silk_screen_results`、
+   `mixing_trace_records`。
+2. 后端算法状态：`new_active_cutline_events`、
+   `updated_active_cutline_events`、`closed_active_cutline_event_ids`。
+3. 后端错误记录：`errors`。
+
+正式响应不再包含 `return_results` 和 `mixing_trace_failures`。这两类完整
+诊断结果仍可保留在算法内部。
+
+## 3. 预警
+
+### 3.1 断料预警
+
+```json
+{
+  "warning_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
   "warning_type": "stockout",
-  "calculation_time": "2026-07-16T08:30:00+08:00",
-  "workshop_code": "WS-S1",
-  "buffer_code": "BUF-ZR-PK",
-  "order_code": "O-T",
+  "warning_time": "2026-07-17T08:00:00+08:00",
+  "buffer_code": "310110302",
+  "order_code": "ORD-S2-001",
   "wafer_size": "182",
   "wafer_spec": "N",
-  "upstream_process_code": "P-ZR",
-  "downstream_process_code": "P-PK",
-  "initial_capacity_gap": 400.0,
-  "total_contribution_capacity": 600.0,
-  "remaining_capacity_gap": 0.0,
-  "selected_machines": [],
-  "risk_resolved": true,
-  "manual_intervention_required": false
+  "workshop_code": "S2",
+  "upstream_process_code": "制绒",
+  "downstream_process_code": "碱抛",
+  "current_quantity": 100.0,
+  "upstream_output_rate": 200.0,
+  "downstream_input_rate": 600.0,
+  "net_consumption_rate": 400.0,
+  "depletion_minutes": 15.0,
+  "stockout_warning_lead_minutes": 30.0
 }
 ```
 
-关键字段：
+`warning_id` 由 Mapper 确定性生成，用于关联对应的切线决策，不依赖数组下标。
 
+<<<<<<< HEAD
 | 字段 | 含义 |
 |---|---|
 | `plan_id` | 方案 ID |
@@ -223,32 +261,27 @@ CutlineAlgorithmResponse
 | `manual_intervention_required` | 是否需要人工介入 |
 
 ### 6.2 选中机台 `selected_machines`
+=======
+### 3.2 溢满预警
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
 
 ```json
 {
-  "machine_code": "ZR-02",
-  "source_order_code": "O-R",
-  "target_order_code": "O-T",
-  "source_buffer_code": "BUF-ZR-PK",
-  "target_buffer_code": "BUF-ZR-PK",
-  "process_code": "P-ZR",
-  "workshop_code": "WS-S1",
-  "wafer_size": "182",
-  "source_wafer_spec": "N",
-  "target_wafer_spec": "N",
-  "contribution_capacity": 600.0,
-  "reduced_capacity": null,
-  "utilization_rate": 1.0,
-  "idle_rate": 0.0,
-  "source_net_rate_before": -400.0,
-  "source_net_rate_after": 200.0,
-  "source_depletion_minutes_after": 600.0,
-  "target_net_rate_before": 400.0,
-  "target_net_rate_after": -200.0,
-  "target_overflow_minutes_after": null
+  "warning_id": "overflow:2026-07-17T08:00:00+08:00:310110302",
+  "warning_type": "overflow",
+  "warning_time": "2026-07-17T08:00:00+08:00",
+  "buffer_code": "310110302",
+  "workshop_code": "S2",
+  "total_inventory": 900.0,
+  "max_capacity": 1000.0,
+  "remaining_capacity": 100.0,
+  "buffer_growth_rate": 300.0,
+  "overflow_minutes": 20.0,
+  "overflow_warning_lead_minutes": 30.0
 }
 ```
 
+<<<<<<< HEAD
 字段说明：
 
 | 字段 | 含义 |
@@ -287,33 +320,121 @@ CutlineAlgorithmResponse
 ### 8.1 新增跟踪事件 `new_active_cutline_events`
 
 当算法生成正式切线方案并选中机台后，会生成新的活动切线事件。
+=======
+对外只展示物理 Buffer 总体风险。订单增长明细、订单库存、订单净速率和
+订单增长速率不返回；内部仍保留这些数据供溢满候选机台选择使用。
+
+## 4. 切线决策
+
+每条决策通过 `warning_id` 关联预警。正式方案和人工介入使用两个独立模型，
+最终 JSON 只出现实际存在的分支。
+
+自动方案：
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
 
 ```json
 {
-  "event_id": "CUT-stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T-ZR-02",
-  "plan_id": "stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T",
-  "machine_code": "ZR-02",
-  "source_order_code": "O-R",
-  "target_order_code": "O-T",
-  "workshop_code": "WS-S1",
-  "source_buffer_code": "BUF-ZR-PK",
-  "target_buffer_code": "BUF-ZR-PK",
-  "upstream_process_code": "P-ZR",
-  "downstream_process_code": "P-PK",
-  "source_wafer_size": "182",
-  "source_wafer_spec": "N",
-  "target_wafer_size": "182",
-  "target_wafer_spec": "N",
-  "cutline_start_time": "2026-07-16T08:30:00+08:00",
-  "negative_start_time": null,
-  "status": "active",
-  "contribution_capacity": 600.0,
-  "warning_type": "stockout"
+  "warning_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+  "plan": {}
 }
 ```
 
-后端处理要求：
+人工介入：
 
+```json
+{
+  "warning_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+  "manual_intervention": {
+    "reason": "no_candidate_machine"
+  }
+}
+```
+
+自动方案中不存在 `manual_intervention` 键；人工介入中不存在 `plan` 键。
+人工介入对象只返回稳定原因代码 `reason`，例如 `no_candidate_machine`、
+`insufficient_capacity`、`source_order_stockout_risk`、
+`target_buffer_overflow_risk`、`no_valid_target_order`；中文文案由展示层映射。
+
+### 4.1 断料正式方案
+
+字段为：
+
+- `plan_id`、`warning_type`、`calculation_time`
+- `workshop_code`、`buffer_code`、`order_code`
+- `wafer_size`、`wafer_spec`
+- `upstream_process_code`、`downstream_process_code`
+- `initial_capacity_gap`、`total_contribution_capacity`、
+  `remaining_capacity_gap`
+- `selected_machines`
+
+### 4.2 溢满正式方案
+
+字段为：
+
+- `plan_id`、`warning_type`、`calculation_time`
+- `workshop_code`、`buffer_code`、`source_order_code`
+- `source_wafer_size`、`source_wafer_spec`
+- `upstream_process_code`、`downstream_process_code`
+- `initial_growth_rate`、`total_reduced_capacity`、`remaining_growth_rate`、
+  `updated_overflow_minutes`
+- `selected_machines`
+
+对外正式方案不返回 `risk_resolved` 和 `manual_intervention_required`。
+
+### 4.3 选中机台
+
+断料和溢满均保留：
+
+- `machine_code`
+- `source_order_code`、`target_order_code`
+- `source_buffer_code`、`target_buffer_code`
+- `process_code`、`workshop_code`
+- `wafer_size`、`source_wafer_spec`、`target_wafer_spec`
+
+断料机台只增加 `contribution_capacity`；溢满机台只增加 `reduced_capacity`。
+不返回利用率、空闲度、切线前后净速率、断料时间和溢满时间等模拟诊断字段。
+
+## 5. 切回建议
+
+```json
+{
+  "event_id": "CUT-202607170800-EA004",
+  "machine_code": "EA004",
+  "source_order_code": "ORD-S2-002",
+  "target_order_code": "ORD-S2-001",
+  "return_recommended_time": "2026-07-17T08:26:00+08:00"
+}
+```
+
+`return_recommendations` 是给甲方展示的业务结果，不用于后端持续计时。
+`return_recommended_time` 是算法首次满足全部切回条件的计算时间。
+现场实际完成切回的 `returned_time` 由后端或现场系统记录，算法不推测。
+
+## 6. 活动事件请求与新事件响应
+
+请求 `active_cutline_events` 与响应 `new_active_cutline_events` 使用同一最小字段集：
+
+```json
+{
+  "event_id": "CUT-202607170800-EA004",
+  "machine_code": "EA004",
+  "source_order_code": "ORD-S2-002",
+  "target_order_code": "ORD-S2-001",
+  "workshop_code": "S2",
+  "target_buffer_code": "310110302",
+  "upstream_process_code": "制绒",
+  "downstream_process_code": "碱抛",
+  "target_wafer_size": "182",
+  "target_wafer_spec": "N",
+  "cutline_start_time": "2026-07-17T08:00:00+08:00",
+  "negative_start_time": null
+}
+```
+
+后端不再回传 `plan_id`、源 Buffer、源硅片尺寸/规格、贡献产能、预警类型和
+`status`。`negative_start_time` 必须显式存在并允许为 `null`。
+
+<<<<<<< HEAD
 1. 持久化 `new_active_cutline_events`。
 2. 下一轮请求时，把仍需跟踪的事件放入请求顶层 `active_cutline_events`。
 3. 不要把这些事件直接作为前端展示列表；前端展示应使用 `cutline_decisions`、`return_results` 等业务结果字段。
@@ -368,28 +489,23 @@ CutlineAlgorithmResponse
 ## 11. 混料追溯 `mixing_trace_records`
 
 正式切线方案生成后，算法会为选中机台计算混料追溯记录。
+=======
+## 7. 更新与关闭事件
+
+更新事件只包含：
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
 
 ```json
 {
-  "mix_trace_id": "MIX-stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T-ZR-02",
-  "plan_id": "stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T",
-  "cutline_event_id": "CUT-stockout:2026-07-16T08:30:00+08:00:BUF-ZR-PK:O-T-ZR-02",
-  "machine_code": "ZR-02",
-  "source_order_code": "O-R",
-  "target_order_code": "O-T",
-  "source_product_code": "PROD-R",
-  "target_product_code": "PROD-T",
-  "mix_start_time": "2026-07-16T10:37:00+08:00",
-  "mixed_basket_start_index": 1,
-  "mixed_basket_end_index": 10,
-  "mixed_basket_count": 10,
-  "estimated_total_mixed_pieces": 1200,
-  "notification_status": "scheduled"
+  "event_id": "CUT-202607170800-EA004",
+  "negative_start_time": null
 }
 ```
 
-后端处理建议：
+`negative_start_time: null` 表示净速率已恢复非负，后端必须清空原计时。
+响应不会全局排除 `null`，因此该字段不会丢失。
 
+<<<<<<< HEAD
 - 保存混料记录。
 - 按业务需要推送 MES。
 - `notification_status=scheduled` 表示尚未到达混料时间。
@@ -409,17 +525,19 @@ CutlineAlgorithmResponse
 ## 13. 局部错误 `errors`
 
 `errors` 只表示某个阶段或某条预警计算失败，不一定代表整个算法失败。
+=======
+关闭事件只返回 ID：
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
 
 ```json
 {
-  "stage": "stockout_candidate",
-  "warning_type": "stockout",
-  "warning_key": "BUF-TARGET:ORD-TARGET:182:N:P-ZR:P-PK",
-  "reason": "candidate_machine_calculation_error",
-  "message": "candidate boundary failed"
+  "closed_active_cutline_event_ids": [
+    "CUT-202607170800-EA004"
+  ]
 }
 ```
 
+<<<<<<< HEAD
 后端处理建议：
 
 - 保存并展示给运维或调度人员。
@@ -457,3 +575,97 @@ CutlineAlgorithmResponse
 5. 收到 `updated_active_cutline_events` 后按 `event_id` 更新保存记录；若状态为 `return_recommended`，关闭该跟踪事件，下一轮不再回传。
 6. 保存 `errors` 便于排查。
 
+=======
+同一响应中，`return_recommendations[].event_id` 与
+`closed_active_cutline_event_ids[]` 必须一一对应。满足切回条件的事件不会再
+出现在 `updated_active_cutline_events`。
+
+## 8. 事件生命周期
+
+事件未产生切回建议时继续观察：
+
+1. `net_consumption_rate >= 0`：计时重置为 `null`；只有原值非空时返回更新。
+2. `net_consumption_rate < 0` 且计时为空：以本轮 `calculation_time` 开始计时并
+   返回更新。
+3. 连续负净速率时间小于或等于稳定窗口：保留计时，不建议切回。
+4. 稳定时间满足但库存小于或等于安全库存：继续观察。
+
+仅当以下三项同时满足时关闭：
+
+1. `net_consumption_rate < 0`；
+2. `current_time - negative_start_time > stability_window_minutes`；
+3. `current_quantity > safe_inventory_quantity`。
+
+其中：
+
+```text
+safe_inventory_quantity
+  = abs(net_consumption_rate)
+  × stockout_warning_lead_minutes
+  ÷ 60
+```
+
+稳定窗口和库存阈值均使用严格大于。算法给出建议后立即结束跟踪，不等待现场
+真实切回。后端收到关闭 ID 后必须移除事件，下一轮不得再次提交。
+
+如果目标 Buffer、订单、净速率无法关联，或 ReturnEvaluator 出现局部异常，
+算法只返回 `errors`，不会建议切回、不会关闭事件；后端保留原事件并在下一轮
+继续提交。
+
+## 9. 丝网清台
+
+每条 `silk_screen_results` 只包含：
+
+- `workshop_code`
+- `current_order_code`
+- `machine_codes`
+- `calculation_time`
+- `silk_screen_clear_minutes`
+- `remaining_production_hours`
+- `prepare_clearance`
+- `reason`
+- `message`
+
+不返回工序、产品、总量/完成量/剩余量、实时产能、预计完工时间、准备时间和
+`next_order_code`。异常丝网机台仍不参与计算；`prepare_clearance` 的判断公式未变。
+
+## 10. 混料追踪与错误
+
+成功的 `mixing_trace_records` 保持现有字段。单机混料失败转换为：
+
+```json
+{
+  "stage": "mixing_trace",
+  "machine_code": "EA004",
+  "reason": "process_duration_not_found",
+  "message": "process duration for EA004/PROD-S2-N-SUPPORT was not found"
+}
+```
+
+每个失败只进入 `errors` 一次；不会再出现在已删除的
+`mixing_trace_failures`。其它机台成功记录、正式方案和新活动事件继续返回。
+
+## 11. 后端处理顺序
+
+1. 展示或转发甲方业务结果。
+2. 将 `new_active_cutline_events` 加入活动事件集合。
+3. 按 `event_id` 应用 `updated_active_cutline_events`；允许把
+   `negative_start_time` 更新为 `null`。
+4. 按 `closed_active_cutline_event_ids` 移除事件。
+5. 下一轮只提交仍在活动集合且未关闭的事件。
+6. 独立保存 `errors`，不得因局部错误丢弃其它成功结果。
+
+## 12. 可执行样例
+
+请求场景位于 `examples/scenarios/`。正式响应样例位于 `debug_outputs/`，包括：
+
+- `v3_stockout_auto_response.json`
+- `v3_stockout_manual_no_candidate_response.json`
+- `v3_overflow_warning_response.json`
+- `v3_return_tracking_started_response.json`
+- `v3_return_recommended_response.json`
+- `v3_silk_prepare_response.json`
+- `v3_mixing_failure_response.json`
+
+所有文件均由 `python examples/generate_v3_scenarios.py` 通过真实 Service 链生成。
+>>>>>>> c89d9c2e13714628ac16d26bc1ef13e365bf952a
