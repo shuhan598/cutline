@@ -1,1 +1,9 @@
-# 健康检查接口，用来判断算法服务是否正常运行
+from fastapi import APIRouter
+
+
+router = APIRouter(tags=["health"])
+
+
+@router.get("/health")
+def health_check() -> dict[str, str]:
+    return {"status": "ok"}

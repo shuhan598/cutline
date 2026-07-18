@@ -326,8 +326,9 @@ CutlineAlgorithmResponse
 
 1. 按 `event_id` 查找已保存事件。
 2. 用 `updated_active_cutline_events` 中的同名事件更新保存状态。
-3. 继续在下一轮请求中回传仍需跟踪的事件。
-4. 该字段同样不用于前端展示。
+3. 如果更新后 `status == "return_recommended"`，表示算法已经给出切回建议，后端应关闭该跟踪事件，并停止在下一轮请求中回传该事件。
+4. 如果更新后仍是 `active`，表示还需要继续跟踪，下轮请求继续放入 `active_cutline_events`。
+5. 该字段同样不用于前端展示。
 
 ## 9. 切回结果 `return_results`
 
@@ -453,5 +454,6 @@ CutlineAlgorithmResponse
 2. 展示或保存 `cutline_decisions`。
 3. 保存 `new_active_cutline_events`。
 4. 下轮请求把保存的活动事件放入 `active_cutline_events`。
-5. 收到 `updated_active_cutline_events` 后按 `event_id` 更新保存记录。
+5. 收到 `updated_active_cutline_events` 后按 `event_id` 更新保存记录；若状态为 `return_recommended`，关闭该跟踪事件，下一轮不再回传。
 6. 保存 `errors` 便于排查。
+
