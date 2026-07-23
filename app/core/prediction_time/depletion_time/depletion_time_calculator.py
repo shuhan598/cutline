@@ -31,7 +31,9 @@ class DepletionTimeCalculator:
             )
 
         return AlgorithmDepletionTimeResult(
+            main_id=net_rate.main_id,
             buffer_code=net_rate.buffer_code,
+            buffer_codes=list(net_rate.buffer_codes),
             order_code=net_rate.order_code,
             wafer_size=net_rate.wafer_size,
             wafer_spec=net_rate.wafer_spec,

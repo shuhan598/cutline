@@ -69,7 +69,9 @@ def _snapshot(
 
 def _rate(
     *,
+    main_id: str = "MAIN-01",
     buffer_code: str = "BUF-01",
+    buffer_codes: list[str] | None = None,
     order_code: str = "ORD-001",
     wafer_size: str = "182",
     wafer_spec: str = "N",
@@ -79,7 +81,11 @@ def _rate(
     upstream_output_rate = 5000
     downstream_input_rate = upstream_output_rate + net_consumption_rate
     return AlgorithmIntervalNetRateResult(
+        main_id=main_id,
         buffer_code=buffer_code,
+        buffer_codes=(
+            [buffer_code] if buffer_codes is None else buffer_codes
+        ),
         order_code=order_code,
         wafer_size=wafer_size,
         wafer_spec=wafer_spec,
@@ -120,6 +126,8 @@ def _assert_calculation_error(
 def test_one_buffer_one_order_overflow_time():
     result = _calculate(_snapshot(_buffer()), _rate())[0]
 
+    assert result.main_id == "MAIN-01"
+    assert result.buffer_codes == ["BUF-01"]
     assert result.total_inventory == 2000
     assert result.buffer_growth_rate == 2000
     assert result.remaining_capacity == 8000
@@ -159,6 +167,7 @@ def test_multiple_order_inventory_and_growth_rates_are_algebraically_summed():
     assert result.remaining_capacity == 6500
     assert result.overflow_minutes == 156
     assert len(results) == 1
+    assert len(result.order_growth_details) == 3
 
 
 def test_order_growth_details_preserve_every_order_and_signed_rate():
@@ -231,33 +240,135 @@ def test_inventory_above_capacity_returns_zero_without_error():
     assert result.overflow_minutes == 0
 
 
-def test_multiple_buffers_are_calculated_separately():
+def test_multiple_main_ids_with_same_interval_are_calculated_separately():
     results = _calculate(
         _snapshot(_buffer("BUF-01", 10000), _buffer("BUF-02", 2000)),
-        _rate(buffer_code="BUF-01", current_quantity=1000, net_consumption_rate=-1000),
-        _rate(buffer_code="BUF-02", current_quantity=1000, net_consumption_rate=-500),
+        _rate(
+            main_id="MAIN-01",
+            buffer_code="BUF-01",
+            current_quantity=1000,
+            net_consumption_rate=-1000,
+        ),
+        _rate(
+            main_id="MAIN-02",
+            buffer_code="BUF-02",
+            current_quantity=1000,
+            net_consumption_rate=-500,
+        ),
     )
 
-    assert [(result.buffer_code, result.overflow_minutes) for result in results] == [
-        ("BUF-01", 540),
-        ("BUF-02", 120),
+    assert [
+        (result.main_id, result.buffer_code, result.overflow_minutes)
+        for result in results
+    ] == [
+        ("MAIN-01", "BUF-01", 540),
+        ("MAIN-02", "BUF-02", 120),
     ]
 
 
-def test_empty_buffer_still_generates_complete_result():
-    result = _calculate(_snapshot(_buffer()))[0]
+def test_master_without_realtime_inventory_generates_no_empty_overflow_result():
+    assert _calculate(_snapshot(_buffer())) == []
+
+
+def test_same_main_sums_unique_physical_capacities_and_all_order_inventory():
+    result = _calculate(
+        _snapshot(_buffer("BUF-01", 10000), _buffer("BUF-02", 20000)),
+        _rate(
+            main_id="MAIN-LAYERS",
+            buffer_code="BUF-01",
+            buffer_codes=["BUF-01", "BUF-02"],
+            order_code="ORD-A",
+            current_quantity=10800,
+            net_consumption_rate=-3000,
+        ),
+        _rate(
+            main_id="MAIN-LAYERS",
+            buffer_code="BUF-02",
+            buffer_codes=["BUF-02"],
+            order_code="ORD-B",
+            current_quantity=2000,
+            net_consumption_rate=1000,
+        ),
+    )[0]
+
+    assert result.main_id == "MAIN-LAYERS"
+    assert result.buffer_code == "BUF-01"
+    assert result.buffer_codes == ["BUF-01", "BUF-02"]
+    assert result.max_capacity == 30000
+    assert result.total_inventory == 12800
+    assert result.remaining_capacity == 17200
+    assert result.buffer_growth_rate == 2000
+    assert result.overflow_minutes == 516
+    assert [
+        (detail.order_code, detail.current_quantity, detail.growth_rate)
+        for detail in result.order_growth_details
+    ] == [
+        ("ORD-A", 10800, 3000),
+        ("ORD-B", 2000, -1000),
+    ]
+
+
+def test_same_physical_buffer_with_multiple_orders_counts_capacity_once():
+    result = _calculate(
+        _snapshot(_buffer("BUF-01", 10000)),
+        _rate(
+            main_id="MAIN-01",
+            buffer_code="BUF-01",
+            order_code="ORD-A",
+            current_quantity=1000,
+            net_consumption_rate=-1000,
+        ),
+        _rate(
+            main_id="MAIN-01",
+            buffer_code="BUF-01",
+            order_code="ORD-B",
+            current_quantity=2000,
+            net_consumption_rate=-500,
+        ),
+    )[0]
+
+    assert result.max_capacity == 10000
+    assert result.total_inventory == 3000
+    assert result.buffer_growth_rate == 1500
+    assert len(result.order_growth_details) == 2
+
+
+def test_representative_and_buffer_codes_are_sorted_and_deduplicated():
+    result = _calculate(
+        _snapshot(_buffer("BUF-02", 2000), _buffer("BUF-01", 10000)),
+        _rate(
+            main_id="MAIN-01",
+            buffer_code="BUF-02",
+            buffer_codes=["BUF-02", "BUF-01", "BUF-02"],
+            current_quantity=1000,
+            net_consumption_rate=-1000,
+        ),
+    )[0]
 
     assert result.model_dump() == {
+        "main_id": "MAIN-01",
         "buffer_code": "BUF-01",
+        "buffer_codes": ["BUF-01", "BUF-02"],
         "workshop_code": "S1",
         "upstream_process_code": "ZR",
         "downstream_process_code": "PK",
-        "max_capacity": 10000.0,
-        "total_inventory": 0.0,
-        "remaining_capacity": 10000.0,
-        "buffer_growth_rate": 0.0,
-        "overflow_minutes": None,
-        "order_growth_details": [],
+        "max_capacity": 12000.0,
+        "total_inventory": 1000.0,
+        "remaining_capacity": 11000.0,
+        "buffer_growth_rate": 1000.0,
+        "overflow_minutes": 660.0,
+        "order_growth_details": [
+            {
+                "order_code": "ORD-001",
+                "wafer_size": "182",
+                "wafer_spec": "N",
+                "current_quantity": 1000.0,
+                "upstream_output_rate": 5000.0,
+                "downstream_input_rate": 4000.0,
+                "net_consumption_rate": -1000.0,
+                "growth_rate": 1000.0,
+            }
+        ],
     }
 
 
@@ -277,12 +388,8 @@ def test_duplicate_buffer_master_fails():
     )
 
 
-def test_buffer_master_without_process_relation_fails():
-    _assert_calculation_error(
-        _snapshot(_buffer(), relations=[]),
-        [],
-        "BUF-01.*process relation.*does not exist",
-    )
+def test_buffer_master_without_process_relation_and_realtime_is_ignored():
+    assert _calculate(_snapshot(_buffer(), relations=[])) == []
 
 
 def test_multiple_process_relations_for_same_buffer_fail():

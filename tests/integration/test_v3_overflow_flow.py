@@ -144,7 +144,9 @@ def test_v3_overflow_selection_and_plan_support_distinct_target_buffer_context()
         ],
     )
     source_interval = AlgorithmIntervalNetRateResult(
+        main_id=warning.main_id,
         buffer_code=TARGET_BUFFER_CODE,
+        buffer_codes=list(warning.buffer_codes),
         order_code="ORD-S2-002",
         wafer_size="182",
         wafer_spec="N",
@@ -157,7 +159,9 @@ def test_v3_overflow_selection_and_plan_support_distinct_target_buffer_context()
         net_consumption_rate=-400,
     )
     target_interval = AlgorithmIntervalNetRateResult(
+        main_id=f"MAIN-{target_buffer_code}",
         buffer_code=target_buffer_code,
+        buffer_codes=[target_buffer_code],
         order_code="ORD-S2-001",
         wafer_size="182",
         wafer_spec="N",
@@ -171,7 +175,9 @@ def test_v3_overflow_selection_and_plan_support_distinct_target_buffer_context()
     )
     overflow_states = [
         AlgorithmBufferOverflowTimeResult(
+            main_id=warning.main_id,
             buffer_code=TARGET_BUFFER_CODE,
+            buffer_codes=list(warning.buffer_codes),
             workshop_code="S2",
             upstream_process_code="制绒",
             downstream_process_code="碱抛",
@@ -183,7 +189,9 @@ def test_v3_overflow_selection_and_plan_support_distinct_target_buffer_context()
             order_growth_details=warning.order_growth_details,
         ),
         AlgorithmBufferOverflowTimeResult(
+            main_id=f"MAIN-{target_buffer_code}",
             buffer_code=target_buffer_code,
+            buffer_codes=[target_buffer_code],
             workshop_code="S2",
             upstream_process_code="碱抛",
             downstream_process_code="背膜",

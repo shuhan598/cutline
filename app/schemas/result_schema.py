@@ -12,7 +12,9 @@ from app.schemas.common_schema import AlgorithmActiveCutlineEvent
 class AlgorithmIntervalNetRateResult(BaseModel):
     """新版算法按 Buffer、订单、规格和具体工序区间计算的净消耗速率。"""
 
+    main_id: str
     buffer_code: str
+    buffer_codes: list[str] = Field(..., min_length=1)
     order_code: str
     wafer_size: str
     wafer_spec: str
@@ -101,7 +103,9 @@ class AlgorithmSilkScreenTransitionResult(BaseModel):
 class AlgorithmDepletionTimeResult(BaseModel):
     """新版算法按订单区间计算的断料时间。"""
 
+    main_id: str
     buffer_code: str
+    buffer_codes: list[str] = Field(..., min_length=1)
     order_code: str
     wafer_size: str
     wafer_spec: str
@@ -131,7 +135,9 @@ class AlgorithmOrderGrowthDetail(BaseModel):
 class AlgorithmBufferOverflowTimeResult(BaseModel):
     """新版算法按物理 Buffer 汇总计算的溢满时间。"""
 
+    main_id: str
     buffer_code: str
+    buffer_codes: list[str] = Field(..., min_length=1)
     workshop_code: str
     upstream_process_code: str
     downstream_process_code: str
@@ -150,7 +156,9 @@ class AlgorithmStockoutWarningResult(BaseModel):
 
     warning_type: Literal["stockout"] = "stockout"
     warning_time: datetime
+    main_id: str
     buffer_code: str
+    buffer_codes: list[str] = Field(..., min_length=1)
     order_code: str
     wafer_size: str
     wafer_spec: str
@@ -170,7 +178,9 @@ class AlgorithmOverflowWarningResult(BaseModel):
 
     warning_type: Literal["overflow"] = "overflow"
     warning_time: datetime
+    main_id: str
     buffer_code: str
+    buffer_codes: list[str] = Field(..., min_length=1)
     workshop_code: str
     upstream_process_code: str
     downstream_process_code: str

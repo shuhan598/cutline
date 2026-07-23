@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from app.adapters.backend_request_loader import BackendRequestLoader
 from app.adapters.snapshot_adapter import SnapshotAdapter
-from app.schemas.backend_request_schema import BackendAlgorithmRequest
 from app.schemas.request_schema import AlgorithmSnapshot, CutlineAlgorithmRequest
 from app.schemas.response_schema import CutlineAlgorithmResponse
 from app.service.cutline_service import CutlineService
@@ -55,10 +55,14 @@ def _load_json(name: str) -> dict:
         return json.load(file)
 
 
+def _load_cutline_request(payload: dict) -> CutlineAlgorithmRequest:
+    return BackendRequestLoader().load_cutline_dict(payload)
+
+
 def test_request_example_is_current_and_converts_to_algorithm_snapshot():
     payload = _load_json("backend_request_sample.json")
 
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = _load_cutline_request(payload)
     snapshot = SnapshotAdapter().to_algorithm_snapshot(request)
 
     assert isinstance(snapshot, AlgorithmSnapshot)
@@ -76,7 +80,7 @@ def test_request_example_is_current_and_converts_to_algorithm_snapshot():
 
 def test_stockout_plan_example_produces_complete_cutline_response():
     payload = _load_json("backend_request_stockout_plan_sample.json")
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = _load_cutline_request(payload)
 
     response = CutlineService().evaluate_algorithm(request)
 
@@ -102,7 +106,7 @@ def test_stockout_plan_example_produces_complete_cutline_response():
     assert response.new_active_cutline_events[0].machine_code == "EA004"
     assert len(response.mixing_trace_records) == 1
     assert response.mixing_trace_records[0].machine_code == "EA004"
-    assert "mixing_trace_failures" not in response.model_fields
+    assert "mixing_trace_failures" not in response.__class__.model_fields
     assert response.errors == []
 
 def test_response_example_has_every_public_response_field():
@@ -137,12 +141,12 @@ def test_v3_response_example_exists_and_matches_public_schema(response_name):
         path.read_text(encoding="utf-8")
     )
     scenario_name = V3_RESPONSE_SCENARIOS[response_name]
-    request = CutlineAlgorithmRequest.model_validate(
-        V3_SCENARIO_BUILDERS[scenario_name]()
-    )
+    request = _load_cutline_request(V3_SCENARIO_BUILDERS[scenario_name]())
     expected = CutlineService().evaluate_algorithm(request)
 
-    assert set(actual.model_fields) == set(CutlineAlgorithmResponse.model_fields)
+    assert set(actual.__class__.model_fields) == set(
+        CutlineAlgorithmResponse.model_fields
+    )
     assert actual.model_dump() == expected.model_dump()
 
 
@@ -201,7 +205,7 @@ def test_generated_v3_scenario_matches_the_shared_factory(scenario_name):
     payload = _load_json(f"scenarios/{scenario_name}.json")
 
     assert payload == V3_SCENARIO_BUILDERS[scenario_name]()
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = _load_cutline_request(payload)
     SnapshotAdapter().to_algorithm_snapshot(request)
 
 
@@ -251,7 +255,7 @@ def test_official_request_examples_do_not_contain_legacy_fake_codes(name):
 def test_backend_ingestion_example_uses_v3_values_without_merging_schemas():
     payload = _load_json("backend_ingestion_request_sample.json")
 
-    BackendAlgorithmRequest.model_validate(payload)
+    BackendRequestLoader().load_dict(payload)
     assert "active_cutline_events" not in payload
     assert all("order_name" not in item for item in payload["orders"])
     assert payload["workshops"] == [
@@ -282,7 +286,7 @@ def test_debug_output_is_regenerated_by_the_current_service(
     request_name,
     response_name,
 ):
-    request = CutlineAlgorithmRequest.model_validate(_load_json(request_name))
+    request = _load_cutline_request(_load_json(request_name))
     expected = CutlineService().evaluate_algorithm(request)
     actual = CutlineAlgorithmResponse.model_validate_json(
         (DEBUG_OUTPUTS / response_name).read_text(encoding="utf-8")

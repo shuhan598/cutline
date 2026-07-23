@@ -44,7 +44,6 @@ class SnapshotMetaRequest(RequestModel):
 class MachineRealtimeRequest(RequestModel):
     machine_code: str = Field(..., description="机台编码")
     status: str = Field(..., description="机台当前生产状态")
-    order_code: str = Field(..., description="机台当前生产订单编码，允许为空字符串")
     tangent_time: datetime | None = Field(..., description="机台切线时间，无切线时间时为 null")
     input_quantity: float = Field(
         ...,
@@ -169,14 +168,11 @@ class BufferMasterRequest(RequestModel):
 
 
 class AgvRelationRequest(RequestModel):
-    buffer_code: str | None = Field(..., description="AGV 调度关系中的 Buffer 编码，缺失时为 null")
-    machine_code: str = Field(..., description="AGV 调度关系中的机台编码")
-    line_code: str = Field(..., description="AGV 调度使用的路线编码")
-    line_name: str | None = Field(..., description="AGV 调度使用的路线名称，缺失时为 null")
-    last_line_code: str | None = Field(..., description="切线前使用的路线编码，缺失时为 null")
-    last_line_name: str | None = Field(..., description="切线前使用的路线名称，缺失时为 null")
-    process_code: str | None = Field(..., description="路线更改后对应的工序编码，缺失时为 null")
-    process_name: str | None = Field(..., description="路线更改后对应的工序名称，缺失时为 null")
+    machine_code: str = Field(..., description="AGV 绑定的机台编码")
+    machine_name: str = Field(..., description="AGV 绑定的机台名称")
+    order_code: str = Field(..., description="AGV 绑定的当前订单编码")
+    order_name: str = Field(..., description="AGV 绑定的当前订单名称")
+    binding_time: datetime = Field(..., description="AGV 定线绑定记录时间")
 
 
 class ActiveCutlineEventRequest(RequestModel):
@@ -212,7 +208,7 @@ class CutlineAlgorithmRequest(RequestModel):
     process_routes: list[ProcessRouteRequest] = Field(..., description="工艺路线顺序、缓存、循环及上下游关系")
     buffer_realtime: list[BufferRealtimeRequest] = Field(..., description="Buffer 当前实时库存及占用率")
     buffer_master: list[BufferMasterRequest] = Field(..., description="Buffer 容量、安全库存、服务工序及所属循环信息")
-    agv_relations: list[AgvRelationRequest] = Field(..., description="AGV 调度路线、切线前路线及更改后工序关系")
+    agv_relations: list[AgvRelationRequest] = Field(..., description="AGV 提供的机台当前订单绑定及记录时间")
     active_cutline_events: list[ActiveCutlineEventRequest] = Field(
         default_factory=list,
         description="后端保存并在本轮重新传入的活动切线事件列表",

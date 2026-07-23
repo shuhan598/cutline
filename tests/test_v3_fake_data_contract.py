@@ -2,11 +2,13 @@ import re
 
 import pytest
 
+from app.adapters.backend_request_loader import BackendRequestLoader
 from app.adapters.snapshot_adapter import SnapshotAdapter
-from app.schemas.request_schema import CutlineAlgorithmRequest
 from tests.fixtures.v3_full_route_factory import (
     BUFFER_INTERVALS,
+    MULTILAYER_BUFFER_CODES,
     PROCESS_CODES,
+    TARGET_BUFFER_CODE,
     V3_SCENARIO_BUILDERS,
     build_base_request_payload,
 )
@@ -39,7 +41,7 @@ def test_all_scenarios_validate_and_convert_without_mutating_payload(
     scenario_payload,
 ):
     _, payload = scenario_payload
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = BackendRequestLoader().load_cutline_dict(payload)
     before = request.model_dump()
 
     snapshot = SnapshotAdapter().to_algorithm_snapshot(request)
@@ -72,10 +74,17 @@ def test_all_scenarios_use_strict_eleven_step_route(scenario_payload):
 
 
 def test_all_scenarios_use_adjacent_numeric_buffers(scenario_payload):
-    _, payload = scenario_payload
+    scenario_name, payload = scenario_payload
     expected_by_code = dict(BUFFER_INTERVALS)
+    if scenario_name == "v3_buffer_main_id_grouping":
+        expected_by_code.update(
+            {
+                buffer_code: expected_by_code[TARGET_BUFFER_CODE]
+                for buffer_code in MULTILAYER_BUFFER_CODES
+            }
+        )
 
-    assert len(payload["buffer_master"]) == 10
+    assert len(payload["buffer_master"]) == len(expected_by_code)
     assert set(expected_by_code) == {
         item["buffer_code"] for item in payload["buffer_master"]
     }
@@ -94,11 +103,6 @@ def test_all_scenarios_use_adjacent_numeric_buffers(scenario_payload):
         assert isinstance(realtime["buffer_code"], str)
         assert BUFFER_CODE_PATTERN.fullmatch(realtime["buffer_code"])
         assert realtime["buffer_code"] in known_codes
-    for relation in payload["agv_relations"]:
-        if relation["buffer_code"] is not None:
-            assert relation["buffer_code"] in known_codes
-
-
 def test_all_scenarios_use_s2_lines_ea_machines_and_backend_statuses(
     scenario_payload,
 ):
@@ -121,6 +125,7 @@ def test_all_scenarios_use_s2_lines_ea_machines_and_backend_statuses(
     assert all(
         item["machine_code"] in machine_codes
         and item["status"] in {"运行", "异常"}
+        and "order_code" not in item
         for item in payload["machine_realtime"]
     )
     assert all(
@@ -175,13 +180,11 @@ def test_all_scenario_references_resolve_to_master_data(scenario_payload):
     orders = {item["order_code"] for item in payload["orders"]}
     lines = {item["line_code"] for item in payload["lines"]}
     buffers = {item["buffer_code"] for item in payload["buffer_master"]}
-    processes = {item["process_code"] for item in payload["process_routes"]}
+    order_names = {
+        item["order_code"]: item["order_name"] for item in payload["orders"]
+    }
 
     assert all(item["machine_code"] in machines for item in payload["machine_realtime"])
-    assert all(
-        not item["order_code"] or item["order_code"] in orders
-        for item in payload["machine_realtime"]
-    )
     assert all(
         item["machine_code"] in machines and item["line_code"] in lines
         for item in payload["machine_lines"]
@@ -193,9 +196,45 @@ def test_all_scenario_references_resolve_to_master_data(scenario_payload):
     assert all(item["product_code"] in products for item in payload["orders"])
     assert all(item["buffer_code"] in buffers for item in payload["buffer_realtime"])
     assert all(
-        item["machine_code"] in machines
-        and item["line_code"] in lines
-        and (item["buffer_code"] is None or item["buffer_code"] in buffers)
-        and (item["process_code"] is None or item["process_code"] in processes)
+        set(item)
+        == {
+            "equipmentid",
+            "equipmentname",
+            "lastlinecode",
+            "lastlinename",
+            "createtime",
+        }
+        and item["equipmentid"] in machines
+        and item["lastlinecode"] in orders
+        and item["lastlinename"] == order_names[item["lastlinecode"]]
         for item in payload["agv_relations"]
+    )
+
+    bound_machines = {
+        item["equipmentid"] for item in payload["agv_relations"]
+    }
+    assert all(
+        runtime["status"] != "运行"
+        or runtime["machine_code"] in bound_machines
+        for runtime in payload["machine_realtime"]
+    )
+
+
+def test_agv_process_fields_cannot_override_machine_master(scenario_payload):
+    _, payload = scenario_payload
+
+    request = BackendRequestLoader().load_cutline_dict(payload)
+    snapshot = SnapshotAdapter().to_algorithm_snapshot(request)
+    process_by_machine = {
+        item["machine_code"]: item["process_code"]
+        for item in payload["machine_master"]
+    }
+
+    assert all(
+        machine.process_code == process_by_machine[machine.machine_code]
+        for machine in snapshot.machine_masters
+    )
+    assert all(
+        "processcode" not in relation and "processname" not in relation
+        for relation in payload["agv_relations"]
     )

@@ -9,6 +9,7 @@ from typing import Any, Iterable, TypeVar
 
 from pydantic import ValidationError
 
+from app.adapters.agv_binding_selector import select_latest_effective_bindings
 from app.schemas.common_schema import (
     AlgorithmActiveCutlineEvent,
     AlgorithmAgvRelation,
@@ -74,8 +75,21 @@ class SnapshotAdapter:
             machine_lines = self._convert_machine_lines(
                 request.machine_lines, machine_by_code, line_by_code
             )
+            agv_relations = self._convert_agv_relations(
+                request.agv_relations,
+                snapshot_time=request.snapshot_meta.snapshot_time,
+                machine_by_code=machine_by_code,
+                order_by_code=order_by_code,
+            )
+            agv_by_machine = self._index_unique(
+                agv_relations,
+                "machine_code",
+                "selected AGV binding",
+            )
             machine_runtimes = self._convert_machine_runtimes(
-                request.machine_realtime, machine_by_code, order_by_code
+                request.machine_realtime,
+                machine_by_code,
+                agv_by_machine,
             )
             self._validate_runtime_machine_lines(machine_runtimes, machine_lines)
             capacities = self._convert_capacities(
@@ -104,12 +118,6 @@ class SnapshotAdapter:
                 relation_by_buffer,
             )
 
-            agv_relations = self._convert_agv_relations(
-                request.agv_relations,
-                machine_by_code,
-                buffer_by_code,
-                process_routes,
-            )
             active_cutline_events = self._convert_active_cutline_events(
                 request.active_cutline_events,
                 snapshot_time=request.snapshot_meta.snapshot_time,
@@ -235,7 +243,7 @@ class SnapshotAdapter:
         self,
         source: Iterable[Any],
         machine_by_code: dict[str, AlgorithmMachineMaster],
-        order_by_code: dict[str, AlgorithmOrder],
+        agv_by_machine: dict[str, AlgorithmAgvRelation],
     ) -> list[AlgorithmMachineRuntime]:
         result: list[AlgorithmMachineRuntime] = []
         seen_machine_codes: set[str] = set()
@@ -249,16 +257,20 @@ class SnapshotAdapter:
                 raise SnapshotConversionError(
                     f"{item.machine_code} machine does not exist for machine runtime"
                 )
-            current_order_code = item.order_code.strip() or None
-            if current_order_code is not None and current_order_code not in order_by_code:
+            status = self._map_machine_status(item.status)
+            binding = agv_by_machine.get(item.machine_code)
+            if status == "running" and binding is None:
                 raise SnapshotConversionError(
-                    f"{current_order_code} order does not exist for machine {item.machine_code}"
+                    f"{item.machine_code} running machine has no effective AGV "
+                    "binding at snapshot_time"
                 )
             result.append(
                 AlgorithmMachineRuntime(
                     machine_code=item.machine_code,
-                    status=self._map_machine_status(item.status),
-                    current_order_code=current_order_code,
+                    status=status,
+                    current_order_code=(
+                        binding.order_code if binding is not None else None
+                    ),
                     tangent_time=item.tangent_time,
                     input_quantity_30m=item.input_quantity,
                     output_quantity_30m=item.output_quantity,
@@ -532,13 +544,51 @@ class SnapshotAdapter:
             ].append(order)
 
         result: list[AlgorithmBufferOrderInventory] = []
-        seen: set[tuple[str, str]] = set()
+        seen: set[tuple[str, str, str]] = set()
+        main_id_by_buffer: dict[str, str] = {}
+        group_context_by_main_id: dict[
+            str, tuple[str, dict[str, str]]
+        ] = {}
         for item in source:
             if item.buffer_code not in buffer_by_code:
                 raise SnapshotConversionError(
                     f"{item.buffer_code} buffer does not exist for realtime inventory"
                 )
+
+            main_id = item.main_id
+            if main_id is None or not main_id.strip():
+                raise SnapshotConversionError(
+                    f"Buffer {item.buffer_code} main_id is required and must not be blank"
+                )
+
             relation = relation_by_buffer[item.buffer_code]
+            buffer = buffer_by_code[item.buffer_code]
+            context = {
+                "workshop_code": relation.workshop_code,
+                "upstream_process_code": relation.upstream_process_code,
+                "downstream_process_code": relation.downstream_process_code,
+                "loop_code": buffer.loop_code,
+            }
+            existing_group_context = group_context_by_main_id.get(main_id)
+            if existing_group_context is None:
+                group_context_by_main_id[main_id] = (
+                    item.buffer_code,
+                    context,
+                )
+            else:
+                existing_buffer_code, expected_context = (
+                    existing_group_context
+                )
+                for field_name, expected_value in expected_context.items():
+                    actual_value = context[field_name]
+                    if actual_value != expected_value:
+                        raise SnapshotConversionError(
+                            f"Buffer main_id {main_id} conflict for "
+                            f"{field_name}: buffer_code "
+                            f"{existing_buffer_code}={expected_value!r}, "
+                            f"buffer_code {item.buffer_code}={actual_value!r}"
+                        )
+
             source_name = item.bound_source_name.strip()
             if not source_name:
                 raise SnapshotConversionError(
@@ -556,14 +606,31 @@ class SnapshotAdapter:
                     f"Buffer {item.buffer_code} source name {source_name} matched multiple orders"
                 )
             order = matches[0]
-            key = (item.buffer_code, order.order_code)
+
+            existing_main_id = main_id_by_buffer.get(item.buffer_code)
+            if (
+                existing_main_id is not None
+                and existing_main_id != main_id
+            ):
+                raise SnapshotConversionError(
+                    f"Buffer {item.buffer_code} main_id conflict: "
+                    f"existing main_id={existing_main_id!r}, "
+                    f"current main_id={main_id!r}, "
+                    f"order_code={order.order_code!r}"
+                )
+            main_id_by_buffer[item.buffer_code] = main_id
+
+            key = (main_id, item.buffer_code, order.order_code)
             if key in seen:
                 raise SnapshotConversionError(
-                    f"Buffer {item.buffer_code} order {order.order_code} duplicate inventory"
+                    f"Buffer main_id {main_id} buffer_code "
+                    f"{item.buffer_code} order {order.order_code} "
+                    "duplicate inventory"
                 )
             seen.add(key)
             result.append(
                 AlgorithmBufferOrderInventory(
+                    main_id=main_id,
                     buffer_code=item.buffer_code,
                     order_code=order.order_code,
                     current_quantity=item.current_quantity,
@@ -574,39 +641,71 @@ class SnapshotAdapter:
     def _convert_agv_relations(
         self,
         source: Iterable[Any],
+        *,
+        snapshot_time: datetime,
         machine_by_code: dict[str, AlgorithmMachineMaster],
-        buffer_by_code: dict[str, AlgorithmBufferMaster],
-        routes: Iterable[AlgorithmProcessRoute],
+        order_by_code: dict[str, AlgorithmOrder],
     ) -> list[AlgorithmAgvRelation]:
-        process_codes = {route.process_code for route in routes}
+        effective_by_machine = select_latest_effective_bindings(
+            source,
+            snapshot_time,
+        )
+
         result: list[AlgorithmAgvRelation] = []
-        for item in source:
-            if item.machine_code not in machine_by_code:
+        for machine_code, (latest_time, latest) in effective_by_machine.items():
+            order_codes = {item.order_code for item in latest}
+            if len(order_codes) > 1:
                 raise SnapshotConversionError(
-                    f"{item.machine_code} machine does not exist for AGV relation"
+                    f"{machine_code} latest AGV order_code conflict at "
+                    f"{latest_time.isoformat()}: {sorted(order_codes)}"
                 )
-            buffer_code = item.buffer_code.strip() or None if item.buffer_code else None
-            process_code = (
-                item.process_code.strip() or None if item.process_code else None
+            order_names = {item.order_name for item in latest}
+            if len(order_names) > 1:
+                raise SnapshotConversionError(
+                    f"{machine_code} latest AGV order_name conflict at "
+                    f"{latest_time.isoformat()}: {sorted(order_names)}"
+                )
+
+            machine = machine_by_code.get(machine_code)
+            if machine is None:
+                raise SnapshotConversionError(
+                    f"{machine_code} machine does not exist for selected AGV binding"
+                )
+            invalid_machine_names = sorted(
+                {
+                    item.machine_name
+                    for item in latest
+                    if item.machine_name != machine.machine_name
+                }
             )
-            if buffer_code and buffer_code not in buffer_by_code:
+            if invalid_machine_names:
                 raise SnapshotConversionError(
-                    f"{buffer_code} buffer does not exist for AGV relation"
+                    f"{machine_code} AGV machine_name "
+                    f"{invalid_machine_names[0]!r} does not match machine "
+                    f"master {machine.machine_name!r}"
                 )
-            if process_code and process_code not in process_codes:
+
+            order_code = next(iter(order_codes))
+            order = order_by_code.get(order_code)
+            if order is None:
                 raise SnapshotConversionError(
-                    f"{process_code} process does not exist for AGV relation"
+                    f"{order_code} order does not exist for selected AGV "
+                    f"binding on machine {machine_code}"
                 )
+            order_name = next(iter(order_names))
+            if order_name != order.order_name:
+                raise SnapshotConversionError(
+                    f"{order_code} AGV order_name {order_name!r} does not "
+                    f"match order master {order.order_name!r}"
+                )
+
             result.append(
                 AlgorithmAgvRelation(
-                    buffer_code=buffer_code,
-                    machine_code=item.machine_code,
-                    line_code=item.line_code,
-                    line_name=item.line_name,
-                    last_line_code=item.last_line_code,
-                    last_line_name=item.last_line_name,
-                    process_code=process_code,
-                    process_name=item.process_name,
+                    machine_code=machine_code,
+                    machine_name=machine.machine_name,
+                    order_code=order_code,
+                    order_name=order.order_name,
+                    binding_time=latest_time,
                 )
             )
         return result

@@ -229,16 +229,19 @@ def snapshot_payload():
         ],
         "buffer_order_inventories": [
             {
+                "main_id": "MAIN-A",
                 "buffer_code": "BUF-A",
                 "order_code": "ORD-01",
                 "current_quantity": 1000,
             },
             {
+                "main_id": "MAIN-B",
                 "buffer_code": "BUF-B",
                 "order_code": "ORD-01",
                 "current_quantity": 800,
             },
             {
+                "main_id": "MAIN-B",
                 "buffer_code": "BUF-B",
                 "order_code": "ORD-02",
                 "current_quantity": 600,
@@ -246,14 +249,11 @@ def snapshot_payload():
         ],
         "agv_relations": [
             {
-                "buffer_code": "BUF-A",
                 "machine_code": "MC-01",
-                "line_code": "LINE-N",
-                "line_name": "N产线",
-                "last_line_code": None,
-                "last_line_name": None,
-                "process_code": "PROC-01",
-                "process_name": "工序一",
+                "machine_name": "一号机",
+                "order_code": "ORD-01",
+                "order_name": "订单一",
+                "binding_time": "2026-07-15T08:55:00+08:00",
             }
         ],
     }
@@ -353,7 +353,7 @@ def test_inventory_records_use_snapshot_time_without_duplicate_time_fields(
     )
     assert all(
         tuple(item.model_fields)
-        == ("buffer_code", "order_code", "current_quantity")
+        == ("main_id", "buffer_code", "order_code", "current_quantity")
         for item in snapshot.buffer_order_inventories
     )
 

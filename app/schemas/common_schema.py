@@ -288,19 +288,17 @@ class AlgorithmBufferProcessRelation(AlgorithmModel):
 class AlgorithmBufferOrderInventory(AlgorithmModel):
     """新版算法内部使用的订单与物理 Buffer 库存明细（buffer实时数据）。"""
 
+    main_id: str = Field(..., description="多个物理 Buffer 共同参与计算的分组编码")
     buffer_code: str = Field(..., description="物理 Buffer 编码")
     order_code: str = Field(..., description="订单编码")
     current_quantity: float = Field(...,ge=0,description="指定订单在当前物理 Buffer 中的库存数量",)
 
 
 class AlgorithmAgvRelation(AlgorithmModel):
-    """新版算法内部使用的 AGV 调度路线关系。"""
+    """新版算法内部使用的 AGV 机台当前订单绑定。"""
 
-    buffer_code: str | None = Field(...,description="AGV 关系对应的物理 Buffer 编码，数据缺失时允许为空",)
     machine_code: str = Field(..., description="机台编码")
-    line_code: str = Field(..., description="当前调度路线编码")
-    line_name: str | None = Field(..., description="当前调度路线名称，数据缺失时允许为空",)
-    last_line_code: str | None = Field(...,description="切线前调度路线编码，数据缺失时允许为空",)
-    last_line_name: str | None = Field(...,description="切线前调度路线名称，数据缺失时允许为空",)
-    process_code: str | None = Field(...,description="路线调整后的目标工序编码，数据缺失时允许为空",)
-    process_name: str | None = Field(...,description="路线调整后的目标工序名称，数据缺失时允许为空",)
+    machine_name: str = Field(..., description="机台名称")
+    order_code: str = Field(..., description="当前订单编码")
+    order_name: str = Field(..., description="当前订单名称")
+    binding_time: datetime = Field(..., description="AGV 定线绑定记录时间")

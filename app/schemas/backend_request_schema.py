@@ -23,7 +23,6 @@ class BackendSnapshotMeta(_BackendRequestModel):
 class BackendMachineRealtime(_BackendRequestModel):
     machine_code: str
     status: str
-    order_code: str
     tangent_time: datetime | None
     input_quantity: float = Field(ge=0)
     output_quantity: float = Field(ge=0)
@@ -127,14 +126,11 @@ class BackendBufferMaster(_BackendRequestModel):
 
 
 class BackendAgvRelation(_BackendRequestModel):
-    buffer_code: str | None
-    machine_code: str
-    line_code: str
-    line_name: str | None
-    last_line_code: str | None
-    last_line_name: str | None
-    process_code: str | None
-    process_name: str | None
+    equipmentid: str
+    equipmentname: str
+    lastlinecode: str
+    lastlinename: str
+    createtime: datetime
 
 
 class BackendAlgorithmRequest(_BackendRequestModel):

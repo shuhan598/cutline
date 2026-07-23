@@ -24,14 +24,14 @@ class OverflowWarningEvaluator:
             )
 
         warnings: list[AlgorithmOverflowWarningResult] = []
-        seen_buffer_codes: set[str] = set()
+        seen_main_ids: set[str] = set()
         for overflow in overflow_results:
             self._validate_algorithm_overflow(overflow)
-            if overflow.buffer_code in seen_buffer_codes:
+            if overflow.main_id in seen_main_ids:
                 raise WarningEvaluationError(
-                    f"{overflow.buffer_code} duplicate overflow warning input"
+                    f"{overflow.main_id} duplicate overflow warning input"
                 )
-            seen_buffer_codes.add(overflow.buffer_code)
+            seen_main_ids.add(overflow.main_id)
 
             if (
                 overflow.overflow_minutes is None
@@ -44,7 +44,9 @@ class OverflowWarningEvaluator:
                 AlgorithmOverflowWarningResult(
                     warning_type="overflow",
                     warning_time=snapshot.current_time,
+                    main_id=overflow.main_id,
                     buffer_code=overflow.buffer_code,
+                    buffer_codes=list(overflow.buffer_codes),
                     workshop_code=overflow.workshop_code,
                     upstream_process_code=overflow.upstream_process_code,
                     downstream_process_code=overflow.downstream_process_code,
@@ -80,11 +82,13 @@ class OverflowWarningEvaluator:
     ) -> None:
         context = (
             f"workshop={getattr(overflow, 'workshop_code', None)}, "
+            f"main_id={overflow.main_id}, "
             f"buffer={overflow.buffer_code}, "
             f"interval={getattr(overflow, 'upstream_process_code', None)}"
             f"->{getattr(overflow, 'downstream_process_code', None)}"
         )
         required_codes = (
+            "main_id",
             "workshop_code",
             "buffer_code",
             "upstream_process_code",
@@ -96,6 +100,14 @@ class OverflowWarningEvaluator:
                 raise WarningEvaluationError(
                     f"{context} missing or blank {field_name}"
                 )
+
+        if not overflow.buffer_codes or any(
+            not isinstance(buffer_code, str) or not buffer_code.strip()
+            for buffer_code in overflow.buffer_codes
+        ):
+            raise WarningEvaluationError(
+                f"{context} missing or blank buffer_codes"
+            )
 
         if (
             overflow.overflow_minutes is not None

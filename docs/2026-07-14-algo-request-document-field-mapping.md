@@ -226,21 +226,20 @@
 
 对应文档分类：AGV查询接口数据
 
-| 文档字段 | 当前外发字段 |
+| 甲方原始字段 | 算法标准字段 |
 | --- | --- |
-| buffer编码 | `buffer_code` |
-| 机台编码 | `machine_code` |
-| 调度路线code | `line_code` |
-| 调度路线名称 | `line_name` |
-| 切线前路线code | `last_line_code` |
-| 切线前路线名称 | `last_line_name` |
-| 更改后工序code | `process_code` |
-| 更改后工序name | `process_name` |
+| `equipmentid` | `machine_code` |
+| `equipmentname` | `machine_name` |
+| `lastlinecode` | `order_code` |
+| `lastlinename` | `order_name` |
+| `createtime` | `binding_time` |
 
 补充说明：
 
-- `agv_relations.buffer_code` 当前不是单纯从 AGV 查询接口原样拿到，而是由编排层结合静态 AGV 关系与运行态上下文推断。
-- 当无法可靠推断时，当前策略是外发 `null`，并把缺口记录进 `snapshot_meta.degraded_flags`。
+- 字段映射只在 `BackendRequestLoader` 中执行。
+- AGV 原始记录中的 `processcode`、`processname` 及其他现场字段不进入算法契约。
+- 机台工序始终来自 `machine_master.process_code/process_name`。
+- `binding_time` 不晚于快照时间的最新有效记录提供机台当前订单。
 
 ## 额外说明
 

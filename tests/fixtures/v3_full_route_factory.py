@@ -43,6 +43,8 @@ CATALOG_TIME = "2026-07-17T07:55:00+08:00"
 TARGET_BUFFER_CODE = "310110302"
 TARGET_ORDER_CODE = "ORD-S2-001"
 SUPPORT_ORDER_CODE = "ORD-S2-002"
+MULTILAYER_MAIN_ID = "MAIN-31011280"
+MULTILAYER_BUFFER_CODES = ("310112803", "310112804")
 
 
 def _machine_name(machine_code: str, process_code: str) -> str:
@@ -224,7 +226,6 @@ def _machine_realtime() -> list[dict[str, Any]]:
         {
             "machine_code": machine_code,
             "status": status,
-            "order_code": order_code,
             "tangent_time": None,
             "input_quantity": 100.0 if status == "运行" else 0.0,
             "output_quantity": 100.0 if status == "运行" else 0.0,
@@ -232,7 +233,7 @@ def _machine_realtime() -> list[dict[str, Any]]:
             "period_quantity": 100.0 if status == "运行" else 0.0,
             "out_time": "2026-07-17T07:55:00+08:00" if status == "运行" else None,
         }
-        for machine_code, _, _, status, order_code in _machine_definitions()
+        for machine_code, _, _, status, _ in _machine_definitions()
     ]
 
 
@@ -270,7 +271,7 @@ def _machine_process_times() -> list[dict[str, Any]]:
 def _buffer_realtime() -> list[dict[str, Any]]:
     return [
         {
-            "main_id": f"INV-{buffer_code}-{TARGET_ORDER_CODE}",
+            "main_id": f"MAIN-{buffer_code}",
             "buffer_code": buffer_code,
             "bound_source_name": "至上",
             "current_quantity": 1000.0,
@@ -280,26 +281,20 @@ def _buffer_realtime() -> list[dict[str, Any]]:
     ]
 
 
-def _process_buffer_code(process_code: str) -> str:
-    index = PROCESS_CODES.index(process_code)
-    if index >= len(BUFFER_INTERVALS):
-        index = len(BUFFER_INTERVALS) - 1
-    return BUFFER_INTERVALS[index][0]
-
-
 def _agv_relations() -> list[dict[str, Any]]:
+    order_names = {
+        order["order_code"]: order["order_name"] for order in _orders()
+    }
     return [
         {
-            "buffer_code": _process_buffer_code(process_code),
-            "machine_code": machine_code,
-            "line_code": line_code,
-            "line_name": line_code.removeprefix("S2-"),
-            "last_line_code": None,
-            "last_line_name": None,
-            "process_code": process_code,
-            "process_name": process_code,
+            "equipmentid": machine_code,
+            "equipmentname": _machine_name(machine_code, process_code),
+            "lastlinecode": order_code,
+            "lastlinename": order_names[order_code],
+            "createtime": "2026-07-17 07:55:00",
         }
-        for machine_code, process_code, line_code, _, _ in _machine_definitions()
+        for machine_code, process_code, _, _, order_code in _machine_definitions()
+        if order_code
     ]
 
 
@@ -348,6 +343,40 @@ def _runtime(payload: dict[str, Any], machine_code: str) -> dict[str, Any]:
     )
 
 
+def _set_agv_binding(
+    payload: dict[str, Any],
+    machine_code: str,
+    order_code: str,
+) -> None:
+    payload["agv_relations"] = [
+        relation
+        for relation in payload["agv_relations"]
+        if relation["equipmentid"] != machine_code
+    ]
+    if not order_code:
+        return
+
+    machine = next(
+        item
+        for item in payload["machine_master"]
+        if item["machine_code"] == machine_code
+    )
+    order = next(
+        item
+        for item in payload["orders"]
+        if item["order_code"] == order_code
+    )
+    payload["agv_relations"].append(
+        {
+            "equipmentid": machine_code,
+            "equipmentname": machine["machine_name"],
+            "lastlinecode": order_code,
+            "lastlinename": order["order_name"],
+            "createtime": "2026-07-17 07:55:00",
+        }
+    )
+
+
 def _set_runtime(
     payload: dict[str, Any],
     machine_code: str,
@@ -361,7 +390,6 @@ def _set_runtime(
     runtime.update(
         {
             "status": status,
-            "order_code": order_code,
             "input_quantity": float(input_quantity),
             "output_quantity": float(output_quantity),
             "completed_quantity": float(output_quantity),
@@ -371,6 +399,7 @@ def _set_runtime(
             ),
         }
     )
+    _set_agv_binding(payload, machine_code, order_code)
 
 
 def _buffer(payload: dict[str, Any], buffer_code: str) -> dict[str, Any]:
@@ -413,7 +442,7 @@ def _upsert_inventory(
         item = matches[0]
     else:
         item = {
-            "main_id": f"INV-{buffer_code}-{order_code}",
+            "main_id": f"MAIN-{buffer_code}",
             "buffer_code": buffer_code,
             "bound_source_name": order_name,
             "current_quantity": 0.0,
@@ -433,6 +462,67 @@ def _scenario(name: str) -> dict[str, Any]:
 
 def build_no_warning_payload() -> dict[str, Any]:
     return _scenario("no_warning")
+
+
+def build_multilayer_buffer_payload() -> dict[str, Any]:
+    """Build two physical Buffer layers sharing one calculation main_id."""
+
+    payload = _scenario("buffer_main_id_grouping")
+    _set_runtime(
+        payload,
+        "EA004",
+        status="\u8fd0\u884c",
+        order_code=SUPPORT_ORDER_CODE,
+        input_quantity=100,
+        output_quantity=100,
+    )
+    template = _buffer(payload, TARGET_BUFFER_CODE)
+    capacities = (10000.0, 20000.0)
+    for buffer_code, capacity in zip(
+        MULTILAYER_BUFFER_CODES,
+        capacities,
+        strict=True,
+    ):
+        layer = deepcopy(template)
+        layer.update(
+            {
+                "buffer_code": buffer_code,
+                "max_capacity": capacity,
+            }
+        )
+        payload["buffer_master"].append(layer)
+
+    order_names = {
+        item["order_code"]: item["order_name"]
+        for item in payload["orders"]
+    }
+    first_code, second_code = MULTILAYER_BUFFER_CODES
+    payload["buffer_realtime"].extend(
+        [
+            {
+                "main_id": MULTILAYER_MAIN_ID,
+                "buffer_code": first_code,
+                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "current_quantity": 3600.0,
+                "current_utilization_rate": 0.36,
+            },
+            {
+                "main_id": MULTILAYER_MAIN_ID,
+                "buffer_code": second_code,
+                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "current_quantity": 7200.0,
+                "current_utilization_rate": 0.36,
+            },
+            {
+                "main_id": MULTILAYER_MAIN_ID,
+                "buffer_code": second_code,
+                "bound_source_name": order_names[SUPPORT_ORDER_CODE],
+                "current_quantity": 2000.0,
+                "current_utilization_rate": 0.1,
+            },
+        ]
+    )
+    return payload
 
 
 def _stockout_payload(name: str) -> dict[str, Any]:
@@ -488,6 +578,59 @@ def _stockout_payload(name: str) -> dict[str, Any]:
 
 def build_stockout_auto_payload() -> dict[str, Any]:
     return _stockout_payload("stockout_auto")
+
+
+def build_multilayer_stockout_payload() -> dict[str, Any]:
+    """Build the automatic stockout case on two physical Buffer layers."""
+
+    payload = _stockout_payload("buffer_main_id_stockout")
+    template = _buffer(payload, TARGET_BUFFER_CODE)
+    for buffer_code in MULTILAYER_BUFFER_CODES:
+        layer = deepcopy(template)
+        layer.update(
+            {
+                "buffer_code": buffer_code,
+                "max_capacity": 50000.0,
+            }
+        )
+        payload["buffer_master"].append(layer)
+
+    payload["buffer_realtime"] = [
+        item
+        for item in payload["buffer_realtime"]
+        if item["buffer_code"] != TARGET_BUFFER_CODE
+    ]
+    order_names = {
+        item["order_code"]: item["order_name"]
+        for item in payload["orders"]
+    }
+    first_code, second_code = MULTILAYER_BUFFER_CODES
+    payload["buffer_realtime"].extend(
+        [
+            {
+                "main_id": MULTILAYER_MAIN_ID,
+                "buffer_code": first_code,
+                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "current_quantity": 40.0,
+                "current_utilization_rate": 0.0008,
+            },
+            {
+                "main_id": MULTILAYER_MAIN_ID,
+                "buffer_code": second_code,
+                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "current_quantity": 60.0,
+                "current_utilization_rate": 0.0012,
+            },
+            {
+                "main_id": MULTILAYER_MAIN_ID,
+                "buffer_code": second_code,
+                "bound_source_name": order_names[SUPPORT_ORDER_CODE],
+                "current_quantity": 2000.0,
+                "current_utilization_rate": 0.04,
+            },
+        ]
+    )
+    return payload
 
 
 def build_stockout_manual_payload() -> dict[str, Any]:
@@ -762,6 +905,7 @@ def build_mixing_failure_payload() -> dict[str, Any]:
 
 V3_SCENARIO_BUILDERS: dict[str, Callable[[], dict[str, Any]]] = {
     "v3_no_warning": build_no_warning_payload,
+    "v3_buffer_main_id_grouping": build_multilayer_buffer_payload,
     "v3_stockout_auto": build_stockout_auto_payload,
     "v3_stockout_manual": build_stockout_manual_payload,
     "v3_stockout_manual_insufficient": build_stockout_manual_insufficient_payload,

@@ -28,7 +28,9 @@ LIST_FIELDS = (
 
 def net_rate_result():
     return schema.AlgorithmIntervalNetRateResult(
+        main_id="MAIN-1",
         buffer_code="BUF-1",
+        buffer_codes=["BUF-1"],
         order_code="ORD-A",
         wafer_size="182",
         wafer_spec="N",
@@ -44,7 +46,9 @@ def net_rate_result():
 
 def depletion_result():
     return schema.AlgorithmDepletionTimeResult(
+        main_id="MAIN-1",
         buffer_code="BUF-1",
+        buffer_codes=["BUF-1"],
         order_code="ORD-A",
         wafer_size="182",
         wafer_spec="N",
@@ -61,7 +65,9 @@ def depletion_result():
 
 def overflow_time_result():
     return schema.AlgorithmBufferOverflowTimeResult(
+        main_id="MAIN-2",
         buffer_code="BUF-2",
+        buffer_codes=["BUF-2"],
         workshop_code="S1",
         upstream_process_code="P1",
         downstream_process_code="P2",
@@ -76,7 +82,9 @@ def overflow_time_result():
 def stockout_warning():
     return schema.AlgorithmStockoutWarningResult(
         warning_time=NOW,
+        main_id="MAIN-1",
         buffer_code="BUF-1",
+        buffer_codes=["BUF-1"],
         order_code="ORD-A",
         wafer_size="182",
         wafer_spec="N",
@@ -95,7 +103,9 @@ def stockout_warning():
 def overflow_warning():
     return schema.AlgorithmOverflowWarningResult(
         warning_time=NOW,
+        main_id="MAIN-2",
         buffer_code="BUF-2",
+        buffer_codes=["BUF-2"],
         workshop_code="S1",
         upstream_process_code="P1",
         downstream_process_code="P2",
@@ -106,6 +116,29 @@ def overflow_warning():
         overflow_minutes=300,
         overflow_warning_lead_minutes=360,
     )
+
+
+@pytest.mark.parametrize(
+    ("factory", "expected_main_id", "expected_buffer_codes"),
+    [
+        (net_rate_result, "MAIN-1", ["BUF-1"]),
+        (depletion_result, "MAIN-1", ["BUF-1"]),
+        (overflow_time_result, "MAIN-2", ["BUF-2"]),
+        (stockout_warning, "MAIN-1", ["BUF-1"]),
+        (overflow_warning, "MAIN-2", ["BUF-2"]),
+    ],
+)
+def test_buffer_calculation_results_require_and_preserve_group_identity(
+    factory,
+    expected_main_id,
+    expected_buffer_codes,
+):
+    result = factory()
+
+    assert result.main_id == expected_main_id
+    assert result.buffer_codes == expected_buffer_codes
+    assert result.__class__.model_fields["main_id"].is_required()
+    assert result.__class__.model_fields["buffer_codes"].is_required()
 
 
 def cutline_decision():

@@ -55,7 +55,9 @@ def _detail(
 
 def _overflow(
     *,
+    main_id: str | None = None,
     buffer_code: str = "BUF-01",
+    buffer_codes: list[str] | None = None,
     workshop_code: str = "S1",
     upstream_process_code: str = "ZR",
     downstream_process_code: str = "PK",
@@ -67,7 +69,11 @@ def _overflow(
     order_growth_details: list[AlgorithmOrderGrowthDetail] | None = None,
 ) -> AlgorithmBufferOverflowTimeResult:
     return AlgorithmBufferOverflowTimeResult(
+        main_id=main_id or f"MAIN-{buffer_code}",
         buffer_code=buffer_code,
+        buffer_codes=(
+            [buffer_code] if buffer_codes is None else buffer_codes
+        ),
         workshop_code=workshop_code,
         upstream_process_code=upstream_process_code,
         downstream_process_code=downstream_process_code,
@@ -151,7 +157,9 @@ def test_warning_preserves_prediction_fields_details_snapshot_time_and_config_le
     assert warning.warning_type == "overflow"
     assert warning.warning_time == SNAPSHOT_TIME
     assert warning.overflow_warning_lead_minutes == 30
+    assert warning.main_id == "MAIN-BUF-COPY"
     assert warning.buffer_code == "BUF-COPY"
+    assert warning.buffer_codes == ["BUF-COPY"]
     assert warning.workshop_code == "S1"
     assert warning.upstream_process_code == "ZR"
     assert warning.downstream_process_code == "PK"
@@ -230,10 +238,12 @@ def test_equal_times_sort_by_workshop_buffer_and_process_interval():
     ]
 
 
-def test_duplicate_buffer_fails_instead_of_emitting_multiple_warnings():
+def test_duplicate_main_fails_instead_of_emitting_multiple_warnings():
     result = _overflow()
     duplicate_with_different_context = result.model_copy(
         update={
+            "buffer_code": "BUF-02",
+            "buffer_codes": ["BUF-02"],
             "workshop_code": "S2",
             "upstream_process_code": "P01",
             "downstream_process_code": "P02",
@@ -243,7 +253,7 @@ def test_duplicate_buffer_fails_instead_of_emitting_multiple_warnings():
     _assert_warning_error(
         _snapshot(),
         [result, duplicate_with_different_context],
-        "BUF-01.*duplicate",
+        "MAIN-BUF-01.*duplicate",
     )
 
 
@@ -287,4 +297,3 @@ def test_blank_overflow_context_field_fails(field_name: str):
     result = _overflow().model_copy(update={field_name: "  "})
 
     _assert_warning_error(_snapshot(), [result], field_name)
-

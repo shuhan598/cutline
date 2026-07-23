@@ -33,7 +33,9 @@ def interval(
 ) -> AlgorithmIntervalNetRateResult:
     upstream_output_rate = 10000
     return AlgorithmIntervalNetRateResult(
+        main_id=f"MAIN-{buffer_code}",
         buffer_code=buffer_code,
+        buffer_codes=[buffer_code],
         order_code=order_code,
         wafer_size=wafer_size,
         wafer_spec=wafer_spec,
@@ -65,7 +67,9 @@ def overflow_state(
     else:
         overflow_minutes = None
     return AlgorithmBufferOverflowTimeResult(
+        main_id=f"MAIN-{buffer_code}",
         buffer_code=buffer_code,
+        buffer_codes=[buffer_code],
         workshop_code="S1",
         upstream_process_code="P01",
         downstream_process_code=downstream_process_code,
@@ -86,7 +90,9 @@ def stockout_warning(
 ) -> AlgorithmStockoutWarningResult:
     return AlgorithmStockoutWarningResult(
         warning_time=CURRENT_TIME,
+        main_id=f"MAIN-{buffer_code}",
         buffer_code=buffer_code,
+        buffer_codes=[buffer_code],
         order_code="ORD-TARGET",
         wafer_size="182",
         wafer_spec="N",
@@ -209,7 +215,9 @@ def overflow_warning(
     )
     return AlgorithmOverflowWarningResult(
         warning_time=CURRENT_TIME,
+        main_id="MAIN-BUF-OVERFLOW",
         buffer_code="BUF-OVERFLOW",
+        buffer_codes=["BUF-OVERFLOW"],
         workshop_code="S1",
         upstream_process_code="P01",
         downstream_process_code="P02",

@@ -71,12 +71,6 @@ def test_required_empty_dataset_is_reported(dataset: str):
     [
         ("workshops", "workshop_name"),
         ("buffer_realtime", "main_id"),
-        ("agv_relations", "buffer_code"),
-        ("agv_relations", "line_name"),
-        ("agv_relations", "last_line_code"),
-        ("agv_relations", "last_line_name"),
-        ("agv_relations", "process_code"),
-        ("agv_relations", "process_name"),
     ],
 )
 def test_required_nullable_business_fields_report_null(dataset: str, field: str):
@@ -92,51 +86,10 @@ def test_required_nullable_business_fields_report_null(dataset: str, field: str)
         for issue in result.issues
     )
 
-
-@pytest.mark.parametrize(
-    ("status", "order_code", "expected_empty_code"),
-    [
-        ("运行", "", True),
-        ("RUNNING", "", True),
-        ("running", "", True),
-        ("异常", "", False),
-        ("idle", "", False),
-        ("异常", "UNKNOWN", False),
-    ],
-)
-def test_machine_order_code_is_state_aware(
-    status: str,
-    order_code: str,
-    expected_empty_code: bool,
-):
-    payload = sample_payload()
-    payload["machine_realtime"][0]["status"] = status
-    payload["machine_realtime"][0]["order_code"] = order_code
-
-    result = validate_payload(payload)
-    empty_code_fields = {
-        (issue.dataset, issue.field)
-        for issue in result.issues
-        if issue.code == "empty_code"
-    }
-
-    assert (
-        ("machine_realtime", "order_code") in empty_code_fields
-    ) is expected_empty_code
-    if order_code == "UNKNOWN":
-        assert any(
-            issue.code == "missing_reference"
-            and issue.dataset == "machine_realtime"
-            and issue.field == "order_code"
-            for issue in result.issues
-        )
-
-
 @pytest.mark.parametrize(
     ("dataset", "field", "target_dataset"),
     [
         ("machine_realtime", "machine_code", "machine_master"),
-        ("machine_realtime", "order_code", "orders"),
         ("orders", "product_code", "products"),
         ("orders", "workshop_code", "workshops"),
         ("machine_process_times", "machine_code", "machine_master"),
@@ -233,9 +186,9 @@ def test_real_api_sample_loads_but_reports_incomplete_inputs():
     assert result.valid is False
     assert issue_counts(result) == {
         "empty_dataset": 6,
-        "null_field": 458,
-        "empty_code": 137,
-        "missing_reference": 441,
+        "null_field": 2,
+        "missing_reference": 440,
+        "missing_agv_binding": 138,
     }
 
 

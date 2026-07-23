@@ -172,11 +172,13 @@ def _snapshot(
         ],
         buffer_order_inventories=[
             AlgorithmBufferOrderInventory(
+                main_id="MAIN-BUF-STOCK",
                 buffer_code="BUF-STOCK",
                 order_code="ORD-STOCK",
                 current_quantity=200 * stockout_minutes / 60,
             ),
             AlgorithmBufferOrderInventory(
+                main_id="MAIN-BUF-OVER",
                 buffer_code="BUF-OVER",
                 order_code="ORD-OVER",
                 current_quantity=1000 - 200 * overflow_minutes / 60,

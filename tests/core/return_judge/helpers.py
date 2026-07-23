@@ -83,7 +83,9 @@ def interval(
 ) -> AlgorithmIntervalNetRateResult:
     upstream_output_rate = 10000
     return AlgorithmIntervalNetRateResult(
+        main_id=f"MAIN-{buffer_code}",
         buffer_code=buffer_code,
+        buffer_codes=[buffer_code],
         order_code=order_code,
         wafer_size=wafer_size,
         wafer_spec=wafer_spec,

@@ -53,7 +53,6 @@ def test_v3_abnormal_machine_quantities_do_not_enter_net_rate_calculation():
     abnormal.update(
         {
             "status": "异常",
-            "order_code": "ORD-S2-001",
             "input_quantity": 10000,
             "output_quantity": 10000,
         }
@@ -79,7 +78,7 @@ def test_v3_abnormal_machine_cannot_determine_order_wafer_spec():
     ] = "异常"
     payload["buffer_realtime"].append(
         {
-            "main_id": "INV-R-SPEC",
+            "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
             "buffer_code": TARGET_BUFFER_CODE,
             "bound_source_name": "华晟",
             "current_quantity": 100,
@@ -132,14 +131,14 @@ def test_v3_r_and_p_order_specs_are_inferred_independently_from_machine_lines():
     payload["buffer_realtime"].extend(
         [
             {
-                "main_id": "INV-R-INFERENCE",
+                "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
                 "buffer_code": TARGET_BUFFER_CODE,
                 "bound_source_name": "华晟",
                 "current_quantity": 100,
                 "current_utilization_rate": 0.001,
             },
             {
-                "main_id": "INV-P-INFERENCE",
+                "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
                 "buffer_code": TARGET_BUFFER_CODE,
                 "bound_source_name": "晶澳",
                 "current_quantity": 100,
@@ -161,7 +160,9 @@ def test_v3_r_and_p_order_specs_are_inferred_independently_from_machine_lines():
 def _r_target_warning(algorithm_snapshot):
     return AlgorithmStockoutWarningResult(
         warning_time=algorithm_snapshot.current_time,
+        main_id=f"MAIN-{TARGET_BUFFER_CODE}",
         buffer_code=TARGET_BUFFER_CODE,
+        buffer_codes=[TARGET_BUFFER_CODE],
         order_code="ORD-S2-003",
         wafer_size="210",
         wafer_spec="R",

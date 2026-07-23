@@ -5,7 +5,10 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from app.adapters.agv_binding_selector import select_latest_effective_bindings
+from app.adapters.backend_request_loader import BackendRequestLoader
 from app.schemas.backend_request_schema import BackendAlgorithmRequest
+from app.schemas.request_schema import AgvRelationRequest
 
 
 class BackendValidationIssue(BaseModel):
@@ -40,17 +43,10 @@ _REQUIRED_DATASETS = (
 _REQUIRED_NULLABLE_FIELDS = (
     ("workshops", "workshop_name"),
     ("buffer_realtime", "main_id"),
-    ("agv_relations", "buffer_code"),
-    ("agv_relations", "line_name"),
-    ("agv_relations", "last_line_code"),
-    ("agv_relations", "last_line_name"),
-    ("agv_relations", "process_code"),
-    ("agv_relations", "process_name"),
 )
 
 _RELATIONSHIPS = (
     ("machine_realtime", "machine_code", "machine_master", "machine_code"),
-    ("machine_realtime", "order_code", "orders", "order_code"),
     ("orders", "product_code", "products", "product_code"),
     ("orders", "workshop_code", "workshops", "workshop_code"),
     (
@@ -75,7 +71,7 @@ _RECORD_KEY_FIELDS = {
     "process_routes": "process_code",
     "buffer_realtime": "buffer_code",
     "buffer_master": "buffer_code",
-    "agv_relations": "machine_code",
+    "agv_relations": "equipmentid",
 }
 
 
@@ -87,10 +83,28 @@ class BackendRequestCompletenessValidator:
         request: BackendAlgorithmRequest,
     ) -> BackendRequestValidationResult:
         issues: list[BackendValidationIssue] = []
+        normalized_agv_relations = [
+            AgvRelationRequest.model_validate(record)
+            for record in BackendRequestLoader().normalize_agv_relations(
+                [
+                    relation.model_dump(mode="python")
+                    for relation in request.agv_relations
+                ]
+            )
+        ]
+        selected_agv_relations = select_latest_effective_bindings(
+            normalized_agv_relations,
+            request.snapshot_meta.snapshot_time,
+        )
         self._validate_empty_datasets(request, issues)
         self._validate_required_nullable_fields(request, issues)
         self._validate_empty_codes(request, issues)
         self._validate_references(request, issues)
+        self._validate_agv_bindings(
+            request,
+            selected_agv_relations,
+            issues,
+        )
         self._validate_routes(request, issues)
         self._validate_served_processes(request, issues)
         self._validate_capacity(request, issues)
@@ -144,13 +158,6 @@ class BackendRequestCompletenessValidator:
                 continue
             for index, record in enumerate(records):
                 for field, value in record.model_dump().items():
-                    if field == "order_code" and dataset == "machine_realtime":
-                        self._validate_runtime_order_code(
-                            record,
-                            index,
-                            issues,
-                        )
-                        continue
                     if field.endswith("_code") and value == "":
                         issues.append(
                             self._issue(
@@ -187,27 +194,6 @@ class BackendRequestCompletenessValidator:
                                     )
                                 )
 
-    def _validate_runtime_order_code(
-        self,
-        record: Any,
-        index: int,
-        issues: list[BackendValidationIssue],
-    ) -> None:
-        if record.order_code == "" and self._is_running(record.status):
-            issues.append(
-                self._issue(
-                    code="empty_code",
-                    dataset="machine_realtime",
-                    field="order_code",
-                    record_key=self._record_key(
-                        "machine_realtime",
-                        record,
-                        index,
-                    ),
-                    message="running machine_realtime.order_code must not be empty",
-                )
-            )
-
     def _validate_references(
         self,
         request: BackendAlgorithmRequest,
@@ -240,6 +226,130 @@ class BackendRequestCompletenessValidator:
                             ),
                         )
                     )
+
+    def _validate_agv_bindings(
+        self,
+        request: BackendAlgorithmRequest,
+        selected_relations: dict[
+            str,
+            tuple[Any, list[AgvRelationRequest]],
+        ],
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        machine_by_code = {
+            machine.machine_code: machine for machine in request.machine_master
+        }
+        order_codes = {order.order_code for order in request.orders}
+        relation_machine_codes: set[str] = set()
+
+        for machine_code, (_, latest) in selected_relations.items():
+            record_key = machine_code or "machine_code:<empty>"
+            order_values = {relation.order_code for relation in latest}
+            order_name_values = {relation.order_name for relation in latest}
+            has_conflict = False
+            for field, values in (
+                ("order_code", order_values),
+                ("order_name", order_name_values),
+            ):
+                if len(values) > 1:
+                    has_conflict = True
+                    issues.append(
+                        self._issue(
+                            code="binding_conflict",
+                            dataset="agv_relations",
+                            field=field,
+                            record_key=record_key,
+                            message=(
+                                f"latest AGV {field} values conflict for "
+                                f"machine {machine_code}: {sorted(values)}"
+                            ),
+                        )
+                    )
+            if has_conflict:
+                continue
+
+            relation = latest[0]
+            relation_machine_codes.add(machine_code)
+            for field, value, targets, target_name in (
+                (
+                    "machine_code",
+                    relation.machine_code,
+                    machine_by_code,
+                    "machine_master.machine_code",
+                ),
+                (
+                    "order_code",
+                    relation.order_code,
+                    order_codes,
+                    "orders.order_code",
+                ),
+            ):
+                if value == "":
+                    issues.append(
+                        self._issue(
+                            code="empty_code",
+                            dataset="agv_relations",
+                            field=field,
+                            record_key=record_key,
+                            message=f"agv_relations.{field} must not be empty",
+                        )
+                    )
+                elif value not in targets:
+                    issues.append(
+                        self._issue(
+                            code="missing_reference",
+                            dataset="agv_relations",
+                            field=field,
+                            record_key=record_key,
+                            message=(
+                                f"agv_relations.{field}={value!r} was not "
+                                f"found in {target_name}"
+                            ),
+                        )
+                    )
+
+            machine = machine_by_code.get(machine_code)
+            if (
+                machine is not None
+                and any(
+                    relation.machine_name != machine.machine_name
+                    for relation in latest
+                )
+            ):
+                issues.append(
+                    self._issue(
+                        code="name_mismatch",
+                        dataset="agv_relations",
+                        field="machine_name",
+                        record_key=record_key,
+                        message=(
+                            "agv_relations.machine_name does not match "
+                            f"machine_master for {machine_code}"
+                        ),
+                    )
+                )
+
+        for index, runtime in enumerate(request.machine_realtime):
+            if (
+                self._is_running(runtime.status)
+                and runtime.machine_code not in relation_machine_codes
+            ):
+                issues.append(
+                    self._issue(
+                        code="missing_agv_binding",
+                        dataset="machine_realtime",
+                        field="machine_code",
+                        record_key=self._record_key(
+                            "machine_realtime",
+                            runtime,
+                            index,
+                        ),
+                        message=(
+                            f"running machine {runtime.machine_code} must have "
+                            "at least one AGV binding record"
+                        ),
+                    )
+                )
 
     def _validate_routes(
         self,
@@ -404,7 +514,8 @@ class BackendRequestCompletenessValidator:
 
     @staticmethod
     def _is_running(status: str) -> bool:
-        return status == "运行" or status.casefold() == "running"
+        normalized = status.strip()
+        return normalized == "运行" or normalized.casefold() == "running"
 
     @staticmethod
     def _issue(

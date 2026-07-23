@@ -3,18 +3,34 @@
 本仓库提供新版切线算法的本地服务编排与测试。当前唯一正式调用链是：
 
 ```text
-CutlineAlgorithmRequest
+原始请求 JSON
+  -> BackendRequestLoader
+  -> CutlineAlgorithmRequest
   -> SnapshotAdapter.to_algorithm_snapshot
   -> CutlinePipeline.evaluate_algorithm
   -> AlgorithmResponseMapper.to_response
   -> CutlineAlgorithmResponse
 ```
 
-算法输出建议和计算结果，不直接控制机台，也不写数据库。当前对后端提供同步 HTTP 接口 `POST /stub/algo/run`：后端提交 `CutlineAlgorithmRequest` JSON，同一次请求直接返回 `CutlineAlgorithmResponse` JSON。
+算法输出建议和计算结果，不直接控制机台，也不写数据库。当前对后端提供同步 HTTP
+接口 `POST /stub/algo/run` 和 `POST /cutline/evaluate`：后端提交请求 JSON，
+同一次请求直接返回 `CutlineAlgorithmResponse` JSON。
 
 ## 请求与内部配置
 
-后端请求使用 `CutlineAlgorithmRequest`。请求中不传 `config`；`SnapshotAdapter` 转换为内部 `AlgorithmSnapshot` 时，由 `AlgorithmConfig` 注入默认运行参数。历史活动切线事件通过请求顶层 `active_cutline_events` 传入。该事件只保存下一轮切回判断需要的 12 个字段：`event_id`、`machine_code`、源/目标订单、车间、目标 Buffer、上下游工序、目标硅片尺寸/规格、切线开始时间和 `negative_start_time`。
+后端请求由 `BackendRequestLoader` 标准化后形成 `CutlineAlgorithmRequest`。请求中不传
+`config`；`SnapshotAdapter` 转换为内部 `AlgorithmSnapshot` 时，由
+`AlgorithmConfig` 注入默认运行参数。历史活动切线事件通过请求顶层
+`active_cutline_events` 传入。该事件只保存下一轮切回判断需要的 12 个字段：
+`event_id`、`machine_code`、源/目标订单、车间、目标 Buffer、上下游工序、
+目标硅片尺寸/规格、切线开始时间和 `negative_start_time`。
+
+`machine_realtime` 不再携带 `order_code`。甲方 AGV 原始字段
+`equipmentid/equipmentname/lastlinecode/lastlinename/createtime` 只在 Loader
+中映射为标准的
+`machine_code/machine_name/order_code/order_name/binding_time`。快照按
+UTC+08:00 选择不晚于 `snapshot_time` 的最新有效绑定，并写入内部
+`AlgorithmMachineRuntime.current_order_code`；机台工序始终来自 `machine_master`。
 
 默认正式切线时刻就是方案生成时刻，切线执行延迟为 0 分钟。混料追溯以该正式切线时刻为基础计算，不再额外增加 15 分钟切线延迟。
 

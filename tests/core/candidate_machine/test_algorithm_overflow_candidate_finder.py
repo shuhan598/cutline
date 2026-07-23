@@ -80,7 +80,9 @@ def _warning(
     return AlgorithmOverflowWarningResult(
         warning_type="overflow",
         warning_time=snapshot().current_time,
+        main_id="MAIN-BUF-01",
         buffer_code="BUF-01",
+        buffer_codes=["BUF-01"],
         workshop_code=workshop_code,
         upstream_process_code=upstream_process_code,
         downstream_process_code=downstream_process_code,
@@ -217,7 +219,9 @@ def test_overflow_result_contains_selected_source_candidate_and_target_context()
 
 def test_target_option_carries_the_unique_target_interval_context():
     target_interval = AlgorithmIntervalNetRateResult(
+        main_id="MAIN-BUF-TARGET",
         buffer_code="BUF-TARGET",
+        buffer_codes=["BUF-TARGET"],
         order_code="ORD-TARGET",
         wafer_size="182",
         wafer_spec="N",

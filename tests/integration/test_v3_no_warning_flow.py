@@ -4,7 +4,7 @@ import pytest
 
 from app.adapters.snapshot_adapter import SnapshotAdapter
 from app.mappers.algorithm_response_mapper import AlgorithmResponseMapper
-from app.schemas.request_schema import CutlineAlgorithmRequest
+from app.adapters.backend_request_loader import BackendRequestLoader
 from app.schemas.response_schema import CutlineAlgorithmResponse
 from app.service.cutline_pipeline import CutlinePipeline
 from app.service.cutline_service import CutlineService
@@ -17,7 +17,7 @@ from tests.fixtures.v3_full_route_factory import (
 def test_v3_no_warning_runs_the_real_public_chain_without_mutating_inputs():
     payload = build_no_warning_payload()
     payload_before = deepcopy(payload)
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = BackendRequestLoader().load_cutline_dict(payload)
     request_before = request.model_dump()
     snapshot = SnapshotAdapter().to_algorithm_snapshot(request)
     snapshot_before = snapshot.model_dump()
@@ -39,7 +39,7 @@ def test_v3_no_warning_runs_the_real_public_chain_without_mutating_inputs():
 
 def test_v3_identical_inputs_produce_stable_complete_results():
     payload = build_no_warning_payload()
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = BackendRequestLoader().load_cutline_dict(payload)
     service_pipeline = CutlinePipeline()
     adapter = SnapshotAdapter()
     mapper = AlgorithmResponseMapper()
@@ -59,7 +59,7 @@ def test_v3_scenario_service_results_are_deterministic_and_request_is_immutable(
     scenario_name,
 ):
     payload = V3_SCENARIO_BUILDERS[scenario_name]()
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = BackendRequestLoader().load_cutline_dict(payload)
     before = request.model_dump()
     service = CutlineService()
 

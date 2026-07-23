@@ -59,6 +59,9 @@ class MachineSelectionEvaluator:
 
         interval_by_key = self._interval_index(interval_results)
         buffer_by_code = self._buffer_index(overflow_results)
+        buffer_code_by_main_id = self._buffer_code_by_main_id(
+            overflow_results
+        )
         target_key = self._warning_interval_key(warning)
         target_interval = interval_by_key.get(target_key)
         if target_interval is None:
@@ -161,9 +164,13 @@ class MachineSelectionEvaluator:
                 )
                 continue
 
-            source_buffer_code = source_interval.buffer_code
-            target_buffer_code = target_interval.buffer_code
-            if source_buffer_code not in buffer_by_code:
+            source_buffer_code = buffer_code_by_main_id.get(
+                source_interval.main_id
+            )
+            target_buffer_code = buffer_code_by_main_id.get(
+                target_interval.main_id
+            )
+            if source_buffer_code is None:
                 rejected.append(
                     self._rejected(
                         candidate,
@@ -176,6 +183,11 @@ class MachineSelectionEvaluator:
                     )
                 )
                 continue
+            if target_buffer_code is None:
+                raise MachineSelectionEvaluationError(
+                    f"{target_interval.main_id} target buffer state "
+                    "does not exist"
+                )
 
             target_before = state.interval_net_rates[target_key]
             target_after = target_before - contribution
@@ -287,6 +299,9 @@ class MachineSelectionEvaluator:
 
         interval_by_key = self._interval_index(interval_results)
         buffer_by_code = self._buffer_index(overflow_results)
+        buffer_code_by_main_id = self._buffer_code_by_main_id(
+            overflow_results
+        )
         current_buffer = buffer_by_code.get(warning.buffer_code)
         if current_buffer is None:
             raise MachineSelectionEvaluationError(
@@ -302,6 +317,22 @@ class MachineSelectionEvaluator:
             warning.downstream_process_code,
         )
         source_interval = interval_by_key.get(source_key)
+        if source_interval is None:
+            source_matches = [
+                (key, interval)
+                for key, interval in interval_by_key.items()
+                if interval.main_id == warning.main_id
+                and interval.order_code == source_detail.order_code
+                and interval.wafer_size == source_detail.wafer_size
+                and interval.wafer_spec == source_detail.wafer_spec
+                and interval.workshop_code == warning.workshop_code
+                and interval.upstream_process_code
+                == warning.upstream_process_code
+                and interval.downstream_process_code
+                == warning.downstream_process_code
+            ]
+            if len(source_matches) == 1:
+                source_key, source_interval = source_matches[0]
 
         state = VirtualCutlineState(
             interval_net_rates={
@@ -459,7 +490,24 @@ class MachineSelectionEvaluator:
                     )
                     continue
                 target_key, target_interval = target_match
-                target_buffer_code = target_interval.buffer_code
+                target_buffer_code = buffer_code_by_main_id.get(
+                    target_interval.main_id
+                )
+                if target_buffer_code is None:
+                    option_rejections.append(
+                        self._overflow_rejected(
+                            candidate,
+                            target_option,
+                            reason="target_buffer_state_not_found",
+                            source_interval=source_interval,
+                            target_interval=target_interval,
+                            source_before=source_before,
+                            source_after=source_after,
+                            source_depletion=source_depletion,
+                            message="target buffer virtual state does not exist",
+                        )
+                    )
+                    continue
                 if target_buffer_code == warning.buffer_code:
                     option_rejections.append(
                         self._overflow_rejected(
@@ -780,6 +828,19 @@ class MachineSelectionEvaluator:
                     f"duplicate buffer state: {overflow.buffer_code}"
                 )
             result[overflow.buffer_code] = overflow
+        return result
+
+    def _buffer_code_by_main_id(
+        self,
+        overflow_results: list[AlgorithmBufferOverflowTimeResult],
+    ) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for overflow in overflow_results:
+            if overflow.main_id in result:
+                raise MachineSelectionEvaluationError(
+                    f"duplicate main buffer state: {overflow.main_id}"
+                )
+            result[overflow.main_id] = overflow.buffer_code
         return result
 
     def _interval_key(self, interval) -> IntervalKey:

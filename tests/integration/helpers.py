@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.adapters.backend_request_loader import BackendRequestLoader
 from app.adapters.snapshot_adapter import SnapshotAdapter
-from app.schemas.request_schema import CutlineAlgorithmRequest
 from app.service.cutline_service import CutlineService
 
 
 def evaluate(payload: dict[str, Any]):
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = BackendRequestLoader().load_cutline_dict(payload)
     return CutlineService().evaluate_algorithm(request)
 
 
 def snapshot(payload: dict[str, Any]):
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = BackendRequestLoader().load_cutline_dict(payload)
     return SnapshotAdapter().to_algorithm_snapshot(request)
 
 
@@ -51,4 +51,3 @@ def response_buffer_codes(value: Any) -> list[str]:
         for item in value:
             result.extend(response_buffer_codes(item))
     return result
-

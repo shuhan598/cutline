@@ -43,7 +43,9 @@ def selected_machine(*, capacity_kind: str = "stockout"):
 def stockout_warning():
     return result.AlgorithmStockoutWarningResult(
         warning_time=NOW,
+        main_id="MAIN-310110302",
         buffer_code="310110302",
+        buffer_codes=["310110302"],
         order_code="ORD-S2-001",
         wafer_size="182",
         wafer_spec="N",
@@ -62,7 +64,9 @@ def stockout_warning():
 def overflow_warning():
     return result.AlgorithmOverflowWarningResult(
         warning_time=NOW,
+        main_id="MAIN-310110302",
         buffer_code="310110302",
+        buffer_codes=["310110302"],
         workshop_code="S2",
         upstream_process_code="制绒",
         downstream_process_code="碱抛",

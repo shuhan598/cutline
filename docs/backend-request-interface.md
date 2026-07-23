@@ -1,16 +1,22 @@
 # 切线算法输入接口文档
 
-> 更新时间：2026-07-17
+> 更新时间：2026-07-23
 >
-> 本文档描述后端传给算法服务的请求 JSON。当前正式同步 HTTP 路由为 `POST /stub/algo/run`。
+> 本文档描述后端传给算法服务的请求 JSON。正式同步 HTTP 路由为
+> `POST /stub/algo/run` 和 `POST /cutline/evaluate`；预校验路由为
+> `POST /backend/validate`。
 
 ## 1. 输入 JSON 是哪一块
 
-算法服务入口接收的请求对象是：
+算法标准请求对象是：
 
 ```python
 app.schemas.request_schema.CutlineAlgorithmRequest
 ```
+
+HTTP 请求先以 JSON 对象进入 `BackendRequestLoader`，其中 AGV 原始五字段会被统一
+映射为算法标准五字段，再校验为 `CutlineAlgorithmRequest`。因此正式计算接口可直接
+接收甲方原始 AGV 字段，不会在映射前按标准字段返回 422。
 
 HTTP 契约：
 
@@ -73,7 +79,7 @@ CutlineAlgorithmResponse
 | `process_routes` | array | 是 | 工艺路线 |
 | `buffer_realtime` | array | 是 | Buffer 实时库存 |
 | `buffer_master` | array | 是 | Buffer 主数据 |
-| `agv_relations` | array | 是 | AGV/路线关系 |
+| `agv_relations` | array | 是 | AGV 机台当前订单绑定历史 |
 | `active_cutline_events` | array | 否，默认空数组 | 后端回传的活动切线跟踪事件 |
 
 ## 3. 快照信息 `snapshot_meta`
@@ -99,7 +105,6 @@ CutlineAlgorithmResponse
 {
   "machine_code": "ZR-02",
   "status": "运行",
-  "order_code": "O-R",
   "tangent_time": null,
   "input_quantity": 300.0,
   "output_quantity": 300.0,
@@ -114,7 +119,7 @@ CutlineAlgorithmResponse
 - `machine_code` 必须能在 `machine_master` 中找到。
 - `status` 只有“运行”或大小写不同的 `running` 会进入算法映射为 `running`。
 - 其它状态，包括“停机”“异常”“待机”等，统一映射为 `stopped`，算法不会调用这些机台。
-- `order_code` 允许为空字符串；非空时必须能在 `orders` 中找到。
+- `machine_realtime` 不再提供 `order_code`；当前订单由快照时刻的有效 AGV 绑定提供。
 - `input_quantity` 和 `output_quantity` 是当前 30 分钟数量，算法会乘以 2 折算小时速率。
 - `period_quantity` 当前主要用于保留丝网相关统计值。
 - `tangent_time`、`out_time` 没有值时传 `null`。
@@ -309,22 +314,55 @@ CutlineAlgorithmResponse
 - 同一个订单可以存在于多个 Buffer。
 - 同一 `(buffer_code, order_code)` 不允许重复。
 
-## 12. AGV/路线关系 `agv_relations`
+## 12. AGV 当前订单绑定 `agv_relations`
+
+甲方原始记录：
 
 ```json
 {
-  "buffer_code": "BUF-ZR-PK",
-  "machine_code": "ZR-02",
-  "line_code": "ROUTE-ZR-02",
-  "line_name": "制绒二号路线",
-  "last_line_code": null,
-  "last_line_name": null,
-  "process_code": "P-ZR",
-  "process_name": "制绒"
+  "equipmentid": "EA003",
+  "equipmentname": "EA003制绒机",
+  "lastlinecode": "ORD-S2-001",
+  "lastlinename": "至上",
+  "createtime": "2026-07-23 10:23:39"
 }
 ```
 
-`buffer_code`、`line_name`、`last_line_code`、`last_line_name`、`process_code`、`process_name` 允许传 `null`，但字段本身必须出现。
+Loader 内部标准化结果：
+
+```json
+{
+  "machine_code": "EA003",
+  "machine_name": "EA003制绒机",
+  "order_code": "ORD-S2-001",
+  "order_name": "至上",
+  "binding_time": "2026-07-23 10:23:39"
+}
+```
+
+唯一映射关系：
+
+| 甲方原始字段 | 算法标准字段 |
+|---|---|
+| `equipmentid` | `machine_code` |
+| `equipmentname` | `machine_name` |
+| `lastlinecode` | `order_code` |
+| `lastlinename` | `order_name` |
+| `createtime` | `binding_time` |
+
+关键规则：
+
+- 原始 AGV 的 `equipmentcode`、`processcode`、`processname` 及其他现场字段会被过滤。
+- 机台工序始终来自 `machine_master`，不使用也不校验 AGV 工序。
+- 无时区的 `binding_time` 按 UTC+08:00 解释。
+- 每台机台选择 `binding_time <= snapshot_time` 的最新记录，不依赖数组顺序。
+- 最新时间完全重复的记录可去重；同一最新时间的 `order_code` 或 `order_name`
+  冲突时拒绝计算。
+- 只校验最终选中的绑定：编码用于关联，名称只做精确一致性检查。
+- 运行机台没有有效 AGV 绑定时拒绝计算；非运行机台允许没有绑定。
+- `BackendOrder` 没有新增 `order_name`：当前后端 ingestion 原始订单没有该字段，
+  也没有可按订单编码唯一映射的等价字段。`/backend/validate` 校验订单编码，
+  正式计算请求中的 `OrderRequest.order_name` 用于最终名称一致性校验。
 
 ## 13. 活动切线跟踪事件 `active_cutline_events`
 
@@ -363,7 +401,8 @@ CutlineAlgorithmResponse
 
 ## 15. 当前样例校验结果
 
-当前两个输入样例均已通过 `CutlineAlgorithmRequest` 校验：
+当前两个输入样例均已通过 `BackendRequestLoader` 标准化及
+`CutlineAlgorithmRequest` 校验：
 
 ```text
 examples/backend_request_sample.json OK

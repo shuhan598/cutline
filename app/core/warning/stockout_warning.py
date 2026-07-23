@@ -31,7 +31,7 @@ class StockoutWarningEvaluator:
             self._validate_algorithm_depletion(depletion)
             unique_key = (
                 depletion.workshop_code,
-                depletion.buffer_code,
+                depletion.main_id,
                 depletion.order_code,
                 depletion.wafer_size,
                 depletion.wafer_spec,
@@ -42,6 +42,7 @@ class StockoutWarningEvaluator:
                 raise WarningEvaluationError(
                     "duplicate stockout warning input: "
                     f"workshop={depletion.workshop_code}, "
+                    f"main_id={depletion.main_id}, "
                     f"buffer={depletion.buffer_code}, "
                     f"order={depletion.order_code}, "
                     f"wafer_size={depletion.wafer_size}, "
@@ -62,7 +63,9 @@ class StockoutWarningEvaluator:
                 AlgorithmStockoutWarningResult(
                     warning_type="stockout",
                     warning_time=snapshot.current_time,
+                    main_id=depletion.main_id,
                     buffer_code=depletion.buffer_code,
+                    buffer_codes=list(depletion.buffer_codes),
                     order_code=depletion.order_code,
                     wafer_size=depletion.wafer_size,
                     wafer_spec=depletion.wafer_spec,
@@ -104,6 +107,7 @@ class StockoutWarningEvaluator:
     ) -> None:
         context = (
             f"workshop={depletion.workshop_code}, "
+            f"main_id={depletion.main_id}, "
             f"buffer={depletion.buffer_code}, "
             f"order={depletion.order_code}, "
             f"wafer_size={depletion.wafer_size}, "
@@ -112,6 +116,7 @@ class StockoutWarningEvaluator:
             f"->{depletion.downstream_process_code}"
         )
         required_codes = (
+            "main_id",
             "buffer_code",
             "order_code",
             "wafer_size",
@@ -126,6 +131,14 @@ class StockoutWarningEvaluator:
                 raise WarningEvaluationError(
                     f"{context} missing or blank {field_name}"
                 )
+
+        if not depletion.buffer_codes or any(
+            not isinstance(buffer_code, str) or not buffer_code.strip()
+            for buffer_code in depletion.buffer_codes
+        ):
+            raise WarningEvaluationError(
+                f"{context} missing or blank buffer_codes"
+            )
 
         if (
             depletion.depletion_minutes is not None

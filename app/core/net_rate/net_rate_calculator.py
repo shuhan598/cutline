@@ -51,9 +51,118 @@ class NetRateCalculator:
     ) -> list[AlgorithmIntervalNetRateResult]:
         context = self._build_machine_context(snapshot)
         return [
-            self._calculate_inventory_net_rate(snapshot, inventory, context)
-            for inventory in snapshot.buffer_order_inventories
+            self._calculate_inventory_net_rate(
+                snapshot,
+                inventory,
+                buffer_codes,
+                context,
+            )
+            for inventory, buffer_codes in self._group_buffer_inventories(
+                snapshot.buffer_order_inventories,
+                context,
+            )
         ]
+
+    def _group_buffer_inventories(
+        self,
+        inventories: Iterable[AlgorithmBufferOrderInventory],
+        context: _AlgorithmNetRateContext,
+    ) -> list[tuple[AlgorithmBufferOrderInventory, list[str]]]:
+        quantities_by_group: dict[
+            tuple[str, str, str, str, str], float
+        ] = {}
+        buffer_codes_by_group: dict[
+            tuple[str, str, str, str, str], set[str]
+        ] = {}
+        interval_by_main_id: dict[str, tuple[str, str, str]] = {}
+        main_id_by_buffer: dict[str, str] = {}
+        seen_physical_inventory: set[tuple[str, str, str]] = set()
+
+        for inventory in inventories:
+            if not inventory.main_id.strip():
+                raise NetRateCalculationError(
+                    f"{inventory.buffer_code} buffer inventory main_id is blank"
+                )
+            relation = context.buffer_relation_by_code.get(
+                inventory.buffer_code
+            )
+            if relation is None:
+                raise NetRateCalculationError(
+                    f"{inventory.buffer_code} process relation does not exist "
+                    "for buffer inventory"
+                )
+
+            existing_main_id = main_id_by_buffer.get(inventory.buffer_code)
+            if (
+                existing_main_id is not None
+                and existing_main_id != inventory.main_id
+            ):
+                raise NetRateCalculationError(
+                    f"{inventory.buffer_code} buffer inventory belongs to "
+                    f"multiple main_id values: {existing_main_id!r}, "
+                    f"{inventory.main_id!r}"
+                )
+            main_id_by_buffer[inventory.buffer_code] = inventory.main_id
+
+            physical_key = (
+                inventory.main_id,
+                inventory.buffer_code,
+                inventory.order_code,
+            )
+            if physical_key in seen_physical_inventory:
+                raise NetRateCalculationError(
+                    f"{inventory.main_id} {inventory.buffer_code} "
+                    f"{inventory.order_code} duplicate buffer inventory"
+                )
+            seen_physical_inventory.add(physical_key)
+
+            interval = (
+                relation.workshop_code,
+                relation.upstream_process_code,
+                relation.downstream_process_code,
+            )
+            expected_interval = interval_by_main_id.get(inventory.main_id)
+            if expected_interval is None:
+                interval_by_main_id[inventory.main_id] = interval
+            elif expected_interval != interval:
+                raise NetRateCalculationError(
+                    f"{inventory.main_id} buffer group has multiple process "
+                    f"intervals: {expected_interval!r}, {interval!r}"
+                )
+
+            group_key = (
+                inventory.main_id,
+                relation.workshop_code,
+                relation.upstream_process_code,
+                relation.downstream_process_code,
+                inventory.order_code,
+            )
+            quantities_by_group[group_key] = (
+                quantities_by_group.get(group_key, 0.0)
+                + inventory.current_quantity
+            )
+            buffer_codes_by_group.setdefault(group_key, set()).add(
+                inventory.buffer_code
+            )
+
+        grouped: list[
+            tuple[AlgorithmBufferOrderInventory, list[str]]
+        ] = []
+        for group_key in sorted(quantities_by_group):
+            main_id, _, _, _, order_code = group_key
+            buffer_codes = sorted(buffer_codes_by_group[group_key])
+            grouped.append(
+                (
+                    AlgorithmBufferOrderInventory(
+                        main_id=main_id,
+                        buffer_code=buffer_codes[0],
+                        order_code=order_code,
+                        current_quantity=quantities_by_group[group_key],
+                    ),
+                    buffer_codes,
+                )
+            )
+        return grouped
 
     def _build_machine_context(
         self,
@@ -155,6 +264,7 @@ class NetRateCalculator:
         self,
         snapshot: AlgorithmSnapshot,
         inventory: AlgorithmBufferOrderInventory,
+        buffer_codes: list[str],
         context: _AlgorithmNetRateContext,
     ) -> AlgorithmIntervalNetRateResult:
         if inventory.order_code not in context.order_by_code:
@@ -203,7 +313,9 @@ class NetRateCalculator:
             context,
         )
         return AlgorithmIntervalNetRateResult(
+            main_id=inventory.main_id,
             buffer_code=inventory.buffer_code,
+            buffer_codes=list(buffer_codes),
             order_code=inventory.order_code,
             wafer_size=product.wafer_size,
             wafer_spec=wafer_spec,

@@ -35,7 +35,9 @@ def _snapshot(lead_minutes: float = 30) -> AlgorithmSnapshot:
 
 def _depletion(
     *,
+    main_id: str | None = None,
     buffer_code: str = "BUF-01",
+    buffer_codes: list[str] | None = None,
     order_code: str = "ORD-001",
     wafer_size: str = "182",
     wafer_spec: str = "N",
@@ -49,7 +51,11 @@ def _depletion(
     net_consumption_rate: float = 2400,
 ) -> AlgorithmDepletionTimeResult:
     return AlgorithmDepletionTimeResult(
+        main_id=main_id or f"MAIN-{buffer_code}",
         buffer_code=buffer_code,
+        buffer_codes=(
+            [buffer_code] if buffer_codes is None else buffer_codes
+        ),
         order_code=order_code,
         wafer_size=wafer_size,
         wafer_spec=wafer_spec,
@@ -136,7 +142,9 @@ def test_zero_minutes_triggers_and_preserves_time_lead_and_complete_input_fields
     assert warning.model_dump() == {
         "warning_type": "stockout",
         "warning_time": SNAPSHOT_TIME,
+        "main_id": "MAIN-BUF-ZERO",
         "buffer_code": "BUF-ZERO",
+        "buffer_codes": ["BUF-ZERO"],
         "order_code": "ORD-ZERO",
         "wafer_size": "182",
         "wafer_spec": "R",
@@ -324,9 +332,24 @@ def test_duplicate_interval_identity_fails_instead_of_emitting_two_warnings():
 
     assert str(exc_info.value) == (
         "duplicate stockout warning input: "
-        "workshop=S1, buffer=BUF-01, order=ORD-001, "
+        "workshop=S1, main_id=MAIN-BUF-01, buffer=BUF-01, order=ORD-001, "
         "wafer_size=182, wafer_spec=N, interval=ZR->PK"
     )
+
+
+def test_warning_preserves_sorted_physical_buffer_codes_for_one_main():
+    warning = _evaluate(
+        _snapshot(),
+        _depletion(
+            main_id="MAIN-LAYERS",
+            buffer_code="BUF-01",
+            buffer_codes=["BUF-01", "BUF-02"],
+        ),
+    )[0]
+
+    assert warning.main_id == "MAIN-LAYERS"
+    assert warning.buffer_code == "BUF-01"
+    assert warning.buffer_codes == ["BUF-01", "BUF-02"]
 
 
 def test_negative_lead_time_fails_even_when_snapshot_was_copied_without_validation():
@@ -354,6 +377,7 @@ def test_negative_depletion_time_fails_even_when_result_was_copied_without_valid
 @pytest.mark.parametrize(
     ("field", "match"),
     [
+        ("main_id", "main_id"),
         ("buffer_code", "buffer_code"),
         ("order_code", "order_code"),
         ("wafer_size", "wafer_size"),
@@ -367,4 +391,3 @@ def test_blank_required_code_fails(field: str, match: str):
     result = _depletion().model_copy(update={field: "  "})
 
     _assert_warning_error(_snapshot(), [result], match)
-

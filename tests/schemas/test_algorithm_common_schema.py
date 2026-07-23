@@ -92,19 +92,17 @@ ALGORITHM_MODEL_FIELDS = {
         "downstream_process_code",
     ),
     "AlgorithmBufferOrderInventory": (
+        "main_id",
         "buffer_code",
         "order_code",
         "current_quantity",
     ),
     "AlgorithmAgvRelation": (
-        "buffer_code",
         "machine_code",
-        "line_code",
-        "line_name",
-        "last_line_code",
-        "last_line_name",
-        "process_code",
-        "process_name",
+        "machine_name",
+        "order_code",
+        "order_name",
+        "binding_time",
     ),
 }
 
@@ -183,12 +181,6 @@ def test_algorithm_model_field_types_and_nullable_contracts_are_explicit():
         ("AlgorithmProcessRoute", "upstream_process_name"),
         ("AlgorithmProcessRoute", "downstream_process_code"),
         ("AlgorithmProcessRoute", "downstream_process_name"),
-        ("AlgorithmAgvRelation", "buffer_code"),
-        ("AlgorithmAgvRelation", "line_name"),
-        ("AlgorithmAgvRelation", "last_line_code"),
-        ("AlgorithmAgvRelation", "last_line_name"),
-        ("AlgorithmAgvRelation", "process_code"),
-        ("AlgorithmAgvRelation", "process_name"),
     }
     special_types = {
         ("AlgorithmMachineRuntime", "tangent_time"): datetime | None,
@@ -206,6 +198,7 @@ def test_algorithm_model_field_types_and_nullable_contracts_are_explicit():
         ("AlgorithmBufferMaster", "served_process_codes"): list[str],
         ("AlgorithmBufferMaster", "served_process_names"): list[str],
         ("AlgorithmBufferOrderInventory", "current_quantity"): float,
+        ("AlgorithmAgvRelation", "binding_time"): datetime,
     }
 
     for model_name, field_names in ALGORITHM_MODEL_FIELDS.items():
@@ -438,6 +431,7 @@ def test_algorithm_buffer_runtime_is_not_defined():
 def test_buffer_order_inventory_rejects_negative_quantity():
     with pytest.raises(ValidationError):
         schema.AlgorithmBufferOrderInventory(
+            main_id="MAIN-A",
             buffer_code="BUF-A",
             order_code="ORD-01",
             current_quantity=-1,
@@ -447,16 +441,28 @@ def test_buffer_order_inventory_rejects_negative_quantity():
 def test_buffer_order_inventory_supports_many_to_many_relationship():
     inventories = [
         schema.AlgorithmBufferOrderInventory(
-            buffer_code="BUF-A", order_code="ORD-01", current_quantity=1000
+            main_id="MAIN-A",
+            buffer_code="BUF-A",
+            order_code="ORD-01",
+            current_quantity=1000,
         ),
         schema.AlgorithmBufferOrderInventory(
-            buffer_code="BUF-B", order_code="ORD-01", current_quantity=800
+            main_id="MAIN-A",
+            buffer_code="BUF-B",
+            order_code="ORD-01",
+            current_quantity=800,
         ),
         schema.AlgorithmBufferOrderInventory(
-            buffer_code="BUF-B", order_code="ORD-02", current_quantity=600
+            main_id="MAIN-A",
+            buffer_code="BUF-B",
+            order_code="ORD-02",
+            current_quantity=600,
         ),
         schema.AlgorithmBufferOrderInventory(
-            buffer_code="BUF-C", order_code="ORD-01", current_quantity=500
+            main_id="MAIN-C",
+            buffer_code="BUF-C",
+            order_code="ORD-01",
+            current_quantity=500,
         ),
     ]
 
@@ -477,6 +483,29 @@ def test_buffer_order_inventory_supports_many_to_many_relationship():
     assert buffer_b_orders == {"ORD-01", "ORD-02"}
     assert buffer_b_total == 1400
     assert order_01_total == 2300
+
+
+def test_buffer_order_inventory_requires_and_preserves_main_id():
+    inventory = schema.AlgorithmBufferOrderInventory(
+        main_id="MAIN-01",
+        buffer_code="BUF-A",
+        order_code="ORD-01",
+        current_quantity=3600,
+    )
+
+    assert inventory.model_dump() == {
+        "main_id": "MAIN-01",
+        "buffer_code": "BUF-A",
+        "order_code": "ORD-01",
+        "current_quantity": 3600.0,
+    }
+
+    with pytest.raises(ValidationError):
+        schema.AlgorithmBufferOrderInventory(
+            buffer_code="BUF-A",
+            order_code="ORD-01",
+            current_quantity=3600,
+        )
 
 
 def test_buffer_process_relations_support_interval_lookup():

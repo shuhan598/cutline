@@ -104,17 +104,26 @@ class ResultPipeline:
         raise AssertionError("legacy run must not be called")
 
 
-def _machine_runtime(code, order_code, input_quantity, output_quantity):
+def _machine_runtime(code, input_quantity, output_quantity):
     return {
         "machine_code": code,
         "status": "running",
-        "order_code": order_code,
         "tangent_time": None,
         "input_quantity": float(input_quantity),
         "output_quantity": float(output_quantity),
         "completed_quantity": 0,
         "period_quantity": 0,
         "out_time": None,
+    }
+
+
+def _agv_relation(machine_code, order_code, order_name):
+    return {
+        "machine_code": machine_code,
+        "machine_name": machine_code,
+        "order_code": order_code,
+        "order_name": order_name,
+        "binding_time": REAL_NOW,
     }
 
 
@@ -215,10 +224,10 @@ def _real_flow_payload():
     return {
         "snapshot_meta": _snapshot_meta(),
         "machine_realtime": [
-            _machine_runtime("M-CAND", "ORD-SOURCE", 200, 200),
-            _machine_runtime("M-SRC-DOWN", "ORD-SOURCE", 200, 0),
-            _machine_runtime("M-TGT-UP", "ORD-TARGET", 0, 0),
-            _machine_runtime("M-TGT-DOWN", "ORD-TARGET", 200, 0),
+            _machine_runtime("M-CAND", 200, 200),
+            _machine_runtime("M-SRC-DOWN", 200, 0),
+            _machine_runtime("M-TGT-UP", 0, 0),
+            _machine_runtime("M-TGT-DOWN", 200, 0),
         ],
         "machine_master": [
             _machine_master("M-CAND", "P01"),
@@ -278,7 +287,12 @@ def _real_flow_payload():
             _buffer_master("BUF-SOURCE"),
             _buffer_master("BUF-TARGET"),
         ],
-        "agv_relations": [],
+        "agv_relations": [
+            _agv_relation("M-CAND", "ORD-SOURCE", "Source"),
+            _agv_relation("M-SRC-DOWN", "ORD-SOURCE", "Source"),
+            _agv_relation("M-TGT-UP", "ORD-TARGET", "Target"),
+            _agv_relation("M-TGT-DOWN", "ORD-TARGET", "Target"),
+        ],
         "active_cutline_events": [],
     }
 
@@ -287,7 +301,7 @@ def _silk_payload():
     return {
         "snapshot_meta": _snapshot_meta(),
         "machine_realtime": [
-            _machine_runtime("M-SILK", "ORD-SILK", 0, 5000)
+            _machine_runtime("M-SILK", 0, 5000)
         ],
         "machine_master": [
             _machine_master("M-SILK", "SW", process_name="丝网")
@@ -319,7 +333,9 @@ def _silk_payload():
         "process_routes": [],
         "buffer_realtime": [],
         "buffer_master": [],
-        "agv_relations": [],
+        "agv_relations": [
+            _agv_relation("M-SILK", "ORD-SILK", "Silk")
+        ],
         "active_cutline_events": [],
     }
 
@@ -377,7 +393,7 @@ def test_real_empty_request_runs_the_real_adapter_pipeline_mapper_chain():
     assert isinstance(response, CutlineAlgorithmResponse)
     assert response.calculation_time == NOW
     assert request.model_dump() == original
-    assert "config" not in request.model_fields
+    assert "config" not in request.__class__.model_fields
 
 
 def test_evaluate_algorithm_does_not_use_legacy_pipeline_run():
@@ -501,7 +517,7 @@ def test_manual_intervention_response_has_no_mixing_or_new_events():
     assert len(response.cutline_decisions) == 1
     assert response.cutline_decisions[0].manual_intervention is not None
     assert response.mixing_trace_records == []
-    assert "mixing_trace_failures" not in response.model_fields
+    assert "mixing_trace_failures" not in response.__class__.model_fields
     assert response.new_active_cutline_events == []
 
 
@@ -537,7 +553,7 @@ def test_historical_event_recommendation_closes_without_returning_update():
         "CUT-HISTORICAL-M-CAND"
     ]
     assert response.updated_active_cutline_events == []
-    assert "return_results" not in response.model_fields
+    assert "return_results" not in response.__class__.model_fields
     assert response.new_active_cutline_events == []
 
 
@@ -560,7 +576,7 @@ def test_mixing_failure_is_mapped_once_to_errors():
     assert response.cutline_decisions[0].plan is not None
     assert len(response.new_active_cutline_events) == 1
     assert response.mixing_trace_records == []
-    assert "mixing_trace_failures" not in response.model_fields
+    assert "mixing_trace_failures" not in response.__class__.model_fields
     assert len(response.errors) == 1
     assert response.errors[0].stage == "mixing_trace"
     assert response.errors[0].reason == "process_duration_not_found"

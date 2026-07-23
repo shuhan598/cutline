@@ -2,10 +2,25 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import TypeAdapter, ValidationError
+
+from app.adapters.agv_binding_selector import normalize_local_time
 from app.schemas.backend_request_schema import BackendAlgorithmRequest
+from app.schemas.request_schema import CutlineAlgorithmRequest
+
+
+_RAW_AGV_FIELD_MAP = {
+    "equipmentid": "machine_code",
+    "equipmentname": "machine_name",
+    "lastlinecode": "order_code",
+    "lastlinename": "order_name",
+    "createtime": "binding_time",
+}
+_DATETIME_ADAPTER = TypeAdapter(datetime)
 
 
 class BackendRequestLoadError(ValueError):
@@ -14,6 +29,105 @@ class BackendRequestLoadError(ValueError):
 
 class BackendRequestLoader:
     """Load backend request payloads into the strict external request model."""
+
+    @staticmethod
+    def _is_raw_agv_record(record: dict[str, Any]) -> bool:
+        return any(field in record for field in _RAW_AGV_FIELD_MAP)
+
+    @staticmethod
+    def _normalize_agv_record(
+        record: dict[str, Any],
+        index: int,
+    ) -> dict[str, Any]:
+        if not BackendRequestLoader._is_raw_agv_record(record):
+            return record
+
+        normalized: dict[str, Any] = {}
+        for raw_field, standard_field in _RAW_AGV_FIELD_MAP.items():
+            has_raw = raw_field in record
+            has_standard = standard_field in record
+            if (
+                has_raw
+                and has_standard
+                and not BackendRequestLoader._agv_values_match(
+                    raw_field,
+                    record[raw_field],
+                    record[standard_field],
+                )
+            ):
+                raise BackendRequestLoadError(
+                    f"agv_relations[{index}] field conflict: "
+                    f"{raw_field}={record[raw_field]!r} does not match "
+                    f"{standard_field}={record[standard_field]!r}"
+                )
+            if has_standard:
+                normalized[standard_field] = record[standard_field]
+            elif has_raw:
+                normalized[standard_field] = record[raw_field]
+        return normalized
+
+    @staticmethod
+    def _agv_values_match(
+        raw_field: str,
+        raw_value: Any,
+        standard_value: Any,
+    ) -> bool:
+        if raw_field != "createtime":
+            return raw_value == standard_value
+        try:
+            raw_time = _DATETIME_ADAPTER.validate_python(raw_value)
+            standard_time = _DATETIME_ADAPTER.validate_python(standard_value)
+        except ValidationError:
+            return raw_value == standard_value
+        return normalize_local_time(raw_time) == normalize_local_time(
+            standard_time
+        )
+
+    def normalize_agv_relations(self, records: Any) -> Any:
+        """Map raw AGV records while preserving non-list schema errors."""
+        if not isinstance(records, list):
+            return records
+        return [
+            self._normalize_agv_record(record, index)
+            if isinstance(record, dict)
+            else record
+            for index, record in enumerate(records)
+        ]
+
+    def normalize_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Deep-copy a request and map only its AGV input collection."""
+        normalized = deepcopy(payload)
+        if isinstance(normalized, dict) and "agv_relations" in normalized:
+            normalized["agv_relations"] = self.normalize_agv_relations(
+                normalized["agv_relations"]
+            )
+        return normalized
+
+    @staticmethod
+    def _project_raw_agv_relations(records: Any) -> Any:
+        if not isinstance(records, list):
+            return records
+
+        projected: list[Any] = []
+        for index, record in enumerate(records):
+            if (
+                not isinstance(record, dict)
+                or not BackendRequestLoader._is_raw_agv_record(record)
+            ):
+                projected.append(record)
+                continue
+            normalized = BackendRequestLoader._normalize_agv_record(
+                record,
+                index,
+            )
+            projected.append(
+                {
+                    raw_field: normalized[standard_field]
+                    for raw_field, standard_field in _RAW_AGV_FIELD_MAP.items()
+                    if standard_field in normalized
+                }
+            )
+        return projected
 
     def load_dict(self, payload: dict[str, Any]) -> BackendAlgorithmRequest:
         cleaned = deepcopy(payload)
@@ -27,7 +141,19 @@ class BackendRequestLoader:
                 if isinstance(record, dict):
                     record.pop("period_quantity", None)
                     record.pop("out_time", None)
+        if isinstance(cleaned, dict) and "agv_relations" in cleaned:
+            cleaned["agv_relations"] = self._project_raw_agv_relations(
+                cleaned["agv_relations"]
+            )
         return BackendAlgorithmRequest.model_validate(cleaned)
+
+    def load_cutline_dict(
+        self,
+        payload: dict[str, Any],
+    ) -> CutlineAlgorithmRequest:
+        return CutlineAlgorithmRequest.model_validate(
+            self.normalize_payload(payload)
+        )
 
     def load_json_file(self, file_path: str | Path) -> BackendAlgorithmRequest:
         path = Path(file_path)

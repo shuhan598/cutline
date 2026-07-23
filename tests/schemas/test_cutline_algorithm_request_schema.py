@@ -50,7 +50,7 @@ def payload():
             "degraded_flags": [],
         },
         "machine_realtime": [{
-            "machine_code": "M1", "status": "运行", "order_code": "", "tangent_time": None,
+            "machine_code": "M1", "status": "运行", "tangent_time": None,
             "input_quantity": 0, "output_quantity": 1, "completed_quantity": 0,
             "period_quantity": 2, "out_time": "2026-07-13T08:00Z",
         }],
@@ -64,7 +64,7 @@ def payload():
         "process_routes": [{"process_code": "P1", "process_name": "工序1", "sequence": 1, "cache_type": "BUFFER", "workshop_code": "S1", "workshop_name": "车间1", "loop_code": "LOOP1", "loop_name": "循环1", "upstream_process_code": None, "upstream_process_name": None, "downstream_process_code": None, "downstream_process_name": None}],
         "buffer_realtime": [{"main_id": None, "buffer_code": "B1", "bound_source_name": "source", "current_quantity": 0, "current_utilization_rate": 0}],
         "buffer_master": [{"buffer_code": "B1", "buffer_name": "缓存1", "buffer_type": "LINE", "buffer_type_title": "线边库", "max_capacity": 1, "safety_low": 0, "served_process_codes": [], "served_process_names": [], "loop_code": "LOOP1", "loop_name": "循环1"}],
-        "agv_relations": [{"buffer_code": None, "machine_code": "M1", "line_code": "L1", "line_name": None, "last_line_code": None, "last_line_name": None, "process_code": None, "process_name": None}],
+        "agv_relations": [{"machine_code": "M1", "machine_name": "机台1", "order_code": "O1", "order_name": "source", "binding_time": "2026-07-13T16:20:00Z"}],
     }
 
 
@@ -184,10 +184,7 @@ def test_unknown_fields_are_rejected(payload, location):
 @pytest.mark.parametrize(
     ("dataset", "field"),
     (("machine_realtime", "tangent_time"), ("workshops", "workshop_name"),
-     ("buffer_realtime", "main_id"), ("agv_relations", "buffer_code"),
-     ("agv_relations", "line_name"), ("agv_relations", "last_line_code"),
-     ("agv_relations", "last_line_name"), ("agv_relations", "process_code"),
-     ("agv_relations", "process_name"), ("process_routes", "upstream_process_code"),
+     ("buffer_realtime", "main_id"), ("process_routes", "upstream_process_code"),
      ("process_routes", "upstream_process_name"), ("process_routes", "downstream_process_code"),
      ("process_routes", "downstream_process_name")),
 )
@@ -231,9 +228,9 @@ def test_explicit_empty_top_level_arrays_are_allowed(payload):
     assert all(getattr(request, field) == [] for field in DATASET_FIELDS)
 
 
-def test_empty_order_code_is_allowed(payload):
+def test_machine_realtime_does_not_expose_order_code(payload):
     request = CutlineAlgorithmRequest.model_validate(payload)
-    assert request.machine_realtime[0].order_code == ""
+    assert "order_code" not in request.machine_realtime[0].__class__.model_fields
 
 
 def test_order_name_is_required_and_non_nullable_on_request_model(payload):

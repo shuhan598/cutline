@@ -34,7 +34,6 @@ def cutline_payload() -> dict:
             {
                 "machine_code": "M1",
                 "status": "运行",
-                "order_code": "",
                 "tangent_time": None,
                 "input_quantity": 0,
                 "output_quantity": 1,
@@ -147,14 +146,13 @@ def cutline_payload() -> dict:
         ],
         "agv_relations": [
             {
-                "buffer_code": None,
-                "machine_code": "M1",
-                "line_code": "L1",
-                "line_name": None,
-                "last_line_code": None,
-                "last_line_name": None,
-                "process_code": None,
-                "process_name": None,
+                "equipmentid": "M1",
+                "equipmentname": "机台1",
+                "lastlinecode": "O1",
+                "lastlinename": "source",
+                "createtime": "2026-07-13 16:20:00",
+                "processcode": "DO-NOT-USE",
+                "processname": "错误工序",
             }
         ],
     }
@@ -176,6 +174,22 @@ def test_backend_validate_accepts_transitional_backend_payload():
     payload = backend_payload()
     payload["machine_realtime"][0]["period_quantity"] = 10
     payload["machine_realtime"][0]["out_time"] = "2026-07-14T08:30:00+08:00"
+
+    response = make_client().post("/backend/validate", json=payload)
+
+    assert response.status_code == 200
+    assert response.json() == {"valid": True, "issues": []}
+
+
+def test_backend_validate_uses_raw_agv_mapping_and_ignores_process_fields():
+    payload = backend_payload()
+    payload["agv_relations"][0].update(
+        {
+            "processcode": "DO-NOT-USE",
+            "processname": "错误工序",
+            "equipmentcode": "WRONG-MACHINE",
+        }
+    )
 
     response = make_client().post("/backend/validate", json=payload)
 
@@ -228,6 +242,10 @@ def test_cutline_evaluate_delegates_to_cutline_service():
     assert response.json()["calculation_time"] == "2026-07-18T12:00:00"
     assert len(calls) == 1
     assert isinstance(calls[0], CutlineAlgorithmRequest)
+    assert calls[0].machine_realtime[0].machine_code == "M1"
+    assert calls[0].agv_relations[0].machine_code == "M1"
+    assert calls[0].agv_relations[0].order_code == "O1"
+    assert calls[0].machine_master[0].process_code == "P1"
 
 def test_stub_algo_run_delegates_synchronously_to_cutline_service():
     app = create_app()
@@ -249,4 +267,19 @@ def test_stub_algo_run_delegates_synchronously_to_cutline_service():
     assert response.json()["calculation_time"] == "2026-07-18T12:30:00"
     assert len(calls) == 1
     assert isinstance(calls[0], CutlineAlgorithmRequest)
+    assert calls[0].agv_relations[0].machine_name == "机台1"
+    assert calls[0].agv_relations[0].order_name == "source"
+
+
+def test_calculation_route_returns_422_for_raw_standard_agv_conflict():
+    payload = cutline_payload()
+    payload["agv_relations"][0]["machine_code"] = "OTHER"
+
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert "agv_relations[0]" in str(detail)
+    assert "equipmentid" in str(detail)
+    assert "machine_code" in str(detail)
 

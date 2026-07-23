@@ -145,6 +145,7 @@ def _snapshot(
         ],
         buffer_order_inventories=[
             AlgorithmBufferOrderInventory(
+                main_id="MAIN-01",
                 buffer_code="BUF-01",
                 order_code="ORD-001",
                 current_quantity=1600,
@@ -181,7 +182,9 @@ def test_single_upstream_and_downstream_machines_are_calculated_per_inventory():
     result = _calculate(_snapshot())[0]
 
     assert result.model_dump() == {
+        "main_id": "MAIN-01",
         "buffer_code": "BUF-01",
+        "buffer_codes": ["BUF-01"],
         "order_code": "ORD-001",
         "wafer_size": "182",
         "wafer_spec": "N",
@@ -342,7 +345,69 @@ def test_missing_matching_downstream_machine_produces_zero_rate():
     assert _calculate(snapshot)[0].downstream_input_rate == 0
 
 
-def test_same_order_in_different_buffers_produces_separate_results():
+def test_same_main_order_in_different_buffers_aggregates_3600_and_7200():
+    snapshot = _snapshot()
+    snapshot.buffer_order_inventories[0] = (
+        snapshot.buffer_order_inventories[0].model_copy(
+            update={"current_quantity": 3600}
+        )
+    )
+    snapshot.buffer_process_relations.append(
+        AlgorithmBufferProcessRelation(
+            buffer_code="BUF-02",
+            workshop_code="S1",
+            upstream_process_code="ZR",
+            downstream_process_code="PK",
+        )
+    )
+    snapshot.buffer_order_inventories.append(
+        AlgorithmBufferOrderInventory(
+            main_id="MAIN-01",
+            buffer_code="BUF-02",
+            order_code="ORD-001",
+            current_quantity=7200,
+        )
+    )
+
+    results = _calculate(snapshot)
+
+    assert len(results) == 1
+    assert results[0].main_id == "MAIN-01"
+    assert results[0].buffer_code == "BUF-01"
+    assert results[0].buffer_codes == ["BUF-01", "BUF-02"]
+    assert results[0].current_quantity == 10800
+    assert results[0].upstream_output_rate == 200
+    assert results[0].downstream_input_rate == 320
+    assert results[0].net_consumption_rate == 120
+
+
+def test_group_buffer_codes_and_representative_are_sorted_not_input_order():
+    snapshot = _snapshot()
+    snapshot.buffer_process_relations.append(
+        AlgorithmBufferProcessRelation(
+            buffer_code="BUF-02",
+            workshop_code="S1",
+            upstream_process_code="ZR",
+            downstream_process_code="PK",
+        )
+    )
+    snapshot.buffer_order_inventories.insert(
+        0,
+        AlgorithmBufferOrderInventory(
+            main_id="MAIN-01",
+            buffer_code="BUF-02",
+            order_code="ORD-001",
+            current_quantity=800,
+        ),
+    )
+
+    result = _calculate(snapshot)[0]
+
+    assert result.buffer_codes == ["BUF-01", "BUF-02"]
+    assert result.buffer_code == "BUF-01"
+
+
+def test_same_group_order_calculates_machine_rates_exactly_once(monkeypatch):
     snapshot = _snapshot()
     snapshot.buffer_process_relations.append(
         AlgorithmBufferProcessRelation(
@@ -354,6 +419,55 @@ def test_same_order_in_different_buffers_produces_separate_results():
     )
     snapshot.buffer_order_inventories.append(
         AlgorithmBufferOrderInventory(
+            main_id="MAIN-01",
+            buffer_code="BUF-02",
+            order_code="ORD-001",
+            current_quantity=7200,
+        )
+    )
+    calculator = net_rate_module.NetRateCalculator()
+    original_upstream = calculator._calculate_upstream_output_rate
+    original_downstream = calculator._calculate_downstream_input_rate
+    calls = {"upstream": 0, "downstream": 0}
+
+    def count_upstream(*args, **kwargs):
+        calls["upstream"] += 1
+        return original_upstream(*args, **kwargs)
+
+    def count_downstream(*args, **kwargs):
+        calls["downstream"] += 1
+        return original_downstream(*args, **kwargs)
+
+    monkeypatch.setattr(
+        calculator,
+        "_calculate_upstream_output_rate",
+        count_upstream,
+    )
+    monkeypatch.setattr(
+        calculator,
+        "_calculate_downstream_input_rate",
+        count_downstream,
+    )
+
+    results = calculator.calculate(snapshot)
+
+    assert len(results) == 1
+    assert calls == {"upstream": 1, "downstream": 1}
+
+
+def test_different_main_ids_with_same_interval_and_order_stay_separate():
+    snapshot = _snapshot()
+    snapshot.buffer_process_relations.append(
+        AlgorithmBufferProcessRelation(
+            buffer_code="BUF-02",
+            workshop_code="S1",
+            upstream_process_code="ZR",
+            downstream_process_code="PK",
+        )
+    )
+    snapshot.buffer_order_inventories.append(
+        AlgorithmBufferOrderInventory(
+            main_id="MAIN-02",
             buffer_code="BUF-02",
             order_code="ORD-001",
             current_quantity=800,
@@ -361,9 +475,13 @@ def test_same_order_in_different_buffers_produces_separate_results():
     )
 
     results = _calculate(snapshot)
-    assert [(item.buffer_code, item.current_quantity) for item in results] == [
-        ("BUF-01", 1600),
-        ("BUF-02", 800),
+
+    assert [
+        (item.main_id, item.buffer_code, item.current_quantity)
+        for item in results
+    ] == [
+        ("MAIN-01", "BUF-01", 1600),
+        ("MAIN-02", "BUF-02", 800),
     ]
 
 
@@ -372,6 +490,7 @@ def test_different_orders_with_same_wafer_spec_are_not_aggregated():
     snapshot.orders.append(_order("ORD-002"))
     snapshot.buffer_order_inventories.append(
         AlgorithmBufferOrderInventory(
+            main_id="MAIN-01",
             buffer_code="BUF-01",
             order_code="ORD-002",
             current_quantity=800,
@@ -445,6 +564,7 @@ def test_net_consumption_rate_signs(
 def test_inventory_order_reference_must_exist():
     snapshot = _snapshot()
     snapshot.buffer_order_inventories[0] = AlgorithmBufferOrderInventory(
+        main_id="MAIN-01",
         buffer_code="BUF-01",
         order_code="UNKNOWN",
         current_quantity=1,

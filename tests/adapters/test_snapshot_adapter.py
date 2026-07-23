@@ -1,7 +1,8 @@
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
+from pydantic import ValidationError
 
 import app.adapters.snapshot_adapter as snapshot_adapter_module
 from app.schemas.request_schema import AlgorithmSnapshot, CutlineAlgorithmRequest
@@ -23,7 +24,6 @@ def _payload() -> dict:
             {
                 "machine_code": "MC-001",
                 "status": "RUNNING",
-                "order_code": "   ",
                 "tangent_time": "2026-07-15T07:30:00Z",
                 "input_quantity": 11,
                 "output_quantity": 12,
@@ -144,21 +144,21 @@ def _payload() -> dict:
         ],
         "buffer_realtime": [
             {
-                "main_id": "ignored-1",
+                "main_id": "MAIN-001",
                 "buffer_code": "BUF-001",
                 "bound_source_name": "至上",
                 "current_quantity": 1200,
                 "current_utilization_rate": 0.6,
             },
             {
-                "main_id": "ignored-2",
+                "main_id": "MAIN-001",
                 "buffer_code": "BUF-001",
                 "bound_source_name": "华晟",
                 "current_quantity": 800,
                 "current_utilization_rate": 0.4,
             },
             {
-                "main_id": None,
+                "main_id": "MAIN-001",
                 "buffer_code": "BUF-002",
                 "bound_source_name": "至上",
                 "current_quantity": 100,
@@ -193,14 +193,11 @@ def _payload() -> dict:
         ],
         "agv_relations": [
             {
-                "buffer_code": "BUF-001",
                 "machine_code": "MC-001",
-                "line_code": "SCHEDULE-ROUTE-01",
-                "line_name": "调度路线一",
-                "last_line_code": None,
-                "last_line_name": None,
-                "process_code": "PROC-02",
-                "process_name": "工序二",
+                "machine_name": "机台一",
+                "order_code": "ORD-001",
+                "order_name": "至上",
+                "binding_time": "2026-07-15 16:00:00",
             }
         ],
     }
@@ -217,6 +214,56 @@ def _assert_conversion_error(payload: dict, match: str | None = None) -> None:
         _convert(payload)
 
 
+def _append_process_route(
+    payload: dict,
+    *,
+    process_code: str,
+    sequence: int,
+    workshop_code: str = "S1",
+    loop_code: str = "LOOP-1",
+) -> None:
+    payload["process_routes"].append(
+        {
+            **deepcopy(payload["process_routes"][0]),
+            "process_code": process_code,
+            "process_name": process_code,
+            "sequence": sequence,
+            "workshop_code": workshop_code,
+            "workshop_name": (
+                "一车间" if workshop_code == "S1" else "二车间"
+            ),
+            "loop_code": loop_code,
+            "loop_name": loop_code,
+            "upstream_process_code": None,
+            "upstream_process_name": None,
+            "downstream_process_code": None,
+            "downstream_process_name": None,
+        }
+    )
+
+
+def _copy_process_pair_to_context(
+    payload: dict,
+    *,
+    workshop_code: str,
+    loop_code: str,
+) -> None:
+    payload["process_routes"].extend(
+        [
+            {
+                **deepcopy(route),
+                "workshop_code": workshop_code,
+                "workshop_name": (
+                    "一车间" if workshop_code == "S1" else "二车间"
+                ),
+                "loop_code": loop_code,
+                "loop_name": loop_code,
+            }
+            for route in payload["process_routes"][:2]
+        ]
+    )
+
+
 def test_minimal_complete_request_converts_to_algorithm_snapshot():
     snapshot = _convert()
 
@@ -231,8 +278,8 @@ def test_snapshot_time_is_used_as_current_time():
     assert snapshot.current_time == datetime(2026, 7, 15, 8, 30, tzinfo=timezone.utc)
 
 
-def test_blank_machine_order_code_becomes_none():
-    assert _convert().machine_runtimes[0].current_order_code is None
+def test_machine_runtime_current_order_code_comes_from_agv_binding():
+    assert _convert().machine_runtimes[0].current_order_code == "ORD-001"
 
 @pytest.mark.parametrize("backend_status", ["运行", "running", "RUNNING", " Running "])
 def test_running_backend_machine_status_maps_to_algorithm_running(backend_status):
@@ -248,11 +295,11 @@ def test_non_running_backend_machine_status_maps_to_algorithm_stopped(backend_st
     payload["machine_realtime"][0]["status"] = backend_status
 
     assert _convert(payload).machine_runtimes[0].status == "stopped"
-def test_nonblank_machine_order_code_is_trimmed_and_preserved():
-    payload = _payload()
-    payload["machine_realtime"][0]["order_code"] = " ORD-001 "
+def test_machine_process_still_comes_from_machine_master():
+    machine = _convert().machine_masters[0]
 
-    assert _convert(payload).machine_runtimes[0].current_order_code == "ORD-001"
+    assert machine.process_code == "PROC-01"
+    assert machine.process_name == "工序一"
 
 
 def test_machine_runtime_quantities_are_raw_30_minute_values():
@@ -336,10 +383,23 @@ def test_blank_order_name_fails_in_adapter(order_name):
 def test_buffer_source_name_matches_order_and_sets_order_code():
     inventories = _convert().buffer_order_inventories
 
-    assert [(item.buffer_code, item.order_code, item.current_quantity) for item in inventories] == [
-        ("BUF-001", "ORD-001", 1200),
-        ("BUF-001", "ORD-002", 800),
-        ("BUF-002", "ORD-001", 100),
+    assert [
+        (item.main_id, item.buffer_code, item.order_code, item.current_quantity)
+        for item in inventories
+    ] == [
+        ("MAIN-001", "BUF-001", "ORD-001", 1200),
+        ("MAIN-001", "BUF-001", "ORD-002", 800),
+        ("MAIN-001", "BUF-002", "ORD-001", 100),
+    ]
+
+
+def test_snapshot_adapter_preserves_main_id_on_each_physical_inventory():
+    inventories = _convert().buffer_order_inventories
+
+    assert [item.main_id for item in inventories] == [
+        "MAIN-001",
+        "MAIN-001",
+        "MAIN-001",
     ]
 
 
@@ -372,7 +432,7 @@ def test_same_order_name_is_matched_within_buffer_workshop():
         "loop_code": "LOOP-2",
     })
     payload["buffer_realtime"].append({
-        "main_id": None,
+        "main_id": "MAIN-S2",
         "buffer_code": "BUF-S2",
         "bound_source_name": "至上",
         "current_quantity": 10,
@@ -408,7 +468,117 @@ def test_duplicate_buffer_order_inventory_fails():
     payload = _payload()
     payload["buffer_realtime"].append(deepcopy(payload["buffer_realtime"][0]))
 
-    _assert_conversion_error(payload, "BUF-001.*ORD-001.*duplicate")
+    _assert_conversion_error(
+        payload,
+        "MAIN-001.*BUF-001.*ORD-001.*duplicate",
+    )
+
+
+@pytest.mark.parametrize("main_id", [None, "", "   "])
+def test_buffer_main_id_must_not_be_null_or_blank(main_id):
+    payload = _payload()
+    payload["buffer_realtime"][0]["main_id"] = main_id
+
+    _assert_conversion_error(payload, "BUF-001.*main_id.*blank")
+
+
+def test_one_physical_buffer_cannot_belong_to_different_main_ids():
+    payload = _payload()
+    payload["buffer_realtime"][1]["main_id"] = "MAIN-OTHER"
+
+    _assert_conversion_error(
+        payload,
+        "BUF-001.*MAIN-001.*MAIN-OTHER.*ORD-002",
+    )
+
+
+def test_same_main_different_buffers_same_order_is_not_duplicate():
+    inventories = [
+        item
+        for item in _convert().buffer_order_inventories
+        if item.order_code == "ORD-001"
+    ]
+
+    assert [(item.main_id, item.buffer_code) for item in inventories] == [
+        ("MAIN-001", "BUF-001"),
+        ("MAIN-001", "BUF-002"),
+    ]
+
+
+def test_same_main_with_different_workshops_fails_with_both_contexts():
+    payload = _payload()
+    _copy_process_pair_to_context(
+        payload,
+        workshop_code="S2",
+        loop_code="LOOP-2",
+    )
+    payload["buffer_master"][1]["loop_code"] = "LOOP-2"
+
+    _assert_conversion_error(
+        payload,
+        "MAIN-001.*workshop_code.*BUF-001.*S1.*BUF-002.*S2",
+    )
+
+
+def test_same_main_with_different_upstream_processes_fails():
+    payload = _payload()
+    payload["process_routes"][0]["sequence"] = 2
+    payload["process_routes"][1]["sequence"] = 3
+    _append_process_route(
+        payload,
+        process_code="PROC-00",
+        sequence=1,
+    )
+    payload["buffer_master"][1]["served_process_codes"] = [
+        "PROC-00",
+        "PROC-01",
+    ]
+    payload["buffer_master"][1]["served_process_names"] = [
+        "PROC-00",
+        "PROC-01",
+    ]
+
+    _assert_conversion_error(
+        payload,
+        "MAIN-001.*upstream_process_code.*BUF-001.*PROC-01.*BUF-002.*PROC-00",
+    )
+
+
+def test_same_main_with_different_downstream_processes_fails():
+    payload = _payload()
+    _append_process_route(
+        payload,
+        process_code="PROC-03",
+        sequence=2,
+    )
+    payload["buffer_master"][1]["served_process_codes"] = [
+        "PROC-01",
+        "PROC-03",
+    ]
+    payload["buffer_master"][1]["served_process_names"] = [
+        "PROC-01",
+        "PROC-03",
+    ]
+
+    _assert_conversion_error(
+        payload,
+        "MAIN-001.*downstream_process_code.*BUF-001.*PROC-02.*BUF-002.*PROC-03",
+    )
+
+
+def test_same_main_with_different_loop_codes_fails():
+    payload = _payload()
+    _copy_process_pair_to_context(
+        payload,
+        workshop_code="S1",
+        loop_code="LOOP-2",
+    )
+    payload["buffer_master"][1]["loop_code"] = "LOOP-2"
+
+    _assert_conversion_error(
+        payload,
+        "MAIN-001.*loop_code.*BUF-001.*LOOP-1.*BUF-002.*LOOP-2",
+    )
 
 
 def test_buffer_served_code_and_name_lengths_must_match():
@@ -496,44 +666,139 @@ def test_buffer_inventory_over_capacity_preserves_original_quantities():
 def test_buffer_realtime_transport_fields_are_excluded():
     inventory_fields = set(_convert().buffer_order_inventories[0].model_dump())
 
-    assert "main_id" not in inventory_fields
+    assert "main_id" in inventory_fields
     assert "current_utilization_rate" not in inventory_fields
 
 
-def test_agv_relation_is_converted_without_algorithm_line_lookup():
+def test_selected_agv_relation_is_converted_to_internal_binding():
     relation = _convert().agv_relations[0]
 
     assert relation.model_dump() == {
-        "buffer_code": "BUF-001",
         "machine_code": "MC-001",
-        "line_code": "SCHEDULE-ROUTE-01",
-        "line_name": "调度路线一",
-        "last_line_code": None,
-        "last_line_name": None,
-        "process_code": "PROC-02",
-        "process_name": "工序二",
+        "machine_name": "机台一",
+        "order_code": "ORD-001",
+        "order_name": "至上",
+        "binding_time": datetime(
+            2026,
+            7,
+            15,
+            16,
+            0,
+            tzinfo=timezone(timedelta(hours=8)),
+        ),
     }
 
 
-def test_agv_whitespace_optional_references_become_none():
+def test_latest_effective_agv_record_wins_regardless_of_input_order():
     payload = _payload()
-    payload["agv_relations"][0]["buffer_code"] = "   "
-    payload["agv_relations"][0]["process_code"] = "   "
+    payload["agv_relations"] = [
+        {
+            "machine_code": "MC-001",
+            "machine_name": "机台一",
+            "order_code": "ORD-002",
+            "order_name": "华晟",
+            "binding_time": "2026-07-15T16:20:00+08:00",
+        },
+        {
+            "machine_code": "MC-001",
+            "machine_name": "机台一",
+            "order_code": "ORD-001",
+            "order_name": "至上",
+            "binding_time": "2026-07-15T16:10:00+08:00",
+        },
+    ]
+
+    snapshot = _convert(payload)
+
+    assert snapshot.machine_runtimes[0].current_order_code == "ORD-002"
+    assert snapshot.agv_relations[0].order_code == "ORD-002"
+
+
+def test_future_agv_record_does_not_participate():
+    payload = _payload()
+    payload["agv_relations"].insert(
+        0,
+        {
+            "machine_code": "MC-001",
+            "machine_name": "机台一",
+            "order_code": "ORD-002",
+            "order_name": "华晟",
+            "binding_time": "2026-07-15T16:40:00+08:00",
+        },
+    )
+
+    snapshot = _convert(payload)
+
+    assert snapshot.machine_runtimes[0].current_order_code == "ORD-001"
+    assert [relation.order_code for relation in snapshot.agv_relations] == [
+        "ORD-001"
+    ]
+
+
+def test_exact_latest_agv_duplicates_are_deduplicated():
+    payload = _payload()
+    payload["agv_relations"].append(deepcopy(payload["agv_relations"][0]))
+
+    snapshot = _convert(payload)
+
+    assert len(snapshot.agv_relations) == 1
+    assert snapshot.machine_runtimes[0].current_order_code == "ORD-001"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("order_code", "ORD-002"),
+        ("order_name", "华晟"),
+    ],
+)
+def test_latest_agv_order_identity_conflict_fails(field, value):
+    payload = _payload()
+    conflicting = deepcopy(payload["agv_relations"][0])
+    conflicting[field] = value
+    payload["agv_relations"].append(conflicting)
+
+    _assert_conversion_error(payload, f"MC-001.*latest.*{field}.*conflict")
+
+
+def test_naive_binding_time_is_interpreted_as_utc_plus_eight():
+    payload = _payload()
+    payload["agv_relations"][0]["binding_time"] = "2026-07-15 16:20:00"
 
     relation = _convert(payload).agv_relations[0]
-    assert relation.buffer_code is None
-    assert relation.process_code is None
+
+    assert relation.binding_time.utcoffset() == timedelta(hours=8)
+
+
+def test_future_unknown_agv_references_are_not_validated():
+    payload = _payload()
+    payload["agv_relations"].append(
+        {
+            "machine_code": "UNKNOWN-MACHINE",
+            "machine_name": "未知机台",
+            "order_code": "UNKNOWN-ORDER",
+            "order_name": "未知订单",
+            "binding_time": "2026-07-15T16:40:00+08:00",
+        }
+    )
+
+    assert _convert(payload).machine_runtimes[0].current_order_code == "ORD-001"
 
 
 @pytest.mark.parametrize(
     ("field", "value", "match"),
     [
         ("machine_code", "UNKNOWN", "UNKNOWN.*machine"),
-        ("buffer_code", "UNKNOWN", "UNKNOWN.*buffer"),
-        ("process_code", "UNKNOWN", "UNKNOWN.*process"),
+        ("machine_name", "错误机台名", "MC-001.*machine_name.*错误机台名.*机台一"),
+        ("order_code", "UNKNOWN", "UNKNOWN.*order"),
+        ("order_name", "错误订单名", "ORD-001.*order_name.*错误订单名.*至上"),
     ],
 )
-def test_agv_nonblank_references_must_exist(field, value, match):
+def test_selected_agv_binding_references_and_names_must_match(
+    field,
+    value,
+    match,
+):
     payload = _payload()
     payload["agv_relations"][0][field] = value
 
@@ -554,11 +819,41 @@ def test_machine_runtime_requires_known_machine():
     _assert_conversion_error(payload, "UNKNOWN.*machine")
 
 
-def test_machine_runtime_nonblank_order_requires_known_order():
+def test_running_machine_without_effective_agv_binding_fails():
     payload = _payload()
-    payload["machine_realtime"][0]["order_code"] = "UNKNOWN"
+    payload["agv_relations"] = []
 
-    _assert_conversion_error(payload, "UNKNOWN.*order")
+    _assert_conversion_error(payload, "MC-001.*running.*AGV")
+
+
+def test_stopped_machine_without_agv_binding_has_no_current_order():
+    payload = _payload()
+    payload["machine_realtime"][0]["status"] = "停机"
+    payload["agv_relations"] = []
+
+    runtime = _convert(payload).machine_runtimes[0]
+
+    assert runtime.status == "stopped"
+    assert runtime.current_order_code is None
+
+
+def test_stopped_machine_with_effective_agv_binding_keeps_current_order():
+    payload = _payload()
+    payload["machine_realtime"][0]["status"] = "异常"
+
+    runtime = _convert(payload).machine_runtimes[0]
+
+    assert runtime.status == "stopped"
+    assert runtime.current_order_code == "ORD-001"
+
+
+def test_snapshot_adapter_does_not_mutate_request():
+    request = CutlineAlgorithmRequest.model_validate(_payload())
+    before = request.model_dump()
+
+    snapshot_adapter_module.SnapshotAdapter().to_algorithm_snapshot(request)
+
+    assert request.model_dump() == before
 
 
 def test_machine_line_requires_known_machine_and_line():

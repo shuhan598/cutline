@@ -111,12 +111,6 @@ def test_missing_top_level_dataset_is_rejected_but_empty_dataset_is_structural()
     [
         ("workshops", "workshop_name"),
         ("buffer_realtime", "main_id"),
-        ("agv_relations", "buffer_code"),
-        ("agv_relations", "line_name"),
-        ("agv_relations", "last_line_code"),
-        ("agv_relations", "last_line_name"),
-        ("agv_relations", "process_code"),
-        ("agv_relations", "process_name"),
     ],
 )
 def test_compatibility_nullable_fields_require_presence(dataset: str, field: str):

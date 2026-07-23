@@ -26,7 +26,7 @@ from tests.fixtures.v3_full_route_factory import (
     build_stockout_manual_insufficient_payload,
     build_stockout_manual_payload,
 )
-from app.schemas.request_schema import CutlineAlgorithmRequest
+from app.adapters.backend_request_loader import BackendRequestLoader
 from app.service.cutline_service import CutlineService
 
 
@@ -44,7 +44,7 @@ def _write_json(path: Path, payload: dict) -> None:
 
 
 def _write_service_response(path: Path, payload: dict) -> None:
-    request = CutlineAlgorithmRequest.model_validate(payload)
+    request = BackendRequestLoader().load_cutline_dict(payload)
     response = CutlineService().evaluate_algorithm(request)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -68,9 +68,6 @@ def _backend_ingestion_payload() -> dict:
         runtime.pop("out_time")
     for order in payload["orders"]:
         order.pop("order_name")
-    for relation in payload["agv_relations"]:
-        relation["last_line_code"] = relation["line_code"]
-        relation["last_line_name"] = relation["line_name"]
     return payload
 
 
