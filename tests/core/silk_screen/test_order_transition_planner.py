@@ -14,6 +14,7 @@ from app.schemas.common_schema import (
     AlgorithmMachineProductCapacity,
     AlgorithmMachineRuntime,
     AlgorithmOrder,
+    AlgorithmProcessRoute,
 )
 from app.schemas.request_schema import AlgorithmSnapshot
 
@@ -103,6 +104,28 @@ def _order(
     )
 
 
+def _route(
+    process_code: str = "SW",
+    *,
+    workshop_code: str = "S1",
+    loop_code: str = "LOOP-01",
+) -> AlgorithmProcessRoute:
+    return AlgorithmProcessRoute(
+        process_code=process_code,
+        process_name="丝网",
+        sequence=1,
+        cache_type="BUFFER",
+        workshop_code=workshop_code,
+        workshop_name=f"{workshop_code}车间",
+        loop_code=loop_code,
+        loop_name=loop_code,
+        upstream_process_code=None,
+        upstream_process_name=None,
+        downstream_process_code=None,
+        downstream_process_name=None,
+    )
+
+
 def _snapshot(
     *,
     current_time: datetime = CURRENT_TIME,
@@ -111,9 +134,21 @@ def _snapshot(
     relations: list[AlgorithmMachineLineRelation] | None = None,
     lines: list[AlgorithmLine] | None = None,
     orders: list[AlgorithmOrder] | None = None,
+    process_routes: list[AlgorithmProcessRoute] | None = None,
     capacities: list[AlgorithmMachineProductCapacity] | None = None,
     clear_minutes: float = 30,
 ) -> AlgorithmSnapshot:
+    resolved_masters = list(
+        masters if masters is not None else [_master()]
+    )
+    resolved_process_routes = list(
+        process_routes
+        if process_routes is not None
+        else {
+            master.process_code: _route(master.process_code)
+            for master in resolved_masters
+        }.values()
+    )
     return AlgorithmSnapshot(
         current_time=current_time,
         workshops=[],
@@ -124,13 +159,11 @@ def _snapshot(
         machine_runtimes=list(
             runtimes if runtimes is not None else [_runtime()]
         ),
-        machine_masters=list(
-            masters if masters is not None else [_master()]
-        ),
+        machine_masters=resolved_masters,
         machine_product_capacities=list(capacities or []),
         orders=list(orders if orders is not None else [_order()]),
         products=[],
-        process_routes=[],
+        process_routes=resolved_process_routes,
         buffer_masters=[],
         buffer_process_relations=[],
         buffer_order_inventories=[],
@@ -166,6 +199,27 @@ def test_single_running_silk_machine_forecasts_current_order():
     assert result.next_order_code is None
 
 
+@pytest.mark.parametrize(
+    ("clear_minutes", "expected_prepare"),
+    [(30, False), (120, True)],
+)
+def test_silk_transition_runs_without_line_data(
+    clear_minutes: float,
+    expected_prepare: bool,
+):
+    result = _evaluate(
+        _snapshot(
+            relations=[],
+            lines=[],
+            clear_minutes=clear_minutes,
+        )
+    )[0]
+
+    assert result.workshop_code == "S1"
+    assert result.current_order_code == "ORD-01"
+    assert result.prepare_clearance is expected_prepare
+
+
 def test_same_workshop_and_order_aggregate_realtime_outputs_only():
     snapshot = _snapshot(
         runtimes=[
@@ -195,7 +249,10 @@ def test_same_order_in_different_workshops_produces_separate_results():
     results = _evaluate(
         _snapshot(
             runtimes=[_runtime("M-S2"), _runtime("M-S1")],
-            masters=[_master("M-S2"), _master("M-S1")],
+            masters=[
+                _master("M-S2", process_code="SW-S2"),
+                _master("M-S1", process_code="SW-S1"),
+            ],
             relations=[
                 _relation("M-S2", "LINE-S2"),
                 _relation("M-S1", "LINE-S1"),
@@ -208,6 +265,10 @@ def test_same_order_in_different_workshops_produces_separate_results():
                 _order(workshop_code="S2"),
                 _order(workshop_code="S1"),
             ],
+            process_routes=[
+                _route("SW-S2", workshop_code="S2"),
+                _route("SW-S1", workshop_code="S1"),
+            ],
         )
     )
 
@@ -215,6 +276,44 @@ def test_same_order_in_different_workshops_produces_separate_results():
         ("S1", "ORD-01"),
         ("S2", "ORD-01"),
     ]
+
+
+def test_silk_group_uses_route_workshop_when_line_workshop_differs():
+    result = _evaluate(
+        _snapshot(
+            lines=[_line(workshop_code="S1")],
+            orders=[_order(workshop_code="S2")],
+            process_routes=[_route(workshop_code="S2")],
+        )
+    )[0]
+
+    assert result.workshop_code == "S2"
+
+
+def test_silk_machine_process_without_route_fails_without_line_fallback():
+    with pytest.raises(
+        SilkScreenTransitionCalculationError,
+        match=r"Machine M01 process SW has no process route",
+    ):
+        _evaluate(_snapshot(process_routes=[]))
+
+
+def test_silk_machine_process_cross_workshop_conflict_is_explicit():
+    with pytest.raises(
+        SilkScreenTransitionCalculationError,
+        match=(
+            r"Machine M01 process SW belongs to multiple "
+            r"workshops: S1, S2"
+        ),
+    ):
+        _evaluate(
+            _snapshot(
+                process_routes=[
+                    _route(workshop_code="S2", loop_code="LOOP-02"),
+                    _route(workshop_code="S1", loop_code="LOOP-01"),
+                ]
+            )
+        )
 
 
 def test_different_orders_are_separate_and_results_are_stably_sorted():
@@ -353,18 +452,7 @@ def test_clear_minutes_parameter_moves_prepare_time():
             _snapshot(masters=[_master(), _master()]),
             "duplicate machine master.*M01",
         ),
-        (
-            _snapshot(
-                relations=[
-                    _relation(line_code="LINE-01"),
-                    _relation(line_code="LINE-02"),
-                ]
-            ),
-            "multiple line relations.*M01",
-        ),
         (_snapshot(masters=[]), "machine master.*M01"),
-        (_snapshot(relations=[]), "line relation.*M01"),
-        (_snapshot(lines=[]), "line.*LINE-01"),
         (_snapshot(orders=[]), "current order.*ORD-01"),
     ],
 )

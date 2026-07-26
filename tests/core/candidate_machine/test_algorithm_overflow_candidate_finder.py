@@ -12,6 +12,7 @@ from tests.core.candidate_machine.helpers import (
     machine,
     machine_line,
     order,
+    process_route,
     product,
     runtime,
     snapshot,
@@ -185,6 +186,10 @@ def _set_workshop(candidate_snapshot, workshop_code: str) -> None:
             update={"workshop_code": workshop_code}
         )
     )
+    candidate_snapshot.process_routes = [
+        route.model_copy(update={"workshop_code": workshop_code})
+        for route in candidate_snapshot.process_routes
+    ]
 
 
 def test_overflow_result_contains_selected_source_candidate_and_target_context():
@@ -231,6 +236,20 @@ def test_overflow_result_contains_selected_source_candidate_and_target_context()
     assert option.target_source_grade == "A"
     assert option.capacity_gap == 1800
     assert option.estimated_contribution_capacity == 16000
+
+
+def test_overflow_candidate_runs_without_line_data():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.lines = []
+    candidate_snapshot.machine_lines = []
+
+    candidate = _find(candidate_snapshot).candidates[0]
+
+    assert candidate.machine_code == "M-01"
+    assert candidate.current_order_code == "ORD-SOURCE"
+    assert candidate.current_order_name == "Source Order"
+    assert candidate.current_wafer_spec == "N"
+    assert candidate.workshop_code == "S1"
 
 
 def test_target_option_carries_the_unique_target_interval_context():
@@ -349,8 +368,10 @@ def test_overflow_source_machine_requires_strict_source_identity(case: str):
             )
         )
     elif case == "different_workshop":
-        candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
-            update={"workshop_code": "S2"}
+        candidate_snapshot.process_routes[0] = (
+            candidate_snapshot.process_routes[0].model_copy(
+                update={"workshop_code": "S2"}
+            )
         )
     elif case == "downstream_process":
         candidate_snapshot.machine_masters[0] = (
@@ -364,6 +385,7 @@ def test_overflow_source_machine_requires_strict_source_identity(case: str):
                 update={"process_code": "P99"}
             )
         )
+        candidate_snapshot.process_routes.append(process_route("P99"))
     elif case == "source_spec_mismatch":
         candidate_snapshot.agv_relations[0] = (
             candidate_snapshot.agv_relations[0].model_copy(
@@ -389,6 +411,47 @@ def test_source_identity_uses_s2_pre_silk_rp_compatibility_for_agv_spec():
     )
 
     assert _find(candidate_snapshot, warning).candidates
+
+
+def test_overflow_uses_route_workshop_for_s2_compatibility_when_line_is_s1():
+    candidate_snapshot = _candidate_snapshot()
+    _set_workshop(candidate_snapshot, "S2")
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"workshop_code": "S1"}
+    )
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "P"}
+        )
+    )
+    warning = _warning(
+        _source_detail(wafer_spec="R"),
+        _target_detail(wafer_spec="P"),
+        workshop_code="S2",
+    )
+
+    candidate = _find(candidate_snapshot, warning).candidates[0]
+
+    assert candidate.workshop_code == "S2"
+
+
+def test_overflow_does_not_use_line_s2_for_rp_compatibility_when_route_is_s1():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"workshop_code": "S2"}
+    )
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "P"}
+        )
+    )
+    warning = _warning(
+        _source_detail(wafer_spec="R"),
+        _target_detail(wafer_spec="P"),
+        workshop_code="S1",
+    )
+
+    assert _find(candidate_snapshot, warning).candidates == []
 
 
 def test_source_product_size_must_match_source_detail():

@@ -1,10 +1,13 @@
 # AGV Wafer Spec Source Implementation Plan
 
+> **后续变更说明：** 本计划记录 AGV 规格改造当时的实施步骤。其中机台所属车间来源
+> 已被 `2026-07-26-machine-workshop-route-source-design.md` 更新为工艺路线。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. The user explicitly forbids commits and branch changes, so verification checkpoints replace commit steps.
 
-**Goal:** Make AGV the authoritative source of each machine's current order, order name, and wafer specification without changing runtime structure, line/workshop ownership, net-rate formulas, or candidate compatibility rules.
+**Goal:** Make AGV the authoritative source of each machine's current order, order name, and wafer specification without changing runtime structure, net-rate formulas, or candidate compatibility rules.
 
-**Architecture:** Extend the existing three-layer AGV contract and SnapshotAdapter output, then add AGV indices to the existing net-rate and candidate contexts. Keep line data for compatibility and workshop lookup while removing only core reads that treat `line.wafer_spec` as current production state.
+**Architecture:** Extend the existing three-layer AGV contract and SnapshotAdapter output, then add AGV indices to the existing net-rate and candidate contexts. Keep line data for compatibility while removing core reads that treat `line.wafer_spec` as current production state. The later workshop-source design replaces the workshop lookup portion with process-route resolution.
 
 **Tech Stack:** Python 3.13, Pydantic v2, FastAPI, pytest
 
@@ -129,7 +132,8 @@ relations = sorted(
 
 Raise `NetRateCalculationError` if empty; otherwise use `relations[0].wafer_spec`.
 In `_matching_runtimes`, use the runtime machine code to obtain the AGV relation and
-check `agv.order_code` and `agv.wafer_spec`. Keep line lookup only for workshop.
+check `agv.order_code` and `agv.wafer_spec`. The original line-based workshop lookup
+in this historical plan is superseded by the shared process-route resolver.
 
 - [ ] **Step 4: Run focused net-rate tests and verify GREEN**
 
@@ -259,7 +263,8 @@ generator after updating its source factory.
 
 Update README and request documentation to describe six raw AGV fields, the mapping,
 the AGV order/spec authority, missing-data error, retained line compatibility field,
-and unchanged machine-line-workshop chain.
+and retained line/machine-line compatibility fields. Machine workshop authority is
+defined by the later process-route source design.
 
 - [ ] **Step 4: Run focused integration tests and verify GREEN**
 
@@ -319,4 +324,3 @@ Expected: exit code 0 with no output.
 Confirm no runtime spec field, no new wafer-spec conflict checks, no formula or
 aggregation changes, no same-Buffer rule changes, no branch/commit operations, and
 report exact changed files, data flow, test results, warnings, and any remaining work.
-

@@ -95,11 +95,18 @@ class LineRequest(RequestModel):
     line_code: str = Field(..., description="产线编码")
     line_name: str = Field(..., description="产线名称")
     wafer_spec: str = Field(..., description="产线绑定的硅片规格")
-    workshop_code: str = Field(..., description="产线所属车间编码")
+    workshop_code: str = Field(
+        ...,
+        description=(
+            "产线自身所属车间编码；兼容保留，不作为机台所属车间的算法依据"
+        ),
+    )
     workshop_name: str = Field(..., description="产线所属车间名称")
 
 
 class MachineLineRequest(RequestModel):
+    """兼容保留的机台产线关系，不作为机台所属车间的算法依据。"""
+
     machine_code: str = Field(..., description="机台与产线关联关系中的机台编码")
     machine_name: str = Field(..., description="机台与产线关联关系中的机台名称")
     line_code: str = Field(..., description="机台与产线关联关系中的产线编码")
@@ -136,7 +143,12 @@ class ProcessRouteRequest(RequestModel):
     process_name: str = Field(..., description="工艺路线节点的工序名称")
     sequence: int = Field(..., description="工序在工艺路线中的顺序号")
     cache_type: str = Field(..., description="该工序的下料可缓存类型")
-    workshop_code: str = Field(..., description="工艺路线所属车间编码")
+    workshop_code: str = Field(
+        ...,
+        description=(
+            "工艺路线所属车间编码，也是机台按所属工序解析车间的权威来源"
+        ),
+    )
     workshop_name: str = Field(..., description="工艺路线所属车间名称")
     loop_code: str = Field(..., description="工艺路线所属循环编码")
     loop_name: str = Field(..., description="工艺路线所属循环名称")
@@ -202,8 +214,14 @@ class CutlineAlgorithmRequest(RequestModel):
     machine_master: list[MachineMasterRequest] = Field(..., description="机台及其所属工序的基础信息")
     machine_process_times: list[MachineProcessTimeRequest] = Field(..., description="机台与产品型号的工艺时间和实际产能关系")
     workshops: list[WorkshopRequest] = Field(..., description="车间基础信息")
-    lines: list[LineRequest] = Field(..., description="产线、硅片规格及所属车间信息")
-    machine_lines: list[MachineLineRequest] = Field(..., description="机台与产线的关联关系")
+    lines: list[LineRequest] = Field(
+        default_factory=list,
+        description="可选的产线兼容数据，当前核心算法不依赖",
+    )
+    machine_lines: list[MachineLineRequest] = Field(
+        default_factory=list,
+        description="可选的机台—产线兼容关系，当前核心算法不依赖",
+    )
     orders: list[OrderRequest] = Field(..., description="订单数量、产品和所属车间信息")
     products: list[ProductRequest] = Field(..., description="产品型号、片源等级和物料信息")
     process_routes: list[ProcessRouteRequest] = Field(..., description="工艺路线顺序、缓存、循环及上下游关系")
@@ -223,13 +241,18 @@ class AlgorithmSnapshot(BaseModel):
 
     workshops: list[AlgorithmWorkshop] = Field(...,description="算法使用的车间基础数据列表",)
     lines: list[AlgorithmLine] = Field(
-        ...,
+        default_factory=list,
         description=(
-            "算法使用的产线基础数据列表，保留产线绑定硅片规格兼容字段，"
-            "用于支持机台—产线—车间归属关系，不作为机台当前实际生产规格的数据来源"
+            "可选兼容产线基础数据列表；兼容保留产线所属车间和硅片规格，"
+            "但二者均不作为机台所属车间或当前生产规格的算法依据"
         ),
     )
-    machine_lines: list[AlgorithmMachineLineRelation] = Field(...,description="机台与产线之间的绑定关系列表",)
+    machine_lines: list[AlgorithmMachineLineRelation] = Field(
+        default_factory=list,
+        description=(
+            "可选兼容机台与产线绑定关系列表，不作为核心算法的数据依据"
+        ),
+    )
 
     machine_runtimes: list[AlgorithmMachineRuntime] = Field(...,description="快照时刻的机台实时运行状态列表",)
     machine_masters: list[AlgorithmMachineMaster] = Field(...,description="机台基础信息列表，包括机台所属工序",)

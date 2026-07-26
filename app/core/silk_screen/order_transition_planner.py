@@ -6,6 +6,10 @@ from datetime import timedelta
 from app.core.silk_screen.errors import (
     SilkScreenTransitionCalculationError,
 )
+from app.core.workshop.machine_workshop_resolver import (
+    MachineWorkshopResolutionError,
+    MachineWorkshopResolver,
+)
 from app.schemas.common_schema import AlgorithmOrder
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import AlgorithmSilkScreenTransitionResult
@@ -39,15 +43,10 @@ class SilkScreenOrderTransitionPlanner:
             field_name="machine_code",
             duplicate_label="machine master",
         )
-        relation_by_machine = self._machine_line_index(
-            snapshot.machine_lines
-        )
-        line_by_code = self._unique_by_code(
-            snapshot.lines,
-            field_name="line_code",
-            duplicate_label="line",
-        )
         order_by_key = self._order_index(snapshot.orders)
+        workshop_resolver = MachineWorkshopResolver(
+            snapshot.process_routes
+        )
 
         groups: dict[tuple[str, str], _SilkOrderGroup] = {}
         for runtime in runtime_by_machine.values():
@@ -63,29 +62,27 @@ class SilkScreenOrderTransitionPlanner:
             if not runtime.current_order_code:
                 continue
 
-            relation = relation_by_machine.get(runtime.machine_code)
-            if relation is None:
-                raise SilkScreenTransitionCalculationError(
-                    f"missing line relation: {runtime.machine_code}"
+            try:
+                machine_workshop_code = (
+                    workshop_resolver.resolve_machine_workshop(master)
                 )
-            line = line_by_code.get(relation.line_code)
-            if line is None:
+            except MachineWorkshopResolutionError as exc:
                 raise SilkScreenTransitionCalculationError(
-                    f"missing line: {relation.line_code}"
-                )
+                    str(exc)
+                ) from exc
 
-            key = (line.workshop_code, runtime.current_order_code)
+            key = (machine_workshop_code, runtime.current_order_code)
             order = order_by_key.get(key)
             if order is None:
                 raise SilkScreenTransitionCalculationError(
                     "missing current order: "
-                    f"{line.workshop_code} {runtime.current_order_code}"
+                    f"{machine_workshop_code} {runtime.current_order_code}"
                 )
 
             group = groups.get(key)
             if group is None:
                 group = _SilkOrderGroup(
-                    workshop_code=line.workshop_code,
+                    workshop_code=machine_workshop_code,
                     process_code=master.process_code,
                     process_name=master.process_name,
                     order=order,
@@ -94,7 +91,8 @@ class SilkScreenOrderTransitionPlanner:
             elif group.process_code != master.process_code:
                 raise SilkScreenTransitionCalculationError(
                     "conflicting silk process codes: "
-                    f"{line.workshop_code} {runtime.current_order_code}"
+                    f"{machine_workshop_code} "
+                    f"{runtime.current_order_code}"
                 )
 
             group.machine_codes.append(runtime.machine_code)
@@ -198,17 +196,6 @@ class SilkScreenOrderTransitionPlanner:
                     f"duplicate {duplicate_label}: {code}"
                 )
             result[code] = item
-        return result
-
-    def _machine_line_index(self, relations) -> dict[str, object]:
-        result: dict[str, object] = {}
-        for relation in relations:
-            if relation.machine_code in result:
-                raise SilkScreenTransitionCalculationError(
-                    "multiple line relations: "
-                    f"{relation.machine_code}"
-                )
-            result[relation.machine_code] = relation
         return result
 
     def _order_index(

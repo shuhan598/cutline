@@ -66,15 +66,18 @@ class OverflowCandidateFinder:
             if candidate_agv.order_code != source_detail.order_code:
                 continue
 
-            _, machine, line = context.machine_context(runtime.machine_code)
-            if line.workshop_code != warning.workshop_code:
+            _, machine = context.machine_context(runtime.machine_code)
+            machine_workshop_code = context.machine_workshop_code(
+                runtime.machine_code
+            )
+            if machine_workshop_code != warning.workshop_code:
                 continue
             if machine.process_code != warning.upstream_process_code:
                 continue
             if not is_wafer_spec_compatible(
                 current_wafer_spec=candidate_agv.wafer_spec,
                 target_wafer_spec=source_detail.wafer_spec,
-                workshop_code=line.workshop_code,
+                workshop_code=machine_workshop_code,
                 process_name=machine.process_name,
             ):
                 continue
@@ -90,7 +93,7 @@ class OverflowCandidateFinder:
                 source_detail=source_detail,
                 source_product=source_product,
                 machine=machine,
-                line=line,
+                machine_workshop_code=machine_workshop_code,
                 candidate_agv=candidate_agv,
                 hourly_output=hourly_output,
                 context=context,
@@ -108,7 +111,7 @@ class OverflowCandidateFinder:
                     machine_code=runtime.machine_code,
                     machine_name=machine.machine_name,
                     status=runtime.status,
-                    workshop_code=line.workshop_code,
+                    workshop_code=machine_workshop_code,
                     process_code=machine.process_code,
                     process_name=machine.process_name,
                     current_order_code=candidate_agv.order_code,
@@ -179,7 +182,7 @@ class OverflowCandidateFinder:
         source_detail: AlgorithmOrderGrowthDetail,
         source_product,
         machine,
-        line,
+        machine_workshop_code: str,
         candidate_agv,
         hourly_output: float,
         context: CandidateContext,
@@ -208,7 +211,7 @@ class OverflowCandidateFinder:
             if not is_wafer_spec_compatible(
                 current_wafer_spec=candidate_agv.wafer_spec,
                 target_wafer_spec=target_detail.wafer_spec,
-                workshop_code=line.workshop_code,
+                workshop_code=machine_workshop_code,
                 process_name=machine.process_name,
             ):
                 continue

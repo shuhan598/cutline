@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, TypeVar
 
+from app.core.workshop.machine_workshop_resolver import (
+    MachineWorkshopResolutionError,
+    MachineWorkshopResolver,
+)
 from app.schemas.common_schema import (
     AlgorithmAgvRelation,
     AlgorithmBufferOrderInventory,
     AlgorithmBufferProcessRelation,
-    AlgorithmLine,
-    AlgorithmMachineLineRelation,
     AlgorithmMachineMaster,
     AlgorithmMachineRuntime,
     AlgorithmOrder,
@@ -30,12 +32,11 @@ ModelT = TypeVar("ModelT")
 @dataclass(frozen=True)
 class _AlgorithmNetRateContext:
     machine_by_code: dict[str, AlgorithmMachineMaster]
-    machine_line_by_code: dict[str, AlgorithmMachineLineRelation]
-    line_by_code: dict[str, AlgorithmLine]
     order_by_code: dict[str, AlgorithmOrder]
     product_by_code: dict[str, AlgorithmProduct]
     buffer_relation_by_code: dict[str, AlgorithmBufferProcessRelation]
     agv_by_machine_code: dict[str, AlgorithmAgvRelation]
+    workshop_resolver: MachineWorkshopResolver
 
 
 class NetRateCalculator:
@@ -175,7 +176,6 @@ class NetRateCalculator:
             "machine_code",
             "machine master",
         )
-        line_by_code = self._unique_index(snapshot.lines, "line_code", "line")
         order_by_code = self._unique_index(snapshot.orders, "order_code", "order")
         product_by_code = self._unique_index(
             snapshot.products,
@@ -187,24 +187,9 @@ class NetRateCalculator:
             "machine_code",
             "AGV relation",
         )
-
-        machine_line_by_code: dict[str, AlgorithmMachineLineRelation] = {}
-        for relation in snapshot.machine_lines:
-            if relation.machine_code in machine_line_by_code:
-                raise NetRateCalculationError(
-                    f"{relation.machine_code} has multiple machine-line relations"
-                )
-            if relation.machine_code not in machine_by_code:
-                raise NetRateCalculationError(
-                    f"{relation.machine_code} machine master does not exist "
-                    "for machine-line relation"
-                )
-            if relation.line_code not in line_by_code:
-                raise NetRateCalculationError(
-                    f"{relation.line_code} line does not exist for machine "
-                    f"{relation.machine_code}"
-                )
-            machine_line_by_code[relation.machine_code] = relation
+        workshop_resolver = MachineWorkshopResolver(
+            snapshot.process_routes
+        )
 
         buffer_relation_by_code: dict[str, AlgorithmBufferProcessRelation] = {}
         for relation in snapshot.buffer_process_relations:
@@ -219,19 +204,19 @@ class NetRateCalculator:
                 raise NetRateCalculationError(
                     f"{runtime.machine_code} machine master does not exist for runtime"
                 )
-            if runtime.machine_code not in machine_line_by_code:
-                raise NetRateCalculationError(
-                    f"{runtime.machine_code} machine-line relation does not exist "
-                    "for runtime"
+            try:
+                workshop_resolver.resolve_machine_workshop(
+                    machine_by_code[runtime.machine_code]
                 )
+            except MachineWorkshopResolutionError as exc:
+                raise NetRateCalculationError(str(exc)) from exc
         return _AlgorithmNetRateContext(
             machine_by_code=machine_by_code,
-            machine_line_by_code=machine_line_by_code,
-            line_by_code=line_by_code,
             order_by_code=order_by_code,
             product_by_code=product_by_code,
             buffer_relation_by_code=buffer_relation_by_code,
             agv_by_machine_code=agv_by_machine_code,
+            workshop_resolver=workshop_resolver,
         )
 
     def _resolve_order_wafer_spec(
@@ -383,9 +368,10 @@ class NetRateCalculator:
             if agv_relation.wafer_spec != wafer_spec:
                 continue
             machine = context.machine_by_code[runtime.machine_code]
-            machine_line = context.machine_line_by_code[runtime.machine_code]
-            line = context.line_by_code[machine_line.line_code]
-            if line.workshop_code != workshop_code:
+            machine_workshop_code = (
+                context.workshop_resolver.resolve_machine_workshop(machine)
+            )
+            if machine_workshop_code != workshop_code:
                 continue
             if machine.process_code != process_code:
                 continue

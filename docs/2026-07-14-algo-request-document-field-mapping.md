@@ -20,8 +20,8 @@
 | 机台基础数据 | `machine_master` |
 | 工艺时长数据 / 机台基础数据-工艺时长数据（中间表） | `machine_process_times` |
 | 车间数据 | `workshops` |
-| 产线数据 | `lines` |
-| 机台-产线（中间表） | `machine_lines` |
+| 产线数据 | `lines`（可选兼容） |
+| 机台-产线（中间表） | `machine_lines`（可选兼容） |
 | 订单数据 | `orders` |
 | 产品型号数据 | `products` |
 | 工艺路线数据 | `process_routes` |
@@ -121,6 +121,12 @@
 | 所属车间编号.车间编码 | `workshop_code` |
 | 所属车间编号.车间名称 | `workshop_name` |
 
+补充说明：
+
+- `lines` 顶层数组可完全省略或显式传入空数组，Schema 默认得到空列表。
+- `lines.workshop_code` 只表示产线自身所属车间，作为兼容输入继续保留。
+- 核心算法不再用该字段判断机台所属车间或当前生产规格。
+
 ## `machine_lines`
 
 对应文档分类：机台-产线（中间表）
@@ -132,6 +138,16 @@
 | 产线编码 | `line_code` |
 | 产线名称 | `line_name` |
 | 绑定硅片规格 | `wafer_spec` |
+
+补充说明：
+
+- `machine_lines` 顶层数组可完全省略或显式传入空数组，Schema 默认得到空列表。
+- 同时提供完整 `lines` 和 `machine_lines` 时，现有引用完整性校验继续保留。
+- 仅提供 `machine_lines` 而 `lines` 为空时明确报错。
+- 机台所属车间不再通过 `machine_lines -> lines.workshop_code` 推导。
+- 当前核心算法不依赖 `lines` 或 `machine_lines`；机台车间来自
+  `machine_master.process_code -> process_routes.workshop_code`，当前订单和规格来自
+  AGV。
 
 ## `orders`
 
@@ -187,6 +203,14 @@
 | 工序上游.工序名称 | `upstream_process_name` |
 | 工序下游.工序编码 | `downstream_process_code` |
 | 工序下游.工序名称 | `downstream_process_name` |
+
+补充说明：
+
+- 机台所属车间的权威链路为
+  `machine_master.process_code -> process_routes.process_code
+  -> process_routes.workshop_code`。
+- 同一工序可在同一车间的多个循环中出现；如果映射到多个不同车间则明确报错。
+- 本次快照中 runtime 引用机台的工序缺少路线时明确报错，不回退到产线车间。
 
 ## `buffer_realtime`
 
@@ -246,7 +270,8 @@
   硅片规格。
 - 当前订单硅片规格以 AGV 绑定为唯一权威；缺失时明确报错，不从产线字段回退。
 - `AlgorithmMachineRuntime` 不保存 `current_wafer_spec`；产线规格字段仅保留兼容性，
-  机台 -> 产线 -> 车间的归属链不变。
+  机台所属车间改由 `machine_master.process_code -> process_routes.workshop_code`
+  解析。
 
 ## 额外说明
 

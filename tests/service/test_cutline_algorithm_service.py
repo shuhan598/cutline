@@ -331,7 +331,9 @@ def _silk_payload():
             )
         ],
         "products": [_product("PROD-SILK")],
-        "process_routes": [],
+        "process_routes": [
+            _process_route("SW", 1, None, None)
+        ],
         "buffer_realtime": [],
         "buffer_master": [],
         "agv_relations": [
@@ -509,6 +511,18 @@ def test_automatic_plan_response_preserves_mixing_and_matching_new_event_ids():
     )
 
 
+def test_mixing_trace_runs_when_line_collections_are_omitted():
+    payload = _real_flow_payload()
+    payload.pop("lines")
+    payload.pop("machine_lines")
+
+    response = _evaluate_real_payload(payload)
+
+    assert len(response.cutline_decisions) == 1
+    assert len(response.mixing_trace_records) == 1
+    assert response.mixing_trace_records[0].machine_code == "M-CAND"
+
+
 def test_manual_intervention_response_has_no_mixing_or_new_events():
     payload = _real_flow_payload()
     payload["machine_realtime"][0]["status"] = "idle"
@@ -558,8 +572,43 @@ def test_historical_event_recommendation_closes_without_returning_update():
     assert response.new_active_cutline_events == []
 
 
+def test_return_recommendation_runs_when_line_collections_are_empty():
+    payload = _real_flow_payload()
+    payload["lines"] = []
+    payload["machine_lines"] = []
+    payload["machine_realtime"][2]["output_quantity"] = 200.0
+    payload["machine_realtime"][3]["input_quantity"] = 0.0
+    payload["buffer_realtime"][1]["current_quantity"] = 1000
+    payload["active_cutline_events"] = [
+        {
+            "event_id": "CUT-HISTORICAL-M-CAND",
+            "machine_code": "M-CAND",
+            "source_order_code": "ORD-SOURCE",
+            "target_order_code": "ORD-TARGET",
+            "workshop_code": "S1",
+            "target_buffer_code": "BUF-TARGET",
+            "upstream_process_code": "P01",
+            "downstream_process_code": "P02",
+            "target_wafer_size": "182",
+            "target_wafer_spec": "N",
+            "cutline_start_time": datetime(2026, 7, 16, 7, 0),
+            "negative_start_time": datetime(2026, 7, 16, 7, 59),
+        }
+    ]
+
+    response = _evaluate_real_payload(payload)
+
+    assert [item.event_id for item in response.return_recommendations] == [
+        "CUT-HISTORICAL-M-CAND"
+    ]
+
+
 def test_silk_result_is_returned_without_any_buffer_warning():
-    response = _evaluate_real_payload(_silk_payload())
+    payload = _silk_payload()
+    payload["lines"] = []
+    payload["machine_lines"] = []
+
+    response = _evaluate_real_payload(payload)
 
     assert response.stockout_warnings == []
     assert response.overflow_warnings == []

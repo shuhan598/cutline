@@ -140,8 +140,8 @@ class BackendAlgorithmRequest(_BackendRequestModel):
     machine_master: list[BackendMachineMaster]
     machine_process_times: list[BackendMachineProcessTime]
     workshops: list[BackendWorkshop]
-    lines: list[BackendLine]
-    machine_lines: list[BackendMachineLine]
+    lines: list[BackendLine] = Field(default_factory=list)
+    machine_lines: list[BackendMachineLine] = Field(default_factory=list)
     orders: list[BackendOrder]
     products: list[BackendProduct]
     process_routes: list[BackendProcessRoute]

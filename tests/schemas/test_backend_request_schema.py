@@ -106,6 +106,28 @@ def test_missing_top_level_dataset_is_rejected_but_empty_dataset_is_structural()
     assert BackendAlgorithmRequest.model_validate(empty).orders == []
 
 
+def test_optional_line_collections_default_to_independent_empty_lists():
+    first_payload = sample_payload()
+    first_payload.pop("lines", None)
+    first_payload.pop("machine_lines", None)
+    second_payload = sample_payload()
+    second_payload.pop("lines", None)
+    second_payload.pop("machine_lines", None)
+
+    first = BackendAlgorithmRequest.model_validate(first_payload)
+    second = BackendAlgorithmRequest.model_validate(second_payload)
+
+    assert first.lines == []
+    assert first.machine_lines == []
+    assert first.lines is not second.lines
+    assert first.machine_lines is not second.machine_lines
+    assert BackendAlgorithmRequest.model_fields["lines"].default_factory is list
+    assert (
+        BackendAlgorithmRequest.model_fields["machine_lines"].default_factory
+        is list
+    )
+
+
 @pytest.mark.parametrize(
     ("dataset", "field"),
     [

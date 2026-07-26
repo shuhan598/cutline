@@ -1,9 +1,8 @@
 import importlib.util
 import inspect
-from importlib.machinery import PathFinder
 
-import app.core
 import app.core.candidate_machine.product_compatibility as compatibility
+import app.core.workshop as workshop
 from app.core.candidate_machine.overflow_candidate_finder import (
     OverflowCandidateFinder,
 )
@@ -31,7 +30,8 @@ def test_legacy_workshop_modules_are_not_importable():
     ) is None
 
 
-def test_legacy_workshop_package_has_no_concrete_package_entrypoint():
-    spec = PathFinder.find_spec("app.core.workshop", app.core.__path__)
-
-    assert spec is None or spec.loader is None
+def test_workshop_package_exposes_only_the_shared_machine_resolver():
+    assert workshop.__all__ == [
+        "MachineWorkshopResolutionError",
+        "MachineWorkshopResolver",
+    ]

@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.cutline_api import get_cutline_service
@@ -183,6 +184,24 @@ def test_backend_validate_accepts_transitional_backend_payload():
     assert response.json() == {"valid": True, "issues": []}
 
 
+@pytest.mark.parametrize("line_input_mode", ["omitted", "empty"])
+def test_backend_validate_accepts_optional_line_collections(
+    line_input_mode: str,
+):
+    payload = backend_payload()
+    if line_input_mode == "omitted":
+        payload.pop("lines", None)
+        payload.pop("machine_lines", None)
+    else:
+        payload["lines"] = []
+        payload["machine_lines"] = []
+
+    response = make_client().post("/backend/validate", json=payload)
+
+    assert response.status_code == 200
+    assert response.json() == {"valid": True, "issues": []}
+
+
 def test_backend_validate_uses_raw_agv_mapping_and_ignores_process_fields():
     payload = backend_payload()
     payload["agv_relations"][0].update(
@@ -300,6 +319,79 @@ def test_cutline_evaluate_uses_raw_agv_spec_through_the_real_service_chain():
     assert response.status_code == 200
     decision = response.json()["cutline_decisions"][0]
     assert decision["plan"]["selected_machines"][0]["machine_code"] == "EA004"
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "line_input_mode"),
+    [
+        ("/cutline/evaluate", "omitted"),
+        ("/cutline/evaluate", "empty"),
+        ("/stub/algo/run", "omitted"),
+        ("/stub/algo/run", "empty"),
+    ],
+)
+def test_cutline_evaluate_accepts_optional_line_collections_through_real_chain(
+    endpoint: str,
+    line_input_mode: str,
+):
+    payload = build_stockout_auto_payload()
+    if line_input_mode == "omitted":
+        payload.pop("lines")
+        payload.pop("machine_lines")
+    else:
+        payload["lines"] = []
+        payload["machine_lines"] = []
+
+    response = make_client().post(endpoint, json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cutline_decisions"][0]["plan"]["selected_machines"][0][
+        "machine_code"
+    ] == "EA004"
+
+
+def test_cutline_evaluate_uses_route_workshop_through_real_service_chain():
+    payload = build_stockout_auto_payload()
+    payload["workshops"].append(
+        {"workshop_code": "S1", "workshop_name": "S1车间"}
+    )
+    candidate_line_code = next(
+        item["line_code"]
+        for item in payload["machine_lines"]
+        if item["machine_code"] == "EA004"
+    )
+    candidate_line = next(
+        item
+        for item in payload["lines"]
+        if item["line_code"] == candidate_line_code
+    )
+    candidate_line.update(
+        workshop_code="S1",
+        workshop_name="S1车间",
+    )
+
+    candidate_master = next(
+        item
+        for item in payload["machine_master"]
+        if item["machine_code"] == "EA004"
+    )
+    route_workshops = {
+        item["workshop_code"]
+        for item in payload["process_routes"]
+        if item["process_code"] == candidate_master["process_code"]
+    }
+    assert route_workshops == {"S2"}
+    assert candidate_line["workshop_code"] == "S1"
+
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 200
+    selected_machine = response.json()["cutline_decisions"][0]["plan"][
+        "selected_machines"
+    ][0]
+    assert selected_machine["machine_code"] == "EA004"
+    assert selected_machine["workshop_code"] == "S2"
 
 
 def test_calculation_route_returns_422_for_raw_standard_agv_conflict():

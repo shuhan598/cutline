@@ -56,8 +56,11 @@ class StockoutCandidateFinder:
             if candidate_agv.order_code == warning.order_code:
                 continue
 
-            _, machine, line = context.machine_context(runtime.machine_code)
-            if line.workshop_code != warning.workshop_code:
+            _, machine = context.machine_context(runtime.machine_code)
+            machine_workshop_code = context.machine_workshop_code(
+                runtime.machine_code
+            )
+            if machine_workshop_code != warning.workshop_code:
                 continue
             if machine.process_code != warning.upstream_process_code:
                 continue
@@ -70,7 +73,7 @@ class StockoutCandidateFinder:
             if not is_wafer_spec_compatible(
                 current_wafer_spec=candidate_agv.wafer_spec,
                 target_wafer_spec=warning.wafer_spec,
-                workshop_code=line.workshop_code,
+                workshop_code=machine_workshop_code,
                 process_name=machine.process_name,
             ):
                 continue
@@ -92,7 +95,7 @@ class StockoutCandidateFinder:
                     machine_code=runtime.machine_code,
                     machine_name=machine.machine_name,
                     status=runtime.status,
-                    workshop_code=line.workshop_code,
+                    workshop_code=machine_workshop_code,
                     process_code=machine.process_code,
                     process_name=machine.process_name,
                     current_order_code=candidate_agv.order_code,

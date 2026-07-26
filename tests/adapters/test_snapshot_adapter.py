@@ -248,21 +248,34 @@ def _copy_process_pair_to_context(
     *,
     workshop_code: str,
     loop_code: str,
-) -> None:
-    payload["process_routes"].extend(
-        [
-            {
-                **deepcopy(route),
-                "workshop_code": workshop_code,
-                "workshop_name": (
-                    "一车间" if workshop_code == "S1" else "二车间"
-                ),
-                "loop_code": loop_code,
-                "loop_name": loop_code,
-            }
-            for route in payload["process_routes"][:2]
-        ]
-    )
+    process_prefix: str = "",
+) -> list[str]:
+    source_routes = payload["process_routes"][:2]
+    code_by_source = {
+        route["process_code"]: f"{process_prefix}{route['process_code']}"
+        for route in source_routes
+    }
+    copied_routes = []
+    for route in source_routes:
+        copied = {
+            **deepcopy(route),
+            "process_code": code_by_source[route["process_code"]],
+            "workshop_code": workshop_code,
+            "workshop_name": (
+                "一车间" if workshop_code == "S1" else "二车间"
+            ),
+            "loop_code": loop_code,
+            "loop_name": loop_code,
+        }
+        for field in (
+            "upstream_process_code",
+            "downstream_process_code",
+        ):
+            if copied[field] is not None:
+                copied[field] = code_by_source[copied[field]]
+        copied_routes.append(copied)
+    payload["process_routes"].extend(copied_routes)
+    return [route["process_code"] for route in copied_routes]
 
 
 def test_minimal_complete_request_converts_to_algorithm_snapshot():
@@ -301,6 +314,70 @@ def test_machine_process_still_comes_from_machine_master():
 
     assert machine.process_code == "PROC-01"
     assert machine.process_name == "工序一"
+
+
+def test_runtime_machine_process_must_have_a_process_route():
+    payload = _payload()
+    payload["machine_master"][0]["process_code"] = "UNKNOWN"
+    payload["machine_master"][0]["process_name"] = "未知工序"
+
+    _assert_conversion_error(
+        payload,
+        r"Machine MC-001 process UNKNOWN has no process route",
+    )
+
+
+def test_runtime_machine_process_cannot_belong_to_multiple_workshops():
+    payload = _payload()
+    _append_process_route(
+        payload,
+        process_code="PROC-01",
+        sequence=1,
+        workshop_code="S2",
+        loop_code="LOOP-2",
+    )
+
+    _assert_conversion_error(
+        payload,
+        (
+            r"Machine MC-001 process PROC-01 belongs to multiple "
+            r"workshops: S1, S2"
+        ),
+    )
+
+
+def test_runtime_machine_process_may_repeat_in_same_workshop_across_loops():
+    payload = _payload()
+    _append_process_route(
+        payload,
+        process_code="PROC-01",
+        sequence=1,
+        workshop_code="S1",
+        loop_code="LOOP-2",
+    )
+
+    snapshot = _convert(payload)
+
+    assert snapshot.machine_masters[0].process_code == "PROC-01"
+
+
+def test_unused_static_machine_does_not_require_route_in_current_snapshot():
+    payload = _payload()
+    payload["machine_master"].append(
+        {
+            "machine_code": "MC-UNUSED",
+            "machine_name": "未参与机台",
+            "process_code": "UNUSED-PROCESS",
+            "process_name": "未参与工序",
+        }
+    )
+
+    snapshot = _convert(payload)
+
+    assert {item.machine_code for item in snapshot.machine_masters} == {
+        "MC-001",
+        "MC-UNUSED",
+    }
 
 
 def test_machine_runtime_quantities_are_raw_30_minute_values():
@@ -423,14 +500,17 @@ def test_same_order_can_exist_in_multiple_buffers():
 def test_same_order_name_is_matched_within_buffer_workshop():
     payload = _payload()
     payload["orders"].append({**deepcopy(payload["orders"][0]), "order_code": "ORD-S2", "workshop_code": "S2", "workshop_name": "二车间"})
-    payload["process_routes"].extend([
-        {**deepcopy(payload["process_routes"][0]), "workshop_code": "S2", "workshop_name": "二车间", "loop_code": "LOOP-2"},
-        {**deepcopy(payload["process_routes"][1]), "workshop_code": "S2", "workshop_name": "二车间", "loop_code": "LOOP-2"},
-    ])
+    s2_process_codes = _copy_process_pair_to_context(
+        payload,
+        workshop_code="S2",
+        loop_code="LOOP-2",
+        process_prefix="S2-",
+    )
     payload["buffer_master"].append({
         **deepcopy(payload["buffer_master"][0]),
         "buffer_code": "BUF-S2",
         "loop_code": "LOOP-2",
+        "served_process_codes": s2_process_codes,
     })
     payload["buffer_realtime"].append({
         "main_id": "MAIN-S2",
@@ -508,12 +588,15 @@ def test_same_main_different_buffers_same_order_is_not_duplicate():
 
 def test_same_main_with_different_workshops_fails_with_both_contexts():
     payload = _payload()
-    _copy_process_pair_to_context(
+    s2_process_codes = _copy_process_pair_to_context(
         payload,
         workshop_code="S2",
         loop_code="LOOP-2",
+        process_prefix="S2-",
     )
     payload["buffer_master"][1]["loop_code"] = "LOOP-2"
+    payload["buffer_master"][1]["served_process_codes"] = s2_process_codes
+    payload["buffer_master"][1]["served_process_names"] = s2_process_codes
 
     _assert_conversion_error(
         payload,
@@ -917,13 +1000,36 @@ def test_duplicate_machine_runtime_fails():
     _assert_conversion_error(payload, "Duplicate machine runtime: MC-001")
 
 
-def test_runtime_machine_without_machine_line_relation_fails():
+def test_lines_without_machine_lines_convert_without_runtime_relation():
     payload = _payload()
     payload["machine_lines"] = []
 
+    snapshot = _convert(payload)
+
+    assert snapshot.lines
+    assert snapshot.machine_lines == []
+    assert snapshot.machine_runtimes[0].machine_code == "MC-001"
+
+
+def test_empty_lines_and_machine_lines_convert():
+    payload = _payload()
+    payload["lines"] = []
+    payload["machine_lines"] = []
+
+    snapshot = _convert(payload)
+
+    assert snapshot.lines == []
+    assert snapshot.machine_lines == []
+    assert snapshot.machine_runtimes[0].machine_code == "MC-001"
+
+
+def test_machine_lines_without_lines_fail_explicitly():
+    payload = _payload()
+    payload["lines"] = []
+
     _assert_conversion_error(
         payload,
-        "Machine MC-001 has no machine-line relation",
+        "machine_lines were provided but lines are empty",
     )
 
 
@@ -1071,16 +1177,28 @@ def test_active_cutline_event_references_must_exist(
 def test_active_cutline_event_process_routes_must_belong_to_event_workshop(field):
     payload = _payload()
     valid_other_route_index = 1 if field == "upstream_process_code" else 0
+    valid_other_field = (
+        "downstream_process_code"
+        if field == "upstream_process_code"
+        else "upstream_process_code"
+    )
+    valid_other_process_code = (
+        f"S2-{payload['process_routes'][valid_other_route_index]['process_code']}"
+    )
     payload["process_routes"].append(
         {
             **deepcopy(payload["process_routes"][valid_other_route_index]),
+            "process_code": valid_other_process_code,
             "workshop_code": "S2",
             "workshop_name": payload["workshops"][1]["workshop_name"],
             "loop_code": "LOOP-S2",
         }
     )
     payload["active_cutline_events"] = [
-        _active_cutline_event(workshop_code="S2")
+        _active_cutline_event(
+            workshop_code="S2",
+            **{valid_other_field: valid_other_process_code},
+        )
     ]
 
     _assert_conversion_error(

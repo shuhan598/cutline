@@ -32,13 +32,21 @@
 UTC+08:00 选择不晚于 `snapshot_time` 的最新有效绑定，并写入内部
 `AlgorithmMachineRuntime.current_order_code`。机台当前订单编码、订单名称和硅片规格均以
 选中的 AGV 绑定为准；`AlgorithmMachineRuntime` 不保存当前硅片规格。产线
-`wafer_spec` 仅为兼容字段，机台到产线再到车间的归属链保持不变；机台工序始终来自
-`machine_master`。需要参与计算的订单如果没有有效 AGV `wafer_spec`，算法会抛出明确的
-数据错误，绝不回退到 `line.wafer_spec`。
+`wafer_spec` 仅为兼容字段。机台所属车间的算法权威链路是
+`machine_code -> machine_master.process_code -> process_routes.process_code
+-> process_routes.workshop_code`；不再通过 `machine_lines -> lines.workshop_code`
+判断。需要参与计算的订单如果没有有效 AGV `wafer_spec`，算法会抛出明确的数据错误，
+绝不回退到 `line.wafer_spec`。`lines` 和 `machine_lines` 是默认空数组的可选兼容
+数据，当前核心算法不依赖产线；省略二者或显式传入空数组均可运行。旧请求同时提供
+完整产线和机台产线关系时，Adapter 仍执行产线唯一性、未知机台、未知产线及重复绑定
+校验。只提供 `machine_lines` 而不提供 `lines` 会得到明确的数据错误。
 
 默认正式切线时刻就是方案生成时刻，切线执行延迟为 0 分钟。混料追溯以该正式切线时刻为基础计算，不再额外增加 15 分钟切线延迟。
 
-请求样例见 `examples/backend_request_sample.json`，空结构响应样例见 `examples/cutline_algorithm_response_sample.json`。运行正式服务链：
+完全省略可选产线字段的标准请求见
+`examples/backend_request_standard.json`；显式传空数组的请求见
+`examples/backend_request_sample.json`。空结构响应样例见
+`examples/cutline_algorithm_response_sample.json`。运行正式服务链：
 
 ```powershell
 python examples/run_cutline_algorithm.py
@@ -46,9 +54,10 @@ python examples/run_cutline_algorithm.py
 
 ## V3 标准假数据
 
-正式示例和完整流程测试统一使用 `S2` / `S2车间`，产线编码为
-`S2-SW1A`、`S2-SW1B`、`S2-SW2A`、`S2-SW2B`，机台编码从
-`EA001` 开始。工艺路线固定为：
+正式示例和完整流程测试统一使用 `S2` / `S2车间`，机台编码从 `EA001` 开始。
+共享测试工厂仍保留 `S2-SW1A`、`S2-SW1B`、`S2-SW2A`、`S2-SW2B`
+完整产线数据，用于验证旧请求兼容；提交的场景 JSON 使用空的可选产线数组验证核心
+算法解耦。工艺路线固定为：
 
 ```text
 发料机 -> 制绒 -> 碱抛 -> 背膜 -> 硼扩 -> POLY -> RCA -> 退火 -> 氧化 -> 正膜 -> 丝网

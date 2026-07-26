@@ -18,6 +18,7 @@ from app.schemas.common_schema import (
     AlgorithmMachineMaster,
     AlgorithmMachineRuntime,
     AlgorithmOrder,
+    AlgorithmProcessRoute,
     AlgorithmProduct,
 )
 from app.schemas.request_schema import AlgorithmSnapshot
@@ -160,7 +161,34 @@ def _snapshot(
                 material_name="Material 001",
             )
         ],
-        process_routes=[],
+        process_routes=[
+            AlgorithmProcessRoute(
+                process_code=process_code,
+                process_name=process_code,
+                sequence=sequence,
+                cache_type="BUFFER",
+                workshop_code="S1",
+                workshop_name="Workshop 1",
+                loop_code="LOOP-1",
+                loop_name="Loop 1",
+                upstream_process_code=(
+                    None if process_code == "ZR" else "ZR"
+                ),
+                upstream_process_name=(
+                    None if process_code == "ZR" else "ZR"
+                ),
+                downstream_process_code=(
+                    "PK" if process_code == "ZR" else None
+                ),
+                downstream_process_name=(
+                    "PK" if process_code == "ZR" else None
+                ),
+            )
+            for sequence, process_code in enumerate(
+                ("ZR", "PK"),
+                start=1,
+            )
+        ],
         buffer_masters=[_buffer("BUF-STOCK"), _buffer("BUF-OVER")],
         buffer_process_relations=[
             AlgorithmBufferProcessRelation(

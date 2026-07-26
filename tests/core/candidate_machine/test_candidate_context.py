@@ -2,7 +2,7 @@ import importlib
 
 import pytest
 
-from tests.core.candidate_machine.helpers import snapshot
+from tests.core.candidate_machine.helpers import process_route, snapshot
 
 
 def _context_module():
@@ -22,8 +22,6 @@ def _assert_context_error(candidate_snapshot, match: str) -> None:
     [
         ("machine_runtimes", "M-01.*duplicate machine runtime"),
         ("machine_masters", "M-01.*duplicate machine master"),
-        ("machine_lines", "M-01.*multiple machine-line"),
-        ("lines", "LINE-1.*duplicate line"),
         ("orders", "ORD-CURRENT.*duplicate order"),
         ("products", "PROD-CURRENT.*duplicate product"),
         ("buffer_process_relations", "BUF-01.*duplicate buffer process relation"),
@@ -46,12 +44,68 @@ def test_context_builds_all_required_indexes():
 
     assert context.runtime_by_machine_code["M-01"].machine_code == "M-01"
     assert context.machine_by_code["M-01"].machine_name == "M-01"
-    assert context.machine_line_by_machine_code["M-01"].line_code == "LINE-1"
-    assert context.line_by_code["LINE-1"].workshop_code == "S1"
     assert context.order_by_code["ORD-CURRENT"].product_code == "PROD-CURRENT"
     assert context.product_by_code["PROD-CURRENT"].wafer_size == "182"
     assert context.buffer_relation_by_code["BUF-01"].upstream_process_code == "P01"
     assert context.agv_by_machine_code["M-01"].order_code == "ORD-CURRENT"
+    assert context.machine_workshop_code("M-01") == "S1"
+
+
+def test_machine_context_returns_runtime_and_master_without_line_data():
+    candidate_snapshot = snapshot()
+    candidate_snapshot.lines = []
+    candidate_snapshot.machine_lines = []
+
+    context = _context_module().CandidateContext(candidate_snapshot)
+    runtime_value, machine_value = context.machine_context("M-01")
+
+    assert runtime_value.machine_code == "M-01"
+    assert machine_value.machine_code == "M-01"
+    assert not hasattr(context, "line_by_code")
+    assert not hasattr(context, "machine_line_by_machine_code")
+
+
+def test_context_allows_same_process_in_same_workshop_across_loops():
+    candidate_snapshot = snapshot()
+    candidate_snapshot.process_routes.append(
+        process_route("P01", loop_code="LOOP-02")
+    )
+
+    context = _context_module().CandidateContext(candidate_snapshot)
+
+    assert context.machine_workshop_code("M-01") == "S1"
+
+
+def test_context_rejects_runtime_machine_process_without_route():
+    candidate_snapshot = snapshot()
+    candidate_snapshot.process_routes = [
+        route for route in candidate_snapshot.process_routes
+        if route.process_code != "P01"
+    ]
+
+    _assert_context_error(
+        candidate_snapshot,
+        r"Machine M-01 process P01 has no process route",
+    )
+
+
+def test_context_rejects_runtime_machine_process_across_workshops():
+    candidate_snapshot = snapshot()
+    candidate_snapshot.process_routes.append(
+        process_route(
+            "P01",
+            workshop_code="S2",
+            loop_code="LOOP-02",
+        )
+    )
+
+    _assert_context_error(
+        candidate_snapshot,
+        (
+            r"Machine M-01 process P01 belongs to multiple "
+            r"workshops: S1, S2"
+        ),
+    )
 
 
 def test_context_returns_selected_agv_relation_with_current_order_context():
@@ -122,8 +176,6 @@ def test_context_rejects_agv_relation_with_unknown_machine():
     ("mutation", "match"),
     [
         ("missing_machine", "M-01.*machine master.*does not exist"),
-        ("missing_machine_line", "M-01.*machine-line.*does not exist"),
-        ("missing_line", "LINE-1.*line.*does not exist"),
         ("missing_runtime_order", "ORD-CURRENT.*order.*does not exist"),
         ("missing_order_product", "PROD-CURRENT.*product.*does not exist"),
     ],
@@ -135,10 +187,6 @@ def test_candidate_context_rejects_missing_required_references(
     candidate_snapshot = snapshot()
     if mutation == "missing_machine":
         candidate_snapshot.machine_masters = []
-    elif mutation == "missing_machine_line":
-        candidate_snapshot.machine_lines = []
-    elif mutation == "missing_line":
-        candidate_snapshot.lines = []
     elif mutation == "missing_runtime_order":
         candidate_snapshot.orders = []
     elif mutation == "missing_order_product":

@@ -1,7 +1,7 @@
 # 机台当前硅片规格来源切换至 AGV 设计
 
 **日期：** 2026-07-26  
-**状态：** 已批准，按方案 A 实施  
+**状态：** 已批准，按方案 A 实施；其中车间来源已由后续工艺路线设计更新
 **范围：** AGV 请求契约与转换、净速率、候选机台、测试数据、示例和输入文档
 
 ## 1. 目标和不变项
@@ -12,8 +12,10 @@
 以下逻辑保持不变：
 
 - `AlgorithmMachineRuntime` 结构不增加 `current_wafer_spec`；
-- `lines`、`machine_lines` 的必传与转换规则；
-- `machine_code -> machine_lines -> lines -> workshop_code` 车间链路；
+- `lines`、`machine_lines` 继续保留；后续可选产线设计允许省略或传空数组，
+  完整旧数据的转换规则不变；
+- 机台车间改由后续设计规定的
+  `machine_master.process_code -> process_routes.workshop_code` 链路解析；
 - 净速率公式与 `main_id`、订单、物理 Buffer 库存聚合规则；
 - ProductCompatibilityChecker 的一般规格相等、S2 丝网前 R/P 兼容规则；
 - 尺寸、片源等级、候选排序、空闲度、利用率和贡献产能规则；
@@ -81,7 +83,7 @@ Loader 的原始记录识别、原始/标准字段冲突检查、后端校验字
 - `runtime.status == "running"`；
 - 对应 AGV 的 `order_code` 等于当前订单；
 - 对应 AGV 的 `wafer_spec` 等于当前规格；
-- 产线推导出的车间等于当前车间；
+- 工艺路线解析出的机台车间等于当前车间；
 - 机台主数据工序等于当前上游或下游工序。
 
 `runtime.current_order_code` 和 `line.wafer_spec` 均不再作为净速率中的当前生产身份。
@@ -104,7 +106,7 @@ machine_code -> AlgorithmAgvRelation
 2. 用 AGV `order_code` 查当前订单和产品；
 3. 用 AGV `wafer_spec` 与预警规格调用现有兼容检查；
 4. 用 AGV `order_code`、`order_name`、`wafer_spec` 填写候选结果；
-5. 车间仍从 `machine_context` 返回的产线获取。
+5. 车间通过统一 `MachineWorkshopResolver` 从机台工序和工艺路线获取。
 
 `AlgorithmStockoutCandidateMachine` 和 `AlgorithmOverflowCandidateMachine`
 新增必填 `current_order_name`，所有生产和测试构造位置同步更新。
@@ -135,4 +137,3 @@ AGV 示例增加 `waferspec`，标准示例增加 `wafer_spec`，并同步 READM
 ## 8. Git 约束
 
 本次在当前工作区原地实施，不执行 `git commit`、`git push`，不创建或切换分支。
-

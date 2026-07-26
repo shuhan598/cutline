@@ -8,6 +8,7 @@ from app.schemas.common_schema import (
     AlgorithmMachineMaster,
     AlgorithmMachineRuntime,
     AlgorithmOrder,
+    AlgorithmProcessRoute,
     AlgorithmProduct,
 )
 from app.schemas.request_schema import AlgorithmSnapshot
@@ -121,6 +122,28 @@ def product(
     )
 
 
+def process_route(
+    process_code: str = "P01",
+    *,
+    workshop_code: str = "S1",
+    loop_code: str = "LOOP-01",
+) -> AlgorithmProcessRoute:
+    return AlgorithmProcessRoute(
+        process_code=process_code,
+        process_name=process_code,
+        sequence=1,
+        cache_type="BUFFER",
+        workshop_code=workshop_code,
+        workshop_name=workshop_code,
+        loop_code=loop_code,
+        loop_name=loop_code,
+        upstream_process_code=None,
+        upstream_process_name=None,
+        downstream_process_code=None,
+        downstream_process_name=None,
+    )
+
+
 def buffer_relation(
     buffer_code: str = "BUF-01",
     workshop_code: str = "S1",
@@ -146,7 +169,10 @@ def snapshot() -> AlgorithmSnapshot:
         machine_product_capacities=[],
         orders=[order()],
         products=[product()],
-        process_routes=[],
+        process_routes=[
+            process_route("P01"),
+            process_route("P02"),
+        ],
         buffer_masters=[],
         buffer_process_relations=[buffer_relation()],
         buffer_order_inventories=[],

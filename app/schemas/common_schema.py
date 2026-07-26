@@ -149,12 +149,17 @@ class AlgorithmLine(AlgorithmModel):
             "不作为机台当前实际生产规格的数据来源"
         ),
     )
-    workshop_code: str = Field(..., description="产线所属车间编码")
+    workshop_code: str = Field(
+        ...,
+        description=(
+            "产线自身所属车间编码；兼容保留，不作为机台所属车间的算法依据"
+        ),
+    )
     workshop_name: str | None = Field(...,description="产线所属车间名称，数据缺失时允许为空",)
 
 
 class AlgorithmMachineLineRelation(AlgorithmModel):
-    """新版算法内部使用的机台与产线编码关联关系。"""
+    """兼容保留的机台与产线关系，不作为机台所属车间的算法依据。"""
 
     machine_code: str = Field(..., description="机台编码")
     line_code: str = Field(..., description="产线编码")
@@ -255,7 +260,12 @@ class AlgorithmProcessRoute(AlgorithmModel):
     process_name: str = Field(..., description="工序名称")
     sequence: int = Field(..., ge=1, description="工序顺序号")
     cache_type: str = Field(..., description="下料可缓存类型")
-    workshop_code: str = Field(..., description="工艺路线所属车间编码")
+    workshop_code: str = Field(
+        ...,
+        description=(
+            "工艺路线所属车间编码，也是机台按所属工序解析车间的权威来源"
+        ),
+    )
     workshop_name: str | None = Field(...,description="工艺路线所属车间名称，数据缺失时允许为空",)
     loop_code: str = Field(..., description="工艺路线所属循环编码")
     loop_name: str = Field(..., description="工艺路线所属循环名称")

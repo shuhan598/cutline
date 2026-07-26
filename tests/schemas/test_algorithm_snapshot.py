@@ -27,15 +27,22 @@ SNAPSHOT_FIELDS = (
 )
 
 CORE_LIST_FIELDS = SNAPSHOT_FIELDS[1:14]
+REQUIRED_CORE_LIST_FIELDS = tuple(
+    field
+    for field in CORE_LIST_FIELDS
+    if field not in {"lines", "machine_lines"}
+)
 
 SNAPSHOT_DESCRIPTIONS = {
     "current_time": "本次算法计算所使用的数据快照时间",
     "workshops": "算法使用的车间基础数据列表",
     "lines": (
-        "算法使用的产线基础数据列表，保留产线绑定硅片规格兼容字段，"
-        "用于支持机台—产线—车间归属关系，不作为机台当前实际生产规格的数据来源"
+        "可选兼容产线基础数据列表；兼容保留产线所属车间和硅片规格，"
+        "但二者均不作为机台所属车间或当前生产规格的算法依据"
     ),
-    "machine_lines": "机台与产线之间的绑定关系列表",
+    "machine_lines": (
+        "可选兼容机台与产线绑定关系列表，不作为核心算法的数据依据"
+    ),
     "machine_runtimes": "快照时刻的机台实时运行状态列表",
     "machine_masters": "机台基础信息列表，包括机台所属工序",
     "machine_product_capacities": "机台与产品型号之间的工艺时间和实际产能关系列表",
@@ -282,7 +289,10 @@ def test_algorithm_snapshot_has_exact_field_order_and_descriptions():
     } == SNAPSHOT_DESCRIPTIONS
 
 
-@pytest.mark.parametrize("missing_field", ("current_time", *CORE_LIST_FIELDS))
+@pytest.mark.parametrize(
+    "missing_field",
+    ("current_time", *REQUIRED_CORE_LIST_FIELDS),
+)
 def test_algorithm_snapshot_requires_current_time_and_all_core_lists(
     snapshot_payload,
     missing_field,
@@ -302,6 +312,28 @@ def test_algorithm_snapshot_allows_explicit_empty_core_lists(snapshot_payload):
     assert all(getattr(snapshot, field_name) == [] for field_name in CORE_LIST_FIELDS)
 
 
+def test_algorithm_snapshot_optional_line_lists_default_independently(
+    snapshot_payload,
+):
+    snapshot_payload.pop("lines")
+    snapshot_payload.pop("machine_lines")
+
+    first = schema.AlgorithmSnapshot.model_validate(snapshot_payload)
+    second = schema.AlgorithmSnapshot.model_validate(snapshot_payload)
+
+    assert first.lines == []
+    assert first.machine_lines == []
+    assert first.lines is not second.lines
+    assert first.machine_lines is not second.machine_lines
+    assert schema.AlgorithmSnapshot.model_fields["lines"].default_factory is list
+    assert (
+        schema.AlgorithmSnapshot.model_fields[
+            "machine_lines"
+        ].default_factory
+        is list
+    )
+
+
 def test_algorithm_snapshot_uses_only_allowed_defaults(snapshot_payload):
     first = schema.AlgorithmSnapshot.model_validate(snapshot_payload)
     second = schema.AlgorithmSnapshot.model_validate(snapshot_payload)
@@ -311,8 +343,12 @@ def test_algorithm_snapshot_uses_only_allowed_defaults(snapshot_payload):
     assert first.config.model_dump() == common_schema.AlgorithmConfig().model_dump()
     assert all(
         schema.AlgorithmSnapshot.model_fields[name].is_required()
-        for name in ("current_time", *CORE_LIST_FIELDS)
+        for name in ("current_time", *REQUIRED_CORE_LIST_FIELDS)
     )
+    assert not schema.AlgorithmSnapshot.model_fields["lines"].is_required()
+    assert not schema.AlgorithmSnapshot.model_fields[
+        "machine_lines"
+    ].is_required()
     assert not schema.AlgorithmSnapshot.model_fields[
         "active_cutline_events"
     ].is_required()

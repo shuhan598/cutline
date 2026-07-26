@@ -1,6 +1,6 @@
 # 切线算法输入接口文档
 
-> 更新时间：2026-07-23
+> 更新时间：2026-07-26
 >
 > 本文档描述后端传给算法服务的请求 JSON。正式同步 HTTP 路由为
 > `POST /stub/algo/run` 和 `POST /cutline/evaluate`；预校验路由为
@@ -39,7 +39,8 @@ CutlineAlgorithmResponse
 
 当前可参考输入样例：
 
-- 简单合法样例：`examples/backend_request_sample.json`
+- 省略产线兼容字段的标准样例：`examples/backend_request_standard.json`
+- 显式传空产线数组的简单样例：`examples/backend_request_sample.json`
 - 完整断料出方案样例：`examples/backend_request_stockout_plan_sample.json`
 
 ## 2. 请求顶层结构
@@ -64,6 +65,7 @@ CutlineAlgorithmResponse
 ```
 
 请求中不要传 `config`。算法参数由内部默认配置 `AlgorithmConfig` 注入。
+上例显式写出 `lines: []` 和 `machine_lines: []`；也可以完全省略这两个键。
 
 | 字段 | 类型 | 是否必填 | 含义 |
 |---|---|---|---|
@@ -72,8 +74,8 @@ CutlineAlgorithmResponse
 | `machine_master` | array | 是 | 机台主数据和工序归属 |
 | `machine_process_times` | array | 是 | 机台-产品工艺时间和产能 |
 | `workshops` | array | 是 | 车间基础数据 |
-| `lines` | array | 是 | 产线和硅片规格 |
-| `machine_lines` | array | 是 | 机台与产线关系 |
+| `lines` | array | 否，默认空数组 | 可选兼容产线和硅片规格 |
+| `machine_lines` | array | 否，默认空数组 | 可选兼容机台与产线关系 |
 | `orders` | array | 是 | 订单基础和数量数据 |
 | `products` | array | 是 | 产品型号基础数据 |
 | `process_routes` | array | 是 | 工艺路线 |
@@ -194,10 +196,16 @@ CutlineAlgorithmResponse
 
 规则：
 
-- 每台机台必须有且只有一个有效产线关系。
+- `lines` 和 `machine_lines` 是可选兼容数据，当前核心算法不依赖产线。
+- 两者都省略或都传空数组时正常运行，不生成虚拟产线或占位关系。
+- 只提供 `lines` 时正常运行，不要求 runtime 机台存在产线关系。
+- 只提供 `machine_lines` 而 `lines` 为空时，Adapter 明确报错
+  `machine_lines were provided but lines are empty`。
+- 同时提供完整旧数据时，继续校验产线编码唯一、未知机台、未知产线、重复关系及
+  同一机台绑定多条不同产线。
 - `lines.wafer_spec` 和 `machine_lines.wafer_spec` 作为兼容字段继续保留。
-- 机台 -> 产线 -> 车间的归属链保持不变，但不再从产线推导当前订单的
-  `wafer_spec`；当前订单规格只来自选中的 AGV 绑定。
+- 产线的 `workshop_code` 只表达产线自身所属车间，不再作为机台所属车间的算法依据。
+- 当前订单规格只来自选中的 AGV 绑定，不从产线规格回退。
 
 ## 8. 订单 `orders`
 
@@ -267,6 +275,14 @@ CutlineAlgorithmResponse
 规则：
 
 - 同一 `(workshop_code, loop_code, process_code)` 不允许重复。
+- 机台所属车间通过
+  `machine_master.process_code -> process_routes.process_code
+  -> process_routes.workshop_code` 解析。
+- 同一 `process_code` 可因不同 `loop_code` 出现多次，但所有记录必须属于同一个
+  `workshop_code`；跨车间时明确报错，不按输入顺序选择。
+- 本次快照中 `machine_realtime` 引用的机台，其 `machine_master.process_code`
+  必须能在工艺路线中找到；缺失时明确报错，不回退 `lines.workshop_code`。
+- 未被本次 runtime 引用的静态机台不因缺少本次路线而被无条件拒绝。
 - `sequence` 从 1 开始。
 - Buffer 服务的两个工序必须能在同一 `loop_code` 下找到，并且相邻。
 
@@ -395,7 +411,11 @@ Loader 内部标准化结果：
 
 ## 14. 最小有效请求样例
 
-简单合法样例：
+省略 `lines`、`machine_lines` 的标准样例：
+
+- `examples/backend_request_standard.json`
+
+显式传入两个空数组的简单合法样例：
 
 - `examples/backend_request_sample.json`
 
@@ -412,10 +432,11 @@ Loader 内部标准化结果：
 
 ## 15. 当前样例校验结果
 
-当前两个输入样例均已通过 `BackendRequestLoader` 标准化及
+当前三个输入样例均已通过 `BackendRequestLoader` 标准化及
 `CutlineAlgorithmRequest` 校验：
 
 ```text
+examples/backend_request_standard.json OK
 examples/backend_request_sample.json OK
 examples/backend_request_stockout_plan_sample.json OK
 ```

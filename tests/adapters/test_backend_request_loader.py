@@ -9,7 +9,9 @@ from app.adapters.backend_request_loader import (
     BackendRequestLoadError,
     BackendRequestLoader,
 )
+from app.adapters.snapshot_adapter import SnapshotAdapter
 from app.schemas.backend_request_schema import BackendAlgorithmRequest
+from tests.fixtures.v3_full_route_factory import build_stockout_auto_payload
 
 
 SAMPLE_PATH = (
@@ -35,6 +37,21 @@ def test_load_dict_returns_model_without_mutating_nested_payload():
     assert payload == original
     assert "period_quantity" not in request.machine_realtime[0].model_fields_set
     assert "out_time" not in request.machine_realtime[0].model_fields_set
+
+
+def test_omitted_line_collections_flow_from_loader_into_snapshot_adapter():
+    payload = build_stockout_auto_payload()
+    payload.pop("lines")
+    payload.pop("machine_lines")
+
+    request = BackendRequestLoader().load_cutline_dict(payload)
+    snapshot = SnapshotAdapter().to_algorithm_snapshot(request)
+
+    assert request.lines == []
+    assert request.machine_lines == []
+    assert snapshot.lines == []
+    assert snapshot.machine_lines == []
+    assert snapshot.machine_runtimes
 
 
 def test_transitional_cleanup_only_applies_to_machine_realtime_records():

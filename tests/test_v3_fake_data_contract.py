@@ -38,6 +38,20 @@ def test_factory_returns_independent_deep_copies():
     )
 
 
+def test_shared_factory_retains_complete_legacy_line_data():
+    payload = build_base_request_payload()
+    lines = {item["line_code"] for item in payload["lines"]}
+
+    assert lines
+    assert payload["machine_lines"]
+    assert all(
+        item["machine_code"]
+        in {machine["machine_code"] for machine in payload["machine_master"]}
+        and item["line_code"] in lines
+        for item in payload["machine_lines"]
+    )
+
+
 def test_all_scenarios_validate_and_convert_without_mutating_payload(
     scenario_payload,
 ):

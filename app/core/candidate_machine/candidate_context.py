@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Iterable, TypeVar
 
 from app.core.candidate_machine.errors import CandidateMachineCalculationError
+from app.core.workshop.machine_workshop_resolver import (
+    MachineWorkshopResolutionError,
+    MachineWorkshopResolver,
+)
 from app.schemas.common_schema import (
     AlgorithmAgvRelation,
     AlgorithmBufferProcessRelation,
-    AlgorithmLine,
-    AlgorithmMachineLineRelation,
     AlgorithmMachineMaster,
     AlgorithmMachineRuntime,
     AlgorithmOrder,
@@ -33,11 +35,6 @@ class CandidateContext:
             "machine_code",
             "machine master",
         )
-        self.line_by_code = self._unique_index(
-            snapshot.lines,
-            "line_code",
-            "line",
-        )
         self.order_by_code = self._unique_index(
             snapshot.orders,
             "order_code",
@@ -58,8 +55,8 @@ class CandidateContext:
             "machine_code",
             "AGV relation",
         )
-        self.machine_line_by_machine_code = self._machine_line_index(
-            snapshot.machine_lines
+        self.workshop_resolver = MachineWorkshopResolver(
+            snapshot.process_routes
         )
         self._validate_references()
 
@@ -79,29 +76,6 @@ class CandidateContext:
             result[key] = item
         return result
 
-    def _machine_line_index(
-        self,
-        relations: Iterable[AlgorithmMachineLineRelation],
-    ) -> dict[str, AlgorithmMachineLineRelation]:
-        result: dict[str, AlgorithmMachineLineRelation] = {}
-        for relation in relations:
-            if relation.machine_code in result:
-                raise CandidateMachineCalculationError(
-                    f"{relation.machine_code} has multiple machine-line relations"
-                )
-            if relation.machine_code not in self.machine_by_code:
-                raise CandidateMachineCalculationError(
-                    f"{relation.machine_code} machine master does not exist "
-                    "for machine-line relation"
-                )
-            if relation.line_code not in self.line_by_code:
-                raise CandidateMachineCalculationError(
-                    f"{relation.line_code} line does not exist for machine "
-                    f"{relation.machine_code}"
-                )
-            result[relation.machine_code] = relation
-        return result
-
     def _validate_references(self) -> None:
         for runtime in self.runtime_by_machine_code.values():
             if runtime.machine_code not in self.machine_by_code:
@@ -109,11 +83,12 @@ class CandidateContext:
                     f"{runtime.machine_code} machine master does not exist "
                     "for machine runtime"
                 )
-            if runtime.machine_code not in self.machine_line_by_machine_code:
-                raise CandidateMachineCalculationError(
-                    f"{runtime.machine_code} machine-line relation does not exist "
-                    "for machine runtime"
+            try:
+                self.workshop_resolver.resolve_machine_workshop(
+                    self.machine_by_code[runtime.machine_code]
                 )
+            except MachineWorkshopResolutionError as exc:
+                raise CandidateMachineCalculationError(str(exc)) from exc
 
         for relation in self.agv_by_machine_code.values():
             if relation.machine_code not in self.machine_by_code:
@@ -137,12 +112,10 @@ class CandidateContext:
     def machine_context(
         self,
         machine_code: str,
-    ) -> tuple[AlgorithmMachineRuntime, AlgorithmMachineMaster, AlgorithmLine]:
+    ) -> tuple[AlgorithmMachineRuntime, AlgorithmMachineMaster]:
         runtime = self.runtime_by_machine_code[machine_code]
         machine = self.machine_by_code[machine_code]
-        relation = self.machine_line_by_machine_code[machine_code]
-        line = self.line_by_code[relation.line_code]
-        return runtime, machine, line
+        return runtime, machine
 
     def order_product(
         self,
@@ -155,6 +128,13 @@ class CandidateContext:
             )
         product = self.product_by_code[order.product_code]
         return order, product
+
+    def machine_workshop_code(self, machine_code: str) -> str:
+        machine = self.machine_by_code[machine_code]
+        try:
+            return self.workshop_resolver.resolve_machine_workshop(machine)
+        except MachineWorkshopResolutionError as exc:
+            raise CandidateMachineCalculationError(str(exc)) from exc
 
     def candidate_agv(self, machine_code: str) -> AlgorithmAgvRelation:
         relation = self.agv_by_machine_code.get(machine_code)

@@ -10,6 +10,10 @@ from typing import Any, Iterable, TypeVar
 from pydantic import ValidationError
 
 from app.adapters.agv_binding_selector import select_latest_effective_bindings
+from app.core.workshop.machine_workshop_resolver import (
+    MachineWorkshopResolutionError,
+    MachineWorkshopResolver,
+)
 from app.schemas.common_schema import (
     AlgorithmActiveCutlineEvent,
     AlgorithmAgvRelation,
@@ -49,6 +53,11 @@ class SnapshotAdapter:
     ) -> AlgorithmSnapshot:
         """Convert a validated backend request into a complete algorithm snapshot."""
         try:
+            if request.machine_lines and not request.lines:
+                raise SnapshotConversionError(
+                    "machine_lines were provided but lines are empty"
+                )
+
             workshops = self._convert_workshops(request.workshops)
             workshop_by_code = self._index_unique(
                 workshops, "workshop_code", "workshop"
@@ -91,7 +100,6 @@ class SnapshotAdapter:
                 machine_by_code,
                 agv_by_machine,
             )
-            self._validate_runtime_machine_lines(machine_runtimes, machine_lines)
             capacities = self._convert_capacities(
                 request.machine_process_times, machine_by_code, product_by_code
             )
@@ -100,6 +108,11 @@ class SnapshotAdapter:
                 request.process_routes, workshop_by_code
             )
             route_by_key = self._index_process_routes(process_routes)
+            self._validate_runtime_machine_workshops(
+                machine_runtimes=machine_runtimes,
+                machine_by_code=machine_by_code,
+                process_routes=process_routes,
+            )
 
             buffer_masters = self._convert_buffer_masters(request.buffer_master)
             buffer_by_code = self._index_unique(
@@ -152,6 +165,21 @@ class SnapshotAdapter:
             raise SnapshotConversionError(
                 f"Snapshot model validation failed: {exc}"
             ) from exc
+
+    def _validate_runtime_machine_workshops(
+        self,
+        *,
+        machine_runtimes: Iterable[AlgorithmMachineRuntime],
+        machine_by_code: dict[str, AlgorithmMachineMaster],
+        process_routes: Iterable[AlgorithmProcessRoute],
+    ) -> None:
+        resolver = MachineWorkshopResolver(process_routes)
+        for runtime in machine_runtimes:
+            machine = machine_by_code[runtime.machine_code]
+            try:
+                resolver.resolve_machine_workshop(machine)
+            except MachineWorkshopResolutionError as exc:
+                raise SnapshotConversionError(str(exc)) from exc
 
     def _convert_workshops(self, source: Iterable[Any]) -> list[AlgorithmWorkshop]:
         return [
@@ -286,20 +314,6 @@ class SnapshotAdapter:
         if normalized == "运行" or normalized.casefold() == "running":
             return "running"
         return "stopped"
-
-    def _validate_runtime_machine_lines(
-        self,
-        machine_runtimes: Iterable[AlgorithmMachineRuntime],
-        machine_lines: Iterable[AlgorithmMachineLineRelation],
-    ) -> None:
-        line_relation_machine_codes = {
-            relation.machine_code for relation in machine_lines
-        }
-        for runtime in machine_runtimes:
-            if runtime.machine_code not in line_relation_machine_codes:
-                raise SnapshotConversionError(
-                    f"Machine {runtime.machine_code} has no machine-line relation"
-                )
 
     def _convert_products(self, source: Iterable[Any]) -> list[AlgorithmProduct]:
         return [

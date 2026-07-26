@@ -8,6 +8,7 @@ from tests.core.candidate_machine.helpers import (
     machine,
     machine_line,
     order,
+    process_route,
     product,
     runtime,
     snapshot,
@@ -119,6 +120,10 @@ def _set_workshop(candidate_snapshot, workshop_code: str) -> None:
             update={"workshop_code": workshop_code}
         )
     )
+    candidate_snapshot.process_routes = [
+        route.model_copy(update={"workshop_code": workshop_code})
+        for route in candidate_snapshot.process_routes
+    ]
 
 
 def test_stockout_candidate_result_contains_complete_realtime_context():
@@ -162,6 +167,20 @@ def test_stockout_candidate_result_contains_complete_realtime_context():
     assert candidate.idle_rate == pytest.approx(0.2)
 
 
+def test_stockout_candidate_runs_without_line_data():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.lines = []
+    candidate_snapshot.machine_lines = []
+
+    candidate = _find(candidate_snapshot).candidates[0]
+
+    assert candidate.machine_code == "M-01"
+    assert candidate.current_order_code == "ORD-CURRENT"
+    assert candidate.current_order_name == "Current Order"
+    assert candidate.current_wafer_spec == "N"
+    assert candidate.workshop_code == "S1"
+
+
 @pytest.mark.parametrize(
     "case",
     [
@@ -179,8 +198,10 @@ def test_stockout_candidate_result_contains_complete_realtime_context():
 def test_stockout_candidate_requires_every_static_qualification(case: str):
     candidate_snapshot = _candidate_snapshot()
     if case == "different_workshop":
-        candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
-            update={"workshop_code": "S2"}
+        candidate_snapshot.process_routes[0] = (
+            candidate_snapshot.process_routes[0].model_copy(
+                update={"workshop_code": "S2"}
+            )
         )
     elif case == "downstream_process":
         candidate_snapshot.machine_masters[0] = (
@@ -194,6 +215,7 @@ def test_stockout_candidate_requires_every_static_qualification(case: str):
                 update={"process_code": "P99"}
             )
         )
+        candidate_snapshot.process_routes.append(process_route("P99"))
     elif case == "not_running":
         candidate_snapshot.machine_runtimes[0] = (
             candidate_snapshot.machine_runtimes[0].model_copy(
@@ -285,6 +307,65 @@ def test_stockout_uses_agv_spec_instead_of_line_spec():
         candidate_snapshot,
         _warning(wafer_spec="R"),
     ).candidates
+
+
+def test_stockout_uses_route_workshop_for_s2_compatibility_when_line_is_s1():
+    candidate_snapshot = _candidate_snapshot()
+    _set_workshop(candidate_snapshot, "S2")
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"workshop_code": "S1"}
+    )
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "P"}
+        )
+    )
+
+    result = _find(
+        candidate_snapshot,
+        _warning(workshop_code="S2", wafer_spec="R"),
+    )
+
+    assert result.candidates[0].workshop_code == "S2"
+
+
+def test_stockout_s2_rp_compatibility_runs_without_line_data():
+    candidate_snapshot = _candidate_snapshot()
+    _set_workshop(candidate_snapshot, "S2")
+    candidate_snapshot.lines = []
+    candidate_snapshot.machine_lines = []
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "P"}
+        )
+    )
+
+    result = _find(
+        candidate_snapshot,
+        _warning(workshop_code="S2", wafer_spec="R"),
+    )
+
+    assert result.candidates[0].workshop_code == "S2"
+    assert result.candidates[0].current_wafer_spec == "P"
+
+
+def test_stockout_does_not_use_line_s2_for_rp_compatibility_when_route_is_s1():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"workshop_code": "S2"}
+    )
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "P"}
+        )
+    )
+
+    result = _find(
+        candidate_snapshot,
+        _warning(workshop_code="S1", wafer_spec="R"),
+    )
+
+    assert result.candidates == []
 
 
 def test_stockout_rejects_incompatible_agv_spec_even_when_line_matches():

@@ -22,6 +22,12 @@ DATASET_FIELDS = (
     "agv_relations",
 )
 
+REQUIRED_DATASET_FIELDS = tuple(
+    field
+    for field in DATASET_FIELDS
+    if field not in {"lines", "machine_lines"}
+)
+
 
 def active_cutline_event_payload():
     return {
@@ -160,11 +166,36 @@ def test_request_has_no_config_field(payload):
     assert error.value.errors()[0]["type"] == "extra_forbidden"
 
 
-@pytest.mark.parametrize("missing_field", ("snapshot_meta", *DATASET_FIELDS))
+@pytest.mark.parametrize(
+    "missing_field",
+    ("snapshot_meta", *REQUIRED_DATASET_FIELDS),
+)
 def test_every_top_level_field_is_required(payload, missing_field):
     del payload[missing_field]
     with pytest.raises(ValidationError):
         CutlineAlgorithmRequest.model_validate(payload)
+
+
+def test_optional_line_collections_default_to_independent_empty_lists(payload):
+    payload.pop("lines")
+    payload.pop("machine_lines")
+
+    first = CutlineAlgorithmRequest.model_validate(payload)
+    second = CutlineAlgorithmRequest.model_validate(deepcopy(payload))
+
+    assert first.lines == []
+    assert first.machine_lines == []
+    assert first.lines is not second.lines
+    assert first.machine_lines is not second.machine_lines
+    assert (
+        CutlineAlgorithmRequest.model_fields["lines"].default_factory is list
+    )
+    assert (
+        CutlineAlgorithmRequest.model_fields[
+            "machine_lines"
+        ].default_factory
+        is list
+    )
 
 
 def test_nested_required_field_is_required(payload):

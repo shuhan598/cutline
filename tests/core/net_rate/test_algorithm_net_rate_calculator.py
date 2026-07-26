@@ -12,6 +12,7 @@ from app.schemas.common_schema import (
     AlgorithmMachineMaster,
     AlgorithmMachineRuntime,
     AlgorithmOrder,
+    AlgorithmProcessRoute,
     AlgorithmProduct,
 )
 from app.schemas.request_schema import AlgorithmSnapshot
@@ -61,6 +62,28 @@ def _product(
     )
 
 
+def _route(
+    process_code: str,
+    *,
+    workshop_code: str = "S1",
+    loop_code: str = "LOOP-01",
+) -> AlgorithmProcessRoute:
+    return AlgorithmProcessRoute(
+        process_code=process_code,
+        process_name=process_code,
+        sequence=1,
+        cache_type="BUFFER",
+        workshop_code=workshop_code,
+        workshop_name=workshop_code,
+        loop_code=loop_code,
+        loop_name=loop_code,
+        upstream_process_code=None,
+        upstream_process_name=None,
+        downstream_process_code=None,
+        downstream_process_name=None,
+    )
+
+
 def _runtime(
     machine_code: str,
     order_code: str = "ORD-001",
@@ -94,6 +117,7 @@ def _add_machine(
     input_quantity: float = 0,
     output_quantity: float = 0,
     period_quantity: float = 999999,
+    route_workshop_code: str = "S1",
 ) -> None:
     snapshot.machine_masters.append(
         AlgorithmMachineMaster(
@@ -119,6 +143,16 @@ def _add_machine(
             period_quantity,
         )
     )
+    if not any(
+        route.process_code == process_code
+        for route in snapshot.process_routes
+    ):
+        snapshot.process_routes.append(
+            _route(
+                process_code,
+                workshop_code=route_workshop_code,
+            )
+        )
     effective_order_code = (
         order_code if agv_order_code is None else agv_order_code
     )
@@ -341,18 +375,69 @@ def test_different_wafer_spec_for_another_order_does_not_enter_rate():
     assert _calculate(snapshot)[0].upstream_output_rate == 200
 
 
-def test_different_workshop_machine_does_not_enter_rate():
+def test_route_workshop_overrides_line_workshop_for_matching_rates():
     snapshot = _snapshot()
-    snapshot.lines.append(_line("LINE-N-S2", "N", "S2"))
-    _add_machine(
-        snapshot,
-        "ZR-S2",
-        "ZR",
-        line_code="LINE-N-S2",
-        output_quantity=50000,
+    snapshot.process_routes = [
+        route.model_copy(update={"workshop_code": "S2"})
+        for route in snapshot.process_routes
+    ]
+    snapshot.buffer_process_relations[0] = (
+        snapshot.buffer_process_relations[0].model_copy(
+            update={"workshop_code": "S2"}
+        )
     )
 
-    assert _calculate(snapshot)[0].upstream_output_rate == 200
+    result = _calculate(snapshot)[0]
+
+    assert snapshot.lines[0].workshop_code == "S1"
+    assert result.workshop_code == "S2"
+    assert result.upstream_output_rate == 200
+    assert result.downstream_input_rate == 320
+
+
+def test_line_workshop_does_not_make_route_workshop_machine_match():
+    snapshot = _snapshot()
+    snapshot.lines[0] = snapshot.lines[0].model_copy(
+        update={"workshop_code": "S2"}
+    )
+    snapshot.buffer_process_relations[0] = (
+        snapshot.buffer_process_relations[0].model_copy(
+            update={"workshop_code": "S2"}
+        )
+    )
+
+    result = _calculate(snapshot)[0]
+
+    assert result.upstream_output_rate == 0
+    assert result.downstream_input_rate == 0
+
+
+def test_runtime_machine_process_without_route_fails_without_line_fallback():
+    snapshot = _snapshot()
+    snapshot.process_routes = [
+        route for route in snapshot.process_routes
+        if route.process_code != "ZR"
+    ]
+
+    _assert_calculation_error(
+        snapshot,
+        r"Machine ZR-01 process ZR has no process route",
+    )
+
+
+def test_runtime_machine_process_with_cross_workshop_routes_fails_stably():
+    snapshot = _snapshot()
+    snapshot.process_routes.append(
+        _route("ZR", workshop_code="S2", loop_code="LOOP-02")
+    )
+
+    _assert_calculation_error(
+        snapshot,
+        (
+            r"Machine ZR-01 process ZR belongs to multiple "
+            r"workshops: S1, S2"
+        ),
+    )
 
 
 def test_different_concrete_process_machine_does_not_enter_rate():
@@ -677,29 +762,25 @@ def test_runtime_machine_master_reference_must_exist():
     _assert_calculation_error(snapshot, "ZR-01.*machine master")
 
 
-def test_runtime_machine_line_reference_must_exist():
+def test_net_rate_calculates_without_compatibility_line_data():
     snapshot = _snapshot()
-    snapshot.machine_lines = [
-        relation
-        for relation in snapshot.machine_lines
-        if relation.machine_code != "ZR-01"
-    ]
+    snapshot.lines = []
+    snapshot.machine_lines = []
 
-    _assert_calculation_error(snapshot, "ZR-01.*machine-line")
+    result = _calculate(snapshot)[0]
+
+    assert result.wafer_spec == "N"
+    assert result.upstream_output_rate == 200
+    assert result.downstream_input_rate == 320
+    assert result.net_consumption_rate == 120
 
 
-def test_machine_line_target_line_reference_must_exist():
+def test_net_rate_ignores_invalid_compatibility_line_relations():
     snapshot = _snapshot()
     snapshot.machine_lines[0] = AlgorithmMachineLineRelation(
         machine_code="ZR-01",
         line_code="UNKNOWN",
     )
-
-    _assert_calculation_error(snapshot, "UNKNOWN.*line")
-
-
-def test_multiple_machine_line_relations_for_same_machine_fail():
-    snapshot = _snapshot()
     snapshot.machine_lines.append(
         AlgorithmMachineLineRelation(
             machine_code="ZR-01",
@@ -707,7 +788,9 @@ def test_multiple_machine_line_relations_for_same_machine_fail():
         )
     )
 
-    _assert_calculation_error(snapshot, "ZR-01.*multiple machine-line")
+    result = _calculate(snapshot)[0]
+
+    assert result.net_consumption_rate == 120
 
 
 def test_multiple_process_relations_for_same_buffer_fail():

@@ -53,6 +53,30 @@ def _write_service_response(path: Path, payload: dict) -> None:
     )
 
 
+def _with_empty_line_compatibility(payload: dict) -> dict:
+    payload["lines"] = []
+    payload["machine_lines"] = []
+    return payload
+
+
+def _without_line_compatibility(payload: dict) -> dict:
+    payload.pop("lines", None)
+    payload.pop("machine_lines", None)
+    return payload
+
+
+def _standard_request_payload() -> dict:
+    return _without_line_compatibility(build_no_warning_payload())
+
+
+def _sample_request_payload() -> dict:
+    return _with_empty_line_compatibility(build_no_warning_payload())
+
+
+def _stockout_request_payload() -> dict:
+    return _with_empty_line_compatibility(build_stockout_auto_payload())
+
+
 def _backend_ingestion_payload() -> dict:
     payload = build_base_request_payload()
     payload.pop("active_cutline_events")
@@ -68,15 +92,20 @@ def _backend_ingestion_payload() -> dict:
         runtime.pop("out_time")
     for order in payload["orders"]:
         order.pop("order_name")
-    return payload
+    return _without_line_compatibility(payload)
 
 
 def generate() -> list[Path]:
     generated: list[Path] = []
     official_examples = {
-        EXAMPLES_DIR / "backend_request_sample.json": build_no_warning_payload,
+        EXAMPLES_DIR / "backend_request_standard.json": (
+            _standard_request_payload
+        ),
+        EXAMPLES_DIR / "backend_request_sample.json": _sample_request_payload,
         EXAMPLES_DIR
-        / "backend_request_stockout_plan_sample.json": build_stockout_auto_payload,
+        / "backend_request_stockout_plan_sample.json": (
+            _stockout_request_payload
+        ),
         EXAMPLES_DIR
         / "backend_ingestion_request_sample.json": _backend_ingestion_payload,
     }
@@ -85,13 +114,14 @@ def generate() -> list[Path]:
         generated.append(path)
 
     response_sample_path = EXAMPLES_DIR / "cutline_algorithm_response_sample.json"
-    _write_service_response(response_sample_path, build_no_warning_payload())
+    _write_service_response(response_sample_path, _sample_request_payload())
     generated.append(response_sample_path)
 
     debug_outputs = {
-        DEBUG_OUTPUTS_DIR / "cutline_response_result.json": build_no_warning_payload,
         DEBUG_OUTPUTS_DIR
-        / "stockout_plan_sample_response.json": build_stockout_auto_payload,
+        / "cutline_response_result.json": _sample_request_payload,
+        DEBUG_OUTPUTS_DIR
+        / "stockout_plan_sample_response.json": _stockout_request_payload,
     }
     for path, builder in debug_outputs.items():
         _write_service_response(path, builder())
@@ -125,12 +155,18 @@ def generate() -> list[Path]:
         / "v3_mixing_failure_response.json": build_mixing_failure_payload,
     }
     for path, builder in response_examples.items():
-        _write_service_response(path, builder())
+        _write_service_response(
+            path,
+            _with_empty_line_compatibility(builder()),
+        )
         generated.append(path)
 
     for scenario_name, builder in sorted(V3_SCENARIO_BUILDERS.items()):
         path = SCENARIOS_DIR / f"{scenario_name}.json"
-        _write_json(path, builder())
+        _write_json(
+            path,
+            _with_empty_line_compatibility(builder()),
+        )
         generated.append(path)
     return generated
 

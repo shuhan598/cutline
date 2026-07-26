@@ -67,7 +67,8 @@ def test_request_example_is_current_and_converts_to_algorithm_snapshot():
 
     assert isinstance(snapshot, AlgorithmSnapshot)
     assert len(snapshot.workshops) == 1
-    assert len(snapshot.lines) == 4
+    assert snapshot.lines == []
+    assert snapshot.machine_lines == []
     assert len(snapshot.machine_runtimes) == 24
     assert len(snapshot.buffer_masters) == 10
     assert [item.process_code for item in snapshot.process_routes] == list(
@@ -75,7 +76,23 @@ def test_request_example_is_current_and_converts_to_algorithm_snapshot():
     )
     assert "config" not in payload
     assert "active_cutline_events" in payload
+    assert payload["lines"] == []
+    assert payload["machine_lines"] == []
     assert payload["snapshot_meta"]["workshop_id"] == "S2"
+
+
+def test_standard_request_example_omits_optional_line_collections():
+    payload = _load_json("backend_request_standard.json")
+
+    request = _load_cutline_request(payload)
+    snapshot = SnapshotAdapter().to_algorithm_snapshot(request)
+
+    assert "lines" not in payload
+    assert "machine_lines" not in payload
+    assert request.lines == []
+    assert request.machine_lines == []
+    assert snapshot.lines == []
+    assert snapshot.machine_lines == []
 
 
 def test_stockout_plan_example_produces_complete_cutline_response():
@@ -203,8 +220,11 @@ def test_return_tracking_example_serializes_backend_timer_field():
 @pytest.mark.parametrize("scenario_name", sorted(V3_SCENARIO_BUILDERS))
 def test_generated_v3_scenario_matches_the_shared_factory(scenario_name):
     payload = _load_json(f"scenarios/{scenario_name}.json")
+    expected = V3_SCENARIO_BUILDERS[scenario_name]()
+    expected["lines"] = []
+    expected["machine_lines"] = []
 
-    assert payload == V3_SCENARIO_BUILDERS[scenario_name]()
+    assert payload == expected
     request = _load_cutline_request(payload)
     SnapshotAdapter().to_algorithm_snapshot(request)
 
@@ -233,6 +253,7 @@ def test_run_script_accepts_a_v3_scenario_path():
 @pytest.mark.parametrize(
     "name",
     [
+        "backend_request_standard.json",
         "backend_request_sample.json",
         "backend_request_stockout_plan_sample.json",
     ],
@@ -266,10 +287,8 @@ def test_backend_ingestion_example_uses_v3_values_without_merging_schemas():
     )
     assert all(item["machine_code"].startswith("EA") for item in payload["machine_master"])
     assert all(item["buffer_code"].isdigit() for item in payload["buffer_master"])
-    assert all(
-        item["line_code"] == f"S2-{item['line_name']}"
-        for item in payload["lines"]
-    )
+    assert "lines" not in payload
+    assert "machine_lines" not in payload
 
 
 @pytest.mark.parametrize(
@@ -313,6 +332,26 @@ def test_readme_documents_v3_generation_and_scenario_execution():
     assert "S2-SW1A" in readme
     assert "generate_v3_scenarios.py" in readme
     assert "examples/scenarios/v3_stockout_auto.json" in readme
+
+
+def test_documents_define_optional_lines_and_authoritative_machine_sources():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    interface = (
+        ROOT / "docs" / "backend-request-interface.md"
+    ).read_text(encoding="utf-8")
+    source_mapping = (
+        ROOT / "docs" / "backend-field-source-mapping.md"
+    ).read_text(encoding="utf-8")
+    field_mapping = (
+        ROOT / "docs" / "2026-07-14-algo-request-document-field-mapping.md"
+    ).read_text(encoding="utf-8")
+
+    for document in (readme, interface, source_mapping, field_mapping):
+        assert "`lines`" in document
+        assert "`machine_lines`" in document
+        assert "可选兼容" in document
+        assert "process_routes.workshop_code" in document
+        assert "AGV" in document
 
 
 def test_backend_response_document_uses_v3_codes_in_public_examples():
