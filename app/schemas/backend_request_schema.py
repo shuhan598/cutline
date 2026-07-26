@@ -130,6 +130,7 @@ class BackendAgvRelation(_BackendRequestModel):
     equipmentname: str
     lastlinecode: str
     lastlinename: str
+    waferspec: str
     createtime: datetime
 
 

@@ -16,6 +16,7 @@ RAW_AGV_FIELDS = {
     "equipmentname",
     "lastlinecode",
     "lastlinename",
+    "waferspec",
     "createtime",
 }
 STANDARD_AGV_FIELDS = {
@@ -23,6 +24,7 @@ STANDARD_AGV_FIELDS = {
     "machine_name",
     "order_code",
     "order_name",
+    "wafer_spec",
     "binding_time",
 }
 
@@ -83,6 +85,7 @@ def test_backend_agv_contract_exposes_only_raw_customer_fields():
             "equipmentname": "EA003制绒机",
             "lastlinecode": "ORD-S2-001",
             "lastlinename": "至上",
+            "waferspec": "N",
             "createtime": "2026-07-23 10:23:39",
         }
     )
@@ -101,6 +104,7 @@ def test_algorithm_agv_contracts_expose_only_standard_fields(model):
             "machine_name": "EA003制绒机",
             "order_code": "ORD-S2-001",
             "order_name": "至上",
+            "wafer_spec": "N",
             "binding_time": "2026-07-23T10:23:39+08:00",
         }
     )
@@ -128,6 +132,7 @@ def test_algorithm_agv_contracts_reject_legacy_fields(model, legacy_field):
         "machine_name": "EA003制绒机",
         "order_code": "ORD-S2-001",
         "order_name": "至上",
+        "wafer_spec": "N",
         "binding_time": "2026-07-23T10:23:39+08:00",
         legacy_field: "obsolete",
     }

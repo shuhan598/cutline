@@ -8,6 +8,7 @@ from app.api.cutline_api import get_cutline_service
 from app.main import create_app
 from app.schemas.request_schema import CutlineAlgorithmRequest
 from app.schemas.response_schema import CutlineAlgorithmResponse
+from tests.fixtures.v3_full_route_factory import build_stockout_auto_payload
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -150,6 +151,7 @@ def cutline_payload() -> dict:
                 "equipmentname": "机台1",
                 "lastlinecode": "O1",
                 "lastlinename": "source",
+                "waferspec": "N",
                 "createtime": "2026-07-13 16:20:00",
                 "processcode": "DO-NOT-USE",
                 "processname": "错误工序",
@@ -245,6 +247,7 @@ def test_cutline_evaluate_delegates_to_cutline_service():
     assert calls[0].machine_realtime[0].machine_code == "M1"
     assert calls[0].agv_relations[0].machine_code == "M1"
     assert calls[0].agv_relations[0].order_code == "O1"
+    assert calls[0].agv_relations[0].wafer_spec == "N"
     assert calls[0].machine_master[0].process_code == "P1"
 
 def test_stub_algo_run_delegates_synchronously_to_cutline_service():
@@ -269,6 +272,34 @@ def test_stub_algo_run_delegates_synchronously_to_cutline_service():
     assert isinstance(calls[0], CutlineAlgorithmRequest)
     assert calls[0].agv_relations[0].machine_name == "机台1"
     assert calls[0].agv_relations[0].order_name == "source"
+    assert calls[0].agv_relations[0].wafer_spec == "N"
+
+
+def test_cutline_evaluate_uses_raw_agv_spec_through_the_real_service_chain():
+    payload = build_stockout_auto_payload()
+    candidate_line = next(
+        item
+        for item in payload["machine_lines"]
+        if item["machine_code"] == "EA004"
+    )
+    candidate_line["wafer_spec"] = "R"
+    next(
+        item
+        for item in payload["lines"]
+        if item["line_code"] == candidate_line["line_code"]
+    )["wafer_spec"] = "R"
+    candidate_binding = next(
+        item
+        for item in payload["agv_relations"]
+        if item["equipmentid"] == "EA004"
+    )
+
+    assert candidate_binding["waferspec"] == "N"
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 200
+    decision = response.json()["cutline_decisions"][0]
+    assert decision["plan"]["selected_machines"][0]["machine_code"] == "EA004"
 
 
 def test_calculation_route_returns_422_for_raw_standard_agv_conflict():

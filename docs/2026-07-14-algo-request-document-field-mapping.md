@@ -232,6 +232,7 @@
 | `equipmentname` | `machine_name` |
 | `lastlinecode` | `order_code` |
 | `lastlinename` | `order_name` |
+| `waferspec` | `wafer_spec` |
 | `createtime` | `binding_time` |
 
 补充说明：
@@ -239,12 +240,20 @@
 - 字段映射只在 `BackendRequestLoader` 中执行。
 - AGV 原始记录中的 `processcode`、`processname` 及其他现场字段不进入算法契约。
 - 机台工序始终来自 `machine_master.process_code/process_name`。
-- `binding_time` 不晚于快照时间的最新有效记录提供机台当前订单。
+- `waferspec` 是必填且不可为 `null` 的字符串，并映射为 `wafer_spec`。当前业务数据
+  和示例使用 `N`、`R`、`P`，本次变更不新增枚举校验。
+- `binding_time` 不晚于快照时间的最新有效记录提供机台当前订单编码、订单名称和
+  硅片规格。
+- 当前订单硅片规格以 AGV 绑定为唯一权威；缺失时明确报错，不从产线字段回退。
+- `AlgorithmMachineRuntime` 不保存 `current_wafer_spec`；产线规格字段仅保留兼容性，
+  机台 -> 产线 -> 车间的归属链不变。
 
 ## 额外说明
 
 - 当前外发字段命名全部统一为英文 `snake_case`。
-- 缺失字段允许 `null`，缺失数据集允许空数组，但必须在 `snapshot_meta.degraded_flags` 中留下可诊断标记。
+- 只有契约中明确声明可空的字段才允许 `null`；必填 AGV 业务字段（包括
+  `waferspec`）不得缺失或为 `null`。允许为空的数据集可以传空数组，但必须在
+  `snapshot_meta.degraded_flags` 中留下可诊断标记。
 - 查看某次真实外发请求建议直接调用：
 
 ```bash

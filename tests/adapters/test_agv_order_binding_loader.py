@@ -17,6 +17,7 @@ def raw_agv_record() -> dict:
         "equipmentname": "EA003制绒机",
         "lastlinecode": "ORD-S2-001",
         "lastlinename": "至上",
+        "waferspec": "N",
         "createtime": "2026-07-23 10:23:39",
     }
 
@@ -27,6 +28,7 @@ def standard_agv_record() -> dict:
         "machine_name": "EA003制绒机",
         "order_code": "ORD-S2-001",
         "order_name": "至上",
+        "wafer_spec": "N",
         "binding_time": "2026-07-23 10:23:39",
     }
 
@@ -68,6 +70,7 @@ def test_raw_agv_onsite_fields_are_filtered_including_process_fields():
         "machine_name",
         "order_code",
         "order_name",
+        "wafer_spec",
         "binding_time",
     }
 
@@ -105,6 +108,7 @@ def test_standard_agv_record_is_preserved_for_strict_schema_validation():
         ("equipmentname", "machine_name"),
         ("lastlinecode", "order_code"),
         ("lastlinename", "order_name"),
+        ("waferspec", "wafer_spec"),
         ("createtime", "binding_time"),
     ],
 )
@@ -152,6 +156,7 @@ def test_equivalent_raw_and_standard_binding_times_do_not_conflict():
         ("equipmentname", "machine_name", "另一台机"),
         ("lastlinecode", "order_code", "ORD-S2-002"),
         ("lastlinename", "order_name", "另一订单"),
+        ("waferspec", "wafer_spec", "R"),
         ("createtime", "binding_time", "2026-07-23 10:24:00"),
     ],
 )

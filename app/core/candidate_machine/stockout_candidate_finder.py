@@ -52,9 +52,8 @@ class StockoutCandidateFinder:
         for runtime in context.runtime_by_machine_code.values():
             if runtime.status != "running":
                 continue
-            if runtime.current_order_code is None:
-                continue
-            if runtime.current_order_code == warning.order_code:
+            candidate_agv = context.candidate_agv(runtime.machine_code)
+            if candidate_agv.order_code == warning.order_code:
                 continue
 
             _, machine, line = context.machine_context(runtime.machine_code)
@@ -63,13 +62,13 @@ class StockoutCandidateFinder:
             if machine.process_code != warning.upstream_process_code:
                 continue
 
-            current_order, current_product = context.order_product(
-                runtime.current_order_code
+            _, current_product = context.order_product(
+                candidate_agv.order_code
             )
             if current_product.wafer_size != warning.wafer_size:
                 continue
             if not is_wafer_spec_compatible(
-                current_wafer_spec=line.wafer_spec,
+                current_wafer_spec=candidate_agv.wafer_spec,
                 target_wafer_spec=warning.wafer_spec,
                 workshop_code=line.workshop_code,
                 process_name=machine.process_name,
@@ -96,10 +95,11 @@ class StockoutCandidateFinder:
                     workshop_code=line.workshop_code,
                     process_code=machine.process_code,
                     process_name=machine.process_name,
-                    current_order_code=current_order.order_code,
+                    current_order_code=candidate_agv.order_code,
+                    current_order_name=candidate_agv.order_name,
                     current_product_code=current_product.product_code,
                     current_wafer_size=current_product.wafer_size,
-                    current_wafer_spec=line.wafer_spec,
+                    current_wafer_spec=candidate_agv.wafer_spec,
                     current_source_grade=current_product.source_grade,
                     target_order_code=target_order.order_code,
                     target_product_code=target_product.product_code,

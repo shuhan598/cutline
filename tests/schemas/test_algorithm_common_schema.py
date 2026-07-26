@@ -102,6 +102,7 @@ ALGORITHM_MODEL_FIELDS = {
         "machine_name",
         "order_code",
         "order_name",
+        "wafer_spec",
         "binding_time",
     ),
 }
@@ -250,7 +251,8 @@ def test_algorithm_line_requires_wafer_spec():
 
 def test_algorithm_line_wafer_spec_description_matches_business_rule():
     assert schema.AlgorithmLine.model_fields["wafer_spec"].description == (
-        "产线绑定的硅片规格，用于判断该产线机台对应的 N、R、P 规格"
+        "为数据与接口兼容保留的产线绑定硅片规格，"
+        "不作为机台当前实际生产规格的数据来源"
     )
 
 
@@ -274,6 +276,10 @@ def test_machine_runtime_can_be_created_with_nullable_values():
     assert runtime.current_order_code is None
     assert runtime.tangent_time is None
     assert runtime.out_time is None
+
+
+def test_machine_runtime_does_not_expose_current_wafer_spec():
+    assert "current_wafer_spec" not in schema.AlgorithmMachineRuntime.model_fields
 
 
 @pytest.mark.parametrize(

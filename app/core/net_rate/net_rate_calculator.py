@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Iterable, TypeVar
 
 from app.schemas.common_schema import (
+    AlgorithmAgvRelation,
     AlgorithmBufferOrderInventory,
     AlgorithmBufferProcessRelation,
     AlgorithmLine,
@@ -34,6 +35,7 @@ class _AlgorithmNetRateContext:
     order_by_code: dict[str, AlgorithmOrder]
     product_by_code: dict[str, AlgorithmProduct]
     buffer_relation_by_code: dict[str, AlgorithmBufferProcessRelation]
+    agv_by_machine_code: dict[str, AlgorithmAgvRelation]
 
 
 class NetRateCalculator:
@@ -180,6 +182,11 @@ class NetRateCalculator:
             "product_code",
             "product",
         )
+        agv_by_machine_code = self._unique_index(
+            snapshot.agv_relations,
+            "machine_code",
+            "AGV relation",
+        )
 
         machine_line_by_code: dict[str, AlgorithmMachineLineRelation] = {}
         for relation in snapshot.machine_lines:
@@ -217,15 +224,6 @@ class NetRateCalculator:
                     f"{runtime.machine_code} machine-line relation does not exist "
                     "for runtime"
                 )
-            if (
-                runtime.current_order_code is not None
-                and runtime.current_order_code not in order_by_code
-            ):
-                raise NetRateCalculationError(
-                    f"{runtime.current_order_code} order does not exist for runtime "
-                    f"{runtime.machine_code}"
-                )
-
         return _AlgorithmNetRateContext(
             machine_by_code=machine_by_code,
             machine_line_by_code=machine_line_by_code,
@@ -233,32 +231,29 @@ class NetRateCalculator:
             order_by_code=order_by_code,
             product_by_code=product_by_code,
             buffer_relation_by_code=buffer_relation_by_code,
+            agv_by_machine_code=agv_by_machine_code,
         )
 
     def _resolve_order_wafer_spec(
         self,
         order_code: str,
-        machine_runtimes: Iterable[AlgorithmMachineRuntime],
-        machine_line_by_code: dict[str, AlgorithmMachineLineRelation],
-        line_by_code: dict[str, AlgorithmLine],
+        agv_relations: Iterable[AlgorithmAgvRelation],
     ) -> str:
-        wafer_specs = {
-            line_by_code[machine_line_by_code[runtime.machine_code].line_code].wafer_spec
-            for runtime in machine_runtimes
-            if self._is_running(runtime) and runtime.current_order_code == order_code
-        }
-        if not wafer_specs:
+        matching_relations = sorted(
+            (
+                relation
+                for relation in agv_relations
+                if relation.order_code == order_code
+            ),
+            key=lambda relation: relation.machine_code,
+        )
+        if not matching_relations:
             raise NetRateCalculationError(
-                f"Order {order_code} wafer_spec cannot be determined: "
-                "no running machine is currently producing this order; "
-                "expected inference chain is machine -> line -> wafer_spec"
+                f"Order {order_code} wafer_spec cannot be determined from "
+                "snapshot.agv_relations: no effective AGV relation matches "
+                f"order {order_code}"
             )
-        if len(wafer_specs) > 1:
-            values = ", ".join(sorted(wafer_specs))
-            raise NetRateCalculationError(
-                f"Order {order_code} has multiple wafer_spec values: {values}"
-            )
-        return next(iter(wafer_specs))
+        return matching_relations[0].wafer_spec
 
     def _calculate_inventory_net_rate(
         self,
@@ -294,9 +289,7 @@ class NetRateCalculator:
 
         wafer_spec = self._resolve_order_wafer_spec(
             inventory.order_code,
-            snapshot.machine_runtimes,
-            context.machine_line_by_code,
-            context.line_by_code,
+            snapshot.agv_relations,
         )
         upstream_output_rate = self._calculate_upstream_output_rate(
             snapshot,
@@ -380,13 +373,18 @@ class NetRateCalculator:
         for runtime in snapshot.machine_runtimes:
             if not self._is_running(runtime):
                 continue
-            if runtime.current_order_code != order_code:
+            agv_relation = context.agv_by_machine_code.get(
+                runtime.machine_code
+            )
+            if agv_relation is None:
+                continue
+            if agv_relation.order_code != order_code:
+                continue
+            if agv_relation.wafer_spec != wafer_spec:
                 continue
             machine = context.machine_by_code[runtime.machine_code]
             machine_line = context.machine_line_by_code[runtime.machine_code]
             line = context.line_by_code[machine_line.line_code]
-            if line.wafer_spec != wafer_spec:
-                continue
             if line.workshop_code != workshop_code:
                 continue
             if machine.process_code != process_code:

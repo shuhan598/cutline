@@ -1938,6 +1938,7 @@
       "equipmentname": "EA001发料机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1945,6 +1946,7 @@
       "equipmentname": "EA003制绒机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1952,6 +1954,7 @@
       "equipmentname": "EA005碱抛机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1959,6 +1962,7 @@
       "equipmentname": "EA007背膜机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1966,6 +1970,7 @@
       "equipmentname": "EA009硼扩机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1973,6 +1978,7 @@
       "equipmentname": "EA011POLY机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1980,6 +1986,7 @@
       "equipmentname": "EA013RCA机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1987,6 +1994,7 @@
       "equipmentname": "EA015退火机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -1994,6 +2002,7 @@
       "equipmentname": "EA017氧化机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -2001,6 +2010,7 @@
       "equipmentname": "EA019正膜机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -2008,6 +2018,7 @@
       "equipmentname": "EA021丝网机",
       "lastlinecode": "ORD-S2-001",
       "lastlinename": "至上",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -2015,6 +2026,7 @@
       "equipmentname": "EA023制绒机",
       "lastlinecode": "ORD-S2-003",
       "lastlinename": "华晟",
+      "waferspec": "R",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -2022,6 +2034,7 @@
       "equipmentname": "EA024制绒机",
       "lastlinecode": "ORD-S2-004",
       "lastlinename": "晶澳",
+      "waferspec": "P",
       "createtime": "2026-07-17 07:55:00"
     },
     {
@@ -2029,6 +2042,7 @@
       "equipmentname": "EA004制绒机",
       "lastlinecode": "ORD-S2-002",
       "lastlinename": "至上支援单",
+      "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     }
   ],

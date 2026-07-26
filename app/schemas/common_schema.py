@@ -142,7 +142,13 @@ class AlgorithmLine(AlgorithmModel):
 
     line_code: str = Field(..., description="产线编码")
     line_name: str = Field(..., description="产线名称")
-    wafer_spec: str = Field(...,description="产线绑定的硅片规格，用于判断该产线机台对应的 N、R、P 规格",)
+    wafer_spec: str = Field(
+        ...,
+        description=(
+            "为数据与接口兼容保留的产线绑定硅片规格，"
+            "不作为机台当前实际生产规格的数据来源"
+        ),
+    )
     workshop_code: str = Field(..., description="产线所属车间编码")
     workshop_name: str | None = Field(...,description="产线所属车间名称，数据缺失时允许为空",)
 
@@ -301,4 +307,5 @@ class AlgorithmAgvRelation(AlgorithmModel):
     machine_name: str = Field(..., description="机台名称")
     order_code: str = Field(..., description="当前订单编码")
     order_name: str = Field(..., description="当前订单名称")
+    wafer_spec: str = Field(..., description="当前订单硅片规格")
     binding_time: datetime = Field(..., description="AGV 定线绑定记录时间")

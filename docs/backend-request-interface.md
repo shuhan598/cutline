@@ -14,8 +14,8 @@
 app.schemas.request_schema.CutlineAlgorithmRequest
 ```
 
-HTTP 请求先以 JSON 对象进入 `BackendRequestLoader`，其中 AGV 原始五字段会被统一
-映射为算法标准五字段，再校验为 `CutlineAlgorithmRequest`。因此正式计算接口可直接
+HTTP 请求先以 JSON 对象进入 `BackendRequestLoader`，其中 AGV 原始六字段会被统一
+映射为算法标准六字段，再校验为 `CutlineAlgorithmRequest`。因此正式计算接口可直接
 接收甲方原始 AGV 字段，不会在映射前按标准字段返回 422。
 
 HTTP 契约：
@@ -195,8 +195,9 @@ CutlineAlgorithmResponse
 规则：
 
 - 每台机台必须有且只有一个有效产线关系。
-- 机台所属产线用于推导订单的 `wafer_spec`。
-- 订单库存的 `wafer_spec` 推导链路是：当前运行机台 -> 产线 -> `wafer_spec`。
+- `lines.wafer_spec` 和 `machine_lines.wafer_spec` 作为兼容字段继续保留。
+- 机台 -> 产线 -> 车间的归属链保持不变，但不再从产线推导当前订单的
+  `wafer_spec`；当前订单规格只来自选中的 AGV 绑定。
 
 ## 8. 订单 `orders`
 
@@ -324,6 +325,7 @@ CutlineAlgorithmResponse
   "equipmentname": "EA003制绒机",
   "lastlinecode": "ORD-S2-001",
   "lastlinename": "至上",
+  "waferspec": "N",
   "createtime": "2026-07-23 10:23:39"
 }
 ```
@@ -336,6 +338,7 @@ Loader 内部标准化结果：
   "machine_name": "EA003制绒机",
   "order_code": "ORD-S2-001",
   "order_name": "至上",
+  "wafer_spec": "N",
   "binding_time": "2026-07-23 10:23:39"
 }
 ```
@@ -348,17 +351,25 @@ Loader 内部标准化结果：
 | `equipmentname` | `machine_name` |
 | `lastlinecode` | `order_code` |
 | `lastlinename` | `order_name` |
+| `waferspec` | `wafer_spec` |
 | `createtime` | `binding_time` |
 
 关键规则：
 
 - 原始 AGV 的 `equipmentcode`、`processcode`、`processname` 及其他现场字段会被过滤。
 - 机台工序始终来自 `machine_master`，不使用也不校验 AGV 工序。
+- `waferspec` 是必填且不可为 `null` 的字符串；Loader 将其映射为标准
+  `wafer_spec`。当前业务数据和示例使用 `N`、`R`、`P`，本次变更不新增枚举校验。
 - 无时区的 `binding_time` 按 UTC+08:00 解释。
 - 每台机台选择 `binding_time <= snapshot_time` 的最新记录，不依赖数组顺序。
 - 最新时间完全重复的记录可去重；同一最新时间的 `order_code` 或 `order_name`
   冲突时拒绝计算。
 - 只校验最终选中的绑定：编码用于关联，名称只做精确一致性检查。
+- 选中的 AGV 绑定是机台当前 `order_code`、`order_name` 和 `wafer_spec` 的唯一权威；
+  `AlgorithmMachineRuntime` 只保存 `current_order_code`，没有
+  `current_wafer_spec`。
+- 订单库存或候选机台缺少可用 AGV `wafer_spec` 时明确报错，不回退到
+  `lines.wafer_spec` 或 `machine_lines.wafer_spec`。
 - 运行机台没有有效 AGV 绑定时拒绝计算；非运行机台允许没有绑定。
 - `BackendOrder` 没有新增 `order_name`：当前后端 ingestion 原始订单没有该字段，
   也没有可按订单编码唯一映射的等价字段。`/backend/validate` 校验订单编码，

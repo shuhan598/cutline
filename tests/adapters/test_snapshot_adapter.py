@@ -197,6 +197,7 @@ def _payload() -> dict:
                 "machine_name": "机台一",
                 "order_code": "ORD-001",
                 "order_name": "至上",
+                "wafer_spec": "N",
                 "binding_time": "2026-07-15 16:00:00",
             }
         ],
@@ -678,6 +679,7 @@ def test_selected_agv_relation_is_converted_to_internal_binding():
         "machine_name": "机台一",
         "order_code": "ORD-001",
         "order_name": "至上",
+        "wafer_spec": "N",
         "binding_time": datetime(
             2026,
             7,
@@ -697,6 +699,7 @@ def test_latest_effective_agv_record_wins_regardless_of_input_order():
             "machine_name": "机台一",
             "order_code": "ORD-002",
             "order_name": "华晟",
+            "wafer_spec": "R",
             "binding_time": "2026-07-15T16:20:00+08:00",
         },
         {
@@ -704,6 +707,7 @@ def test_latest_effective_agv_record_wins_regardless_of_input_order():
             "machine_name": "机台一",
             "order_code": "ORD-001",
             "order_name": "至上",
+            "wafer_spec": "N",
             "binding_time": "2026-07-15T16:10:00+08:00",
         },
     ]
@@ -712,6 +716,7 @@ def test_latest_effective_agv_record_wins_regardless_of_input_order():
 
     assert snapshot.machine_runtimes[0].current_order_code == "ORD-002"
     assert snapshot.agv_relations[0].order_code == "ORD-002"
+    assert snapshot.agv_relations[0].wafer_spec == "R"
 
 
 def test_future_agv_record_does_not_participate():
@@ -723,6 +728,7 @@ def test_future_agv_record_does_not_participate():
             "machine_name": "机台一",
             "order_code": "ORD-002",
             "order_name": "华晟",
+            "wafer_spec": "R",
             "binding_time": "2026-07-15T16:40:00+08:00",
         },
     )
@@ -743,6 +749,28 @@ def test_exact_latest_agv_duplicates_are_deduplicated():
 
     assert len(snapshot.agv_relations) == 1
     assert snapshot.machine_runtimes[0].current_order_code == "ORD-001"
+
+
+@pytest.mark.parametrize(
+    ("wafer_specs", "expected"),
+    [
+        (("R", "N"), "N"),
+        (("N", "R"), "N"),
+    ],
+)
+def test_latest_same_time_wafer_specs_select_lexicographically(
+    wafer_specs,
+    expected,
+):
+    payload = _payload()
+    payload["agv_relations"][0]["wafer_spec"] = wafer_specs[0]
+    tied = deepcopy(payload["agv_relations"][0])
+    tied["wafer_spec"] = wafer_specs[1]
+    payload["agv_relations"].append(tied)
+
+    relation = _convert(payload).agv_relations[0]
+
+    assert relation.wafer_spec == expected
 
 
 @pytest.mark.parametrize(
@@ -778,6 +806,7 @@ def test_future_unknown_agv_references_are_not_validated():
             "machine_name": "未知机台",
             "order_code": "UNKNOWN-ORDER",
             "order_name": "未知订单",
+            "wafer_spec": "N",
             "binding_time": "2026-07-15T16:40:00+08:00",
         }
     )

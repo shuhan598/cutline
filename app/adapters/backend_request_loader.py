@@ -18,6 +18,7 @@ _RAW_AGV_FIELD_MAP = {
     "equipmentname": "machine_name",
     "lastlinecode": "order_code",
     "lastlinename": "order_name",
+    "waferspec": "wafer_spec",
     "createtime": "binding_time",
 }
 _DATETIME_ADAPTER = TypeAdapter(datetime)

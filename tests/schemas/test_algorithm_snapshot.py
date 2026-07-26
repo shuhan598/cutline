@@ -31,7 +31,10 @@ CORE_LIST_FIELDS = SNAPSHOT_FIELDS[1:14]
 SNAPSHOT_DESCRIPTIONS = {
     "current_time": "本次算法计算所使用的数据快照时间",
     "workshops": "算法使用的车间基础数据列表",
-    "lines": "算法使用的产线基础数据列表，包含用于判断N、R、P规格的产线绑定硅片规格",
+    "lines": (
+        "算法使用的产线基础数据列表，保留产线绑定硅片规格兼容字段，"
+        "用于支持机台—产线—车间归属关系，不作为机台当前实际生产规格的数据来源"
+    ),
     "machine_lines": "机台与产线之间的绑定关系列表",
     "machine_runtimes": "快照时刻的机台实时运行状态列表",
     "machine_masters": "机台基础信息列表，包括机台所属工序",
@@ -253,6 +256,7 @@ def snapshot_payload():
                 "machine_name": "一号机",
                 "order_code": "ORD-01",
                 "order_name": "订单一",
+                "wafer_spec": "N",
                 "binding_time": "2026-07-15T08:55:00+08:00",
             }
         ],

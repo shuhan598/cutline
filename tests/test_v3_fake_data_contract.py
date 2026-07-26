@@ -10,6 +10,7 @@ from tests.fixtures.v3_full_route_factory import (
     PROCESS_CODES,
     TARGET_BUFFER_CODE,
     V3_SCENARIO_BUILDERS,
+    _set_agv_binding,
     build_base_request_payload,
 )
 
@@ -202,11 +203,13 @@ def test_all_scenario_references_resolve_to_master_data(scenario_payload):
             "equipmentname",
             "lastlinecode",
             "lastlinename",
+            "waferspec",
             "createtime",
         }
         and item["equipmentid"] in machines
         and item["lastlinecode"] in orders
         and item["lastlinename"] == order_names[item["lastlinecode"]]
+        and item["waferspec"] in {"N", "R", "P"}
         for item in payload["agv_relations"]
     )
 
@@ -238,3 +241,30 @@ def test_agv_process_fields_cannot_override_machine_master(scenario_payload):
         "processcode" not in relation and "processname" not in relation
         for relation in payload["agv_relations"]
     )
+
+
+def test_agv_binding_factory_allows_explicit_backend_field_overrides():
+    payload = build_base_request_payload()
+
+    _set_agv_binding(
+        payload,
+        machine_code="EA001",
+        order_code="ORD-S2-003",
+        order_name="显式订单名",
+        wafer_spec="R",
+        binding_time="2026-07-17 07:59:00",
+    )
+
+    relation = next(
+        item
+        for item in payload["agv_relations"]
+        if item["equipmentid"] == "EA001"
+    )
+    assert relation == {
+        "equipmentid": "EA001",
+        "equipmentname": "EA001发料机",
+        "lastlinecode": "ORD-S2-003",
+        "lastlinename": "显式订单名",
+        "waferspec": "R",
+        "createtime": "2026-07-17 07:59:00",
+    }

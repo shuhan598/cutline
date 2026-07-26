@@ -117,12 +117,13 @@ def _machine_runtime(code, input_quantity, output_quantity):
     }
 
 
-def _agv_relation(machine_code, order_code, order_name):
+def _agv_relation(machine_code, order_code, order_name, wafer_spec="N"):
     return {
         "machine_code": machine_code,
         "machine_name": machine_code,
         "order_code": order_code,
         "order_name": order_name,
+        "wafer_spec": wafer_spec,
         "binding_time": REAL_NOW,
     }
 

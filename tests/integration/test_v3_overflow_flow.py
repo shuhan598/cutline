@@ -115,6 +115,7 @@ def test_v3_overflow_selection_and_plan_support_distinct_target_buffer_context()
                 process_code="制绒",
                 process_name="制绒",
                 current_order_code="ORD-S2-002",
+                current_order_name="ORD-S2-002",
                 current_product_code="PROD-S2-N-SUPPORT",
                 current_wafer_size="182",
                 current_wafer_spec="N",

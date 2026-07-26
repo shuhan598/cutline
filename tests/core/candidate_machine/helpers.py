@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from app.schemas.common_schema import (
+    AlgorithmAgvRelation,
     AlgorithmBufferProcessRelation,
     AlgorithmLine,
     AlgorithmMachineLineRelation,
@@ -10,6 +11,23 @@ from app.schemas.common_schema import (
     AlgorithmProduct,
 )
 from app.schemas.request_schema import AlgorithmSnapshot
+
+
+def agv_relation(
+    machine_code: str = "M-01",
+    order_code: str = "ORD-CURRENT",
+    order_name: str = "Current Order",
+    wafer_spec: str = "N",
+    binding_time: datetime = datetime(2026, 7, 15, 8, 0),
+) -> AlgorithmAgvRelation:
+    return AlgorithmAgvRelation(
+        machine_code=machine_code,
+        machine_name=machine_code,
+        order_code=order_code,
+        order_name=order_name,
+        wafer_spec=wafer_spec,
+        binding_time=binding_time,
+    )
 
 
 def line(
@@ -132,6 +150,5 @@ def snapshot() -> AlgorithmSnapshot:
         buffer_masters=[],
         buffer_process_relations=[buffer_relation()],
         buffer_order_inventories=[],
-        agv_relations=[],
+        agv_relations=[agv_relation()],
     )
-

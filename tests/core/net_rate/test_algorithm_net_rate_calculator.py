@@ -4,6 +4,7 @@ import pytest
 
 import app.core.net_rate.net_rate_calculator as net_rate_module
 from app.schemas.common_schema import (
+    AlgorithmAgvRelation,
     AlgorithmBufferOrderInventory,
     AlgorithmBufferProcessRelation,
     AlgorithmLine,
@@ -88,6 +89,8 @@ def _add_machine(
     order_code: str = "ORD-001",
     status: str = "running",
     line_code: str = "LINE-N-S1",
+    agv_order_code: str | None = None,
+    agv_wafer_spec: str = "N",
     input_quantity: float = 0,
     output_quantity: float = 0,
     period_quantity: float = 999999,
@@ -116,12 +119,26 @@ def _add_machine(
             period_quantity,
         )
     )
+    effective_order_code = (
+        order_code if agv_order_code is None else agv_order_code
+    )
+    snapshot.agv_relations.append(
+        AlgorithmAgvRelation(
+            machine_code=machine_code,
+            machine_name=machine_code,
+            order_code=effective_order_code,
+            order_name=effective_order_code,
+            wafer_spec=agv_wafer_spec,
+            binding_time=snapshot.current_time,
+        )
+    )
 
 
 def _snapshot(
     *,
     upstream_output: float = 100,
     downstream_input: float = 160,
+    agv_wafer_spec: str = "N",
 ) -> AlgorithmSnapshot:
     snapshot = AlgorithmSnapshot(
         current_time=datetime(2026, 7, 15, 8, 30),
@@ -157,12 +174,14 @@ def _snapshot(
         snapshot,
         "ZR-01",
         "ZR",
+        agv_wafer_spec=agv_wafer_spec,
         output_quantity=upstream_output,
     )
     _add_machine(
         snapshot,
         "PK-01",
         "PK",
+        agv_wafer_spec=agv_wafer_spec,
         input_quantity=downstream_input,
     )
     return snapshot
@@ -196,6 +215,17 @@ def test_single_upstream_and_downstream_machines_are_calculated_per_inventory():
         "downstream_input_rate": 320.0,
         "net_consumption_rate": 120.0,
     }
+
+
+def test_wafer_spec_comes_from_agv_when_line_spec_differs():
+    snapshot = _snapshot(agv_wafer_spec="R")
+
+    result = _calculate(snapshot)[0]
+
+    assert snapshot.lines[0].wafer_spec == "N"
+    assert result.wafer_spec == "R"
+    assert result.upstream_output_rate == 200
+    assert result.downstream_input_rate == 320
 
 
 def test_wafer_size_comes_from_order_product_reference():
@@ -258,6 +288,42 @@ def test_different_order_machines_do_not_enter_current_order_rate():
     assert _calculate(snapshot)[0].upstream_output_rate == 200
 
 
+def test_runtime_rates_are_filtered_by_agv_order_and_wafer_spec():
+    snapshot = _snapshot(agv_wafer_spec="R")
+    snapshot.orders.append(_order("ORD-002"))
+    _add_machine(
+        snapshot,
+        "ZR-AGV-OTHER-ORDER",
+        "ZR",
+        agv_order_code="ORD-002",
+        agv_wafer_spec="R",
+        output_quantity=50000,
+    )
+    _add_machine(
+        snapshot,
+        "ZR-AGV-OTHER-SPEC",
+        "ZR",
+        agv_wafer_spec="N",
+        output_quantity=50000,
+    )
+
+    result = _calculate(snapshot)[0]
+
+    assert result.wafer_spec == "R"
+    assert result.upstream_output_rate == 200
+
+
+def test_runtime_current_order_code_does_not_override_agv_order():
+    snapshot = _snapshot()
+    for runtime in snapshot.machine_runtimes:
+        runtime.current_order_code = "STALE-RUNTIME-ORDER"
+
+    result = _calculate(snapshot)[0]
+
+    assert result.upstream_output_rate == 200
+    assert result.downstream_input_rate == 320
+
+
 def test_different_wafer_spec_for_another_order_does_not_enter_rate():
     snapshot = _snapshot()
     snapshot.orders.append(_order("ORD-002"))
@@ -268,6 +334,7 @@ def test_different_wafer_spec_for_another_order_does_not_enter_rate():
         "ZR",
         order_code="ORD-002",
         line_code="LINE-R-S1",
+        agv_wafer_spec="R",
         output_quantity=50000,
     )
 
@@ -516,33 +583,54 @@ def test_different_orders_with_same_wafer_spec_are_not_aggregated():
     assert results["ORD-002"].net_consumption_rate == 1000
 
 
-def test_same_order_with_multiple_wafer_specs_fails():
+def test_same_order_multiple_agv_specs_selects_smallest_machine_code():
     snapshot = _snapshot()
-    snapshot.lines.append(_line("LINE-R-S1", "R", "S1"))
     _add_machine(
         snapshot,
-        "ZR-R",
-        "ZR",
-        line_code="LINE-R-S1",
-        output_quantity=1,
+        "AA-R",
+        "OX",
+        agv_wafer_spec="R",
     )
 
-    _assert_calculation_error(snapshot, "ORD-001.*multiple wafer_spec")
+    result = _calculate(snapshot)[0]
+
+    assert result.wafer_spec == "R"
+    assert result.upstream_output_rate == 0
+    assert result.downstream_input_rate == 0
 
 
-def test_order_wafer_spec_cannot_be_inferred_without_current_runtime():
+def test_order_wafer_spec_is_resolved_from_agv_without_current_runtime():
     snapshot = _snapshot()
     snapshot.machine_runtimes = []
 
-    _assert_calculation_error(snapshot, "ORD-001.*wafer_spec.*no running machine")
+    result = _calculate(snapshot)[0]
+
+    assert result.wafer_spec == "N"
+    assert result.upstream_output_rate == 0
+    assert result.downstream_input_rate == 0
 
 
-def test_order_wafer_spec_cannot_be_inferred_from_stopped_runtime():
+def test_stopped_runtime_does_not_contribute_to_agv_resolved_order():
     snapshot = _snapshot()
     for runtime in snapshot.machine_runtimes:
         runtime.status = "stopped"
 
-    _assert_calculation_error(snapshot, "ORD-001.*wafer_spec.*no running machine")
+    result = _calculate(snapshot)[0]
+
+    assert result.wafer_spec == "N"
+    assert result.upstream_output_rate == 0
+    assert result.downstream_input_rate == 0
+
+
+def test_inventory_order_without_effective_agv_relation_fails_without_line_fallback():
+    snapshot = _snapshot()
+    snapshot.agv_relations = []
+
+    _assert_calculation_error(
+        snapshot,
+        r"ORD-001.*wafer_spec.*snapshot\.agv_relations.*effective AGV",
+    )
+
 
 @pytest.mark.parametrize(
     ("upstream_output", "downstream_input", "expected"),

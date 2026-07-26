@@ -172,6 +172,7 @@ class AgvRelationRequest(RequestModel):
     machine_name: str = Field(..., description="AGV 绑定的机台名称")
     order_code: str = Field(..., description="AGV 绑定的当前订单编码")
     order_name: str = Field(..., description="AGV 绑定的当前订单名称")
+    wafer_spec: str = Field(..., description="AGV 绑定的当前订单硅片规格")
     binding_time: datetime = Field(..., description="AGV 定线绑定记录时间")
 
 
@@ -221,7 +222,13 @@ class AlgorithmSnapshot(BaseModel):
     current_time: datetime = Field(...,description="本次算法计算所使用的数据快照时间",)
 
     workshops: list[AlgorithmWorkshop] = Field(...,description="算法使用的车间基础数据列表",)
-    lines: list[AlgorithmLine] = Field(...,description="算法使用的产线基础数据列表，包含用于判断N、R、P规格的产线绑定硅片规格",)
+    lines: list[AlgorithmLine] = Field(
+        ...,
+        description=(
+            "算法使用的产线基础数据列表，保留产线绑定硅片规格兼容字段，"
+            "用于支持机台—产线—车间归属关系，不作为机台当前实际生产规格的数据来源"
+        ),
+    )
     machine_lines: list[AlgorithmMachineLineRelation] = Field(...,description="机台与产线之间的绑定关系列表",)
 
     machine_runtimes: list[AlgorithmMachineRuntime] = Field(...,description="快照时刻的机台实时运行状态列表",)

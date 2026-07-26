@@ -26,11 +26,15 @@
 目标硅片尺寸/规格、切线开始时间和 `negative_start_time`。
 
 `machine_realtime` 不再携带 `order_code`。甲方 AGV 原始字段
-`equipmentid/equipmentname/lastlinecode/lastlinename/createtime` 只在 Loader
+`equipmentid/equipmentname/lastlinecode/lastlinename/waferspec/createtime` 只在 Loader
 中映射为标准的
-`machine_code/machine_name/order_code/order_name/binding_time`。快照按
+`machine_code/machine_name/order_code/order_name/wafer_spec/binding_time`。快照按
 UTC+08:00 选择不晚于 `snapshot_time` 的最新有效绑定，并写入内部
-`AlgorithmMachineRuntime.current_order_code`；机台工序始终来自 `machine_master`。
+`AlgorithmMachineRuntime.current_order_code`。机台当前订单编码、订单名称和硅片规格均以
+选中的 AGV 绑定为准；`AlgorithmMachineRuntime` 不保存当前硅片规格。产线
+`wafer_spec` 仅为兼容字段，机台到产线再到车间的归属链保持不变；机台工序始终来自
+`machine_master`。需要参与计算的订单如果没有有效 AGV `wafer_spec`，算法会抛出明确的
+数据错误，绝不回退到 `line.wafer_spec`。
 
 默认正式切线时刻就是方案生成时刻，切线执行延迟为 0 分钟。混料追溯以该正式切线时刻为基础计算，不再额外增加 15 分钟切线延迟。
 

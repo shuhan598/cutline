@@ -7,6 +7,7 @@ from app.schemas.result_schema import (
     AlgorithmOverflowWarningResult,
 )
 from tests.core.candidate_machine.helpers import (
+    agv_relation,
     line,
     machine,
     machine_line,
@@ -113,6 +114,11 @@ def _candidate_snapshot():
         product("PROD-TARGET", "182", "A"),
         product("PROD-SECOND", "182", "A"),
     ]
+    candidate_snapshot.agv_relations[0] = agv_relation(
+        order_code="ORD-SOURCE",
+        order_name="Source Order",
+        wafer_spec="N",
+    )
     return candidate_snapshot
 
 
@@ -128,6 +134,7 @@ def _add_machine(
     wafer_spec: str = "N",
     input_quantity_30m: float = 10000,
     output_quantity_30m: float = 8000,
+    order_name: str | None = None,
 ) -> None:
     line_code = f"LINE-{machine_code}"
     candidate_snapshot.lines.append(
@@ -146,6 +153,14 @@ def _add_machine(
             status,
             input_quantity_30m,
             output_quantity_30m,
+        )
+    )
+    candidate_snapshot.agv_relations.append(
+        agv_relation(
+            machine_code=machine_code,
+            order_code=order_code or "ORD-SOURCE",
+            order_name=order_name or order_code or "ORD-SOURCE",
+            wafer_spec=wafer_spec,
         )
     )
 
@@ -197,6 +212,7 @@ def test_overflow_result_contains_selected_source_candidate_and_target_context()
     assert candidate.process_code == "P01"
     assert candidate.process_name == "制绒"
     assert candidate.current_order_code == "ORD-SOURCE"
+    assert candidate.current_order_name == "Source Order"
     assert candidate.current_product_code == "PROD-SOURCE"
     assert candidate.current_wafer_size == "182"
     assert candidate.current_wafer_spec == "N"
@@ -324,9 +340,12 @@ def test_overflow_source_machine_requires_strict_source_identity(case: str):
             )
         )
     elif case == "other_order":
-        candidate_snapshot.machine_runtimes[0] = (
-            candidate_snapshot.machine_runtimes[0].model_copy(
-                update={"current_order_code": "ORD-TARGET"}
+        candidate_snapshot.agv_relations[0] = (
+            candidate_snapshot.agv_relations[0].model_copy(
+                update={
+                    "order_code": "ORD-TARGET",
+                    "order_name": "Target Order",
+                }
             )
         )
     elif case == "different_workshop":
@@ -346,18 +365,22 @@ def test_overflow_source_machine_requires_strict_source_identity(case: str):
             )
         )
     elif case == "source_spec_mismatch":
-        candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
-            update={"wafer_spec": "R"}
+        candidate_snapshot.agv_relations[0] = (
+            candidate_snapshot.agv_relations[0].model_copy(
+                update={"wafer_spec": "R"}
+            )
         )
 
     assert _find(candidate_snapshot).candidates == []
 
 
-def test_source_identity_does_not_use_s2_rp_relaxation():
+def test_source_identity_uses_s2_pre_silk_rp_compatibility_for_agv_spec():
     candidate_snapshot = _candidate_snapshot()
     _set_workshop(candidate_snapshot, "S2")
-    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
-        update={"wafer_spec": "P"}
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "P"}
+        )
     )
     warning = _warning(
         _source_detail(wafer_spec="R"),
@@ -365,7 +388,7 @@ def test_source_identity_does_not_use_s2_rp_relaxation():
         workshop_code="S2",
     )
 
-    assert _find(candidate_snapshot, warning).candidates == []
+    assert _find(candidate_snapshot, warning).candidates
 
 
 def test_source_product_size_must_match_source_detail():
@@ -462,8 +485,10 @@ def test_overflow_target_uses_algorithm_spec_compatibility(
 ):
     candidate_snapshot = _candidate_snapshot()
     _set_workshop(candidate_snapshot, workshop_code)
-    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
-        update={"wafer_spec": source_spec}
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": source_spec}
+        )
     )
     candidate_snapshot.machine_masters[0] = (
         candidate_snapshot.machine_masters[0].model_copy(
@@ -477,6 +502,47 @@ def test_overflow_target_uses_algorithm_spec_compatibility(
     )
 
     assert bool(_find(candidate_snapshot, warning).candidates) is expected
+
+
+def test_overflow_uses_agv_current_context_and_ignores_runtime_and_line():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.machine_runtimes[0] = (
+        candidate_snapshot.machine_runtimes[0].model_copy(
+            update={"current_order_code": None}
+        )
+    )
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"wafer_spec": "R"}
+    )
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={
+                "order_name": "AGV Source Order",
+                "wafer_spec": "N",
+            }
+        )
+    )
+
+    candidate = _find(candidate_snapshot).candidates[0]
+
+    assert candidate.current_order_code == "ORD-SOURCE"
+    assert candidate.current_order_name == "AGV Source Order"
+    assert candidate.current_wafer_spec == "N"
+
+
+def test_overflow_target_compatibility_uses_agv_spec_instead_of_line_spec():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"wafer_spec": "R"}
+    )
+
+    assert _find(candidate_snapshot).candidates
+
+
+def test_overflow_candidate_dump_contains_agv_order_name():
+    candidate = _find(_candidate_snapshot()).candidates[0]
+
+    assert candidate.model_dump()["current_order_name"] == "Source Order"
 
 
 @pytest.mark.parametrize(

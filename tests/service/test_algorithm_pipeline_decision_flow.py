@@ -18,6 +18,7 @@ from app.schemas.result_schema import (
 )
 from app.service.cutline_pipeline import CutlinePipeline
 from tests.core.candidate_machine.helpers import (
+    agv_relation,
     buffer_relation,
     order,
     product,
@@ -77,6 +78,14 @@ def _decision_snapshot(
     value.products = [
         product("PROD-SOURCE", "182", "A"),
         product("PROD-TARGET", "182", "A"),
+    ]
+    value.agv_relations = [
+        agv_relation(
+            machine_code="M-01",
+            order_code="ORD-SOURCE",
+            order_name="ORD-SOURCE",
+            wafer_spec="N",
+        )
     ]
     value.buffer_process_relations = [
         buffer_relation(

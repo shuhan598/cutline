@@ -698,6 +698,7 @@ class SnapshotAdapter:
                     f"{order_code} AGV order_name {order_name!r} does not "
                     f"match order master {order.order_name!r}"
                 )
+            wafer_spec = min(item.wafer_spec for item in latest)
 
             result.append(
                 AlgorithmAgvRelation(
@@ -705,6 +706,7 @@ class SnapshotAdapter:
                     machine_name=machine.machine_name,
                     order_code=order_code,
                     order_name=order.order_name,
+                    wafer_spec=wafer_spec,
                     binding_time=latest_time,
                 )
             )

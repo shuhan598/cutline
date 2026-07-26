@@ -74,6 +74,7 @@ def payload() -> dict:
                 "equipmentname": "EA003制绒机",
                 "lastlinecode": "ORD-S2-001",
                 "lastlinename": "至上",
+                "waferspec": "N",
                 "createtime": "2026-07-23 10:20:00",
             }
         ],
@@ -169,6 +170,7 @@ def test_agv_process_fields_are_filtered_and_never_validated():
         "equipmentname",
         "lastlinecode",
         "lastlinename",
+        "waferspec",
         "createtime",
     }
     assert not any(

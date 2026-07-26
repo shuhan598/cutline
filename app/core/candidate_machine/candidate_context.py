@@ -4,6 +4,7 @@ from typing import Iterable, TypeVar
 
 from app.core.candidate_machine.errors import CandidateMachineCalculationError
 from app.schemas.common_schema import (
+    AlgorithmAgvRelation,
     AlgorithmBufferProcessRelation,
     AlgorithmLine,
     AlgorithmMachineLineRelation,
@@ -51,6 +52,11 @@ class CandidateContext:
             snapshot.buffer_process_relations,
             "buffer_code",
             "buffer process relation",
+        )
+        self.agv_by_machine_code = self._unique_index(
+            snapshot.agv_relations,
+            "machine_code",
+            "AGV relation",
         )
         self.machine_line_by_machine_code = self._machine_line_index(
             snapshot.machine_lines
@@ -108,13 +114,17 @@ class CandidateContext:
                     f"{runtime.machine_code} machine-line relation does not exist "
                     "for machine runtime"
                 )
-            if (
-                runtime.current_order_code is not None
-                and runtime.current_order_code not in self.order_by_code
-            ):
+
+        for relation in self.agv_by_machine_code.values():
+            if relation.machine_code not in self.machine_by_code:
                 raise CandidateMachineCalculationError(
-                    f"{runtime.current_order_code} order does not exist for "
-                    f"machine runtime {runtime.machine_code}"
+                    f"{relation.machine_code} machine master does not exist "
+                    "for AGV relation"
+                )
+            if relation.order_code not in self.order_by_code:
+                raise CandidateMachineCalculationError(
+                    f"{relation.order_code} order does not exist for "
+                    f"AGV relation {relation.machine_code}"
                 )
 
         for order in self.order_by_code.values():
@@ -146,6 +156,14 @@ class CandidateContext:
         product = self.product_by_code[order.product_code]
         return order, product
 
+    def candidate_agv(self, machine_code: str) -> AlgorithmAgvRelation:
+        relation = self.agv_by_machine_code.get(machine_code)
+        if relation is None:
+            raise CandidateMachineCalculationError(
+                f"{machine_code} running candidate has no AGV relation"
+            )
+        return relation
+
     def validate_warning_relation(self, warning) -> AlgorithmBufferProcessRelation:
         relation = self.buffer_relation_by_code.get(warning.buffer_code)
         if relation is None:
@@ -168,4 +186,3 @@ class CandidateContext:
                 f"process relation: warning={expected}, relation={actual}"
             )
         return relation
-

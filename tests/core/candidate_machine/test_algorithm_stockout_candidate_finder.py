@@ -3,6 +3,7 @@ import pytest
 import app.core.candidate_machine.stockout_candidate_finder as stockout_module
 from app.schemas.result_schema import AlgorithmStockoutWarningResult
 from tests.core.candidate_machine.helpers import (
+    agv_relation,
     line,
     machine,
     machine_line,
@@ -68,6 +69,7 @@ def _add_machine(
     wafer_spec: str = "N",
     input_quantity_30m: float = 10000,
     output_quantity_30m: float = 8000,
+    order_name: str | None = None,
 ) -> None:
     line_code = f"LINE-{machine_code}"
     candidate_snapshot.lines.append(
@@ -86,6 +88,14 @@ def _add_machine(
             status,
             input_quantity_30m,
             output_quantity_30m,
+        )
+    )
+    candidate_snapshot.agv_relations.append(
+        agv_relation(
+            machine_code=machine_code,
+            order_code=order_code or "ORD-CURRENT",
+            order_name=order_name or order_code or "ORD-CURRENT",
+            wafer_spec=wafer_spec,
         )
     )
 
@@ -134,6 +144,7 @@ def test_stockout_candidate_result_contains_complete_realtime_context():
     assert candidate.process_code == "P01"
     assert candidate.process_name == "制绒"
     assert candidate.current_order_code == "ORD-CURRENT"
+    assert candidate.current_order_name == "Current Order"
     assert candidate.current_product_code == "PROD-CURRENT"
     assert candidate.current_wafer_size == "182"
     assert candidate.current_wafer_spec == "N"
@@ -159,8 +170,6 @@ def test_stockout_candidate_result_contains_complete_realtime_context():
         "other_process",
         "not_running",
         "uppercase_running",
-        "empty_order",
-        "target_order",
         "different_size",
         "incompatible_spec",
         "source_grade_upgrade",
@@ -197,25 +206,15 @@ def test_stockout_candidate_requires_every_static_qualification(case: str):
                 update={"status": "RUNNING"}
             )
         )
-    elif case == "empty_order":
-        candidate_snapshot.machine_runtimes[0] = (
-            candidate_snapshot.machine_runtimes[0].model_copy(
-                update={"current_order_code": None}
-            )
-        )
-    elif case == "target_order":
-        candidate_snapshot.machine_runtimes[0] = (
-            candidate_snapshot.machine_runtimes[0].model_copy(
-                update={"current_order_code": "ORD-TARGET"}
-            )
-        )
     elif case == "different_size":
         candidate_snapshot.products[0] = candidate_snapshot.products[0].model_copy(
             update={"wafer_size": "210"}
         )
     elif case == "incompatible_spec":
-        candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
-            update={"wafer_spec": "R"}
+        candidate_snapshot.agv_relations[0] = (
+            candidate_snapshot.agv_relations[0].model_copy(
+                update={"wafer_spec": "R"}
+            )
         )
     elif case == "source_grade_upgrade":
         candidate_snapshot.products[0] = candidate_snapshot.products[0].model_copy(
@@ -253,8 +252,10 @@ def test_stockout_candidate_uses_algorithm_spec_compatibility(
 ):
     candidate_snapshot = _candidate_snapshot()
     _set_workshop(candidate_snapshot, workshop_code)
-    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
-        update={"wafer_spec": current_spec}
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": current_spec}
+        )
     )
     candidate_snapshot.machine_masters[0] = (
         candidate_snapshot.machine_masters[0].model_copy(
@@ -267,6 +268,91 @@ def test_stockout_candidate_uses_algorithm_spec_compatibility(
     )
 
     assert bool(_find(candidate_snapshot, warning).candidates) is expected
+
+
+def test_stockout_uses_agv_spec_instead_of_line_spec():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"wafer_spec": "N"}
+    )
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "R"}
+        )
+    )
+
+    assert _find(
+        candidate_snapshot,
+        _warning(wafer_spec="R"),
+    ).candidates
+
+
+def test_stockout_rejects_incompatible_agv_spec_even_when_line_matches():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
+        update={"wafer_spec": "R"}
+    )
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={"wafer_spec": "N"}
+        )
+    )
+
+    assert _find(
+        candidate_snapshot,
+        _warning(wafer_spec="R"),
+    ).candidates == []
+
+
+@pytest.mark.parametrize(
+    "runtime_order_code",
+    [None, "ORD-TARGET", "STALE-UNKNOWN"],
+)
+def test_stockout_uses_agv_order_when_runtime_order_is_missing_or_different(
+    runtime_order_code: str | None,
+):
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.machine_runtimes[0] = (
+        candidate_snapshot.machine_runtimes[0].model_copy(
+            update={"current_order_code": runtime_order_code}
+        )
+    )
+
+    candidate = _find(candidate_snapshot).candidates[0]
+
+    assert candidate.current_order_code == "ORD-CURRENT"
+    assert candidate.current_order_name == "Current Order"
+
+
+def test_stockout_excludes_warning_order_from_agv_relation():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.agv_relations[0] = (
+        candidate_snapshot.agv_relations[0].model_copy(
+            update={
+                "order_code": "ORD-TARGET",
+                "order_name": "Target Order",
+            }
+        )
+    )
+
+    assert _find(candidate_snapshot).candidates == []
+
+
+def test_stockout_running_candidate_without_agv_fails_explicitly():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.agv_relations = []
+
+    with pytest.raises(
+        stockout_module.CandidateMachineCalculationError,
+        match="M-01.*running candidate.*AGV relation",
+    ):
+        _find(candidate_snapshot)
+
+
+def test_stockout_candidate_dump_contains_agv_order_name():
+    candidate = _find(_candidate_snapshot()).candidates[0]
+
+    assert candidate.model_dump()["current_order_name"] == "Current Order"
 
 
 @pytest.mark.parametrize(

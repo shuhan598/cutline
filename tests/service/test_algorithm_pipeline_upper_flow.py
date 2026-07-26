@@ -9,6 +9,7 @@ from app.core.silk_screen.order_transition_planner import (
     SilkScreenOrderTransitionPlanner,
 )
 from app.schemas.common_schema import (
+    AlgorithmAgvRelation,
     AlgorithmBufferMaster,
     AlgorithmBufferOrderInventory,
     AlgorithmBufferProcessRelation,
@@ -184,7 +185,22 @@ def _snapshot(
                 current_quantity=1000 - 200 * overflow_minutes / 60,
             ),
         ],
-        agv_relations=[],
+        agv_relations=[
+            AlgorithmAgvRelation(
+                machine_code=machine_code,
+                machine_name=machine_code,
+                order_code=order_code,
+                order_name=order_code,
+                wafer_spec="N",
+                binding_time=NOW,
+            )
+            for machine_code, order_code in (
+                ("ZR-STOCK", "ORD-STOCK"),
+                ("PK-STOCK", "ORD-STOCK"),
+                ("ZR-OVER", "ORD-OVER"),
+                ("PK-OVER", "ORD-OVER"),
+            )
+        ],
         config={
             "stockout_warning_lead_minutes": warning_lead_minutes,
             "overflow_warning_lead_minutes": warning_lead_minutes,

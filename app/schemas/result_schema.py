@@ -205,6 +205,7 @@ class AlgorithmStockoutCandidateMachine(BaseModel):
     process_code: str
     process_name: str
     current_order_code: str
+    current_order_name: str
     current_product_code: str
     current_wafer_size: str
     current_wafer_spec: str
@@ -267,6 +268,7 @@ class AlgorithmOverflowCandidateMachine(BaseModel):
     process_code: str
     process_name: str
     current_order_code: str
+    current_order_name: str
     current_product_code: str
     current_wafer_size: str
     current_wafer_spec: str

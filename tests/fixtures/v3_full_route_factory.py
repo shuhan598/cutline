@@ -285,12 +285,21 @@ def _agv_relations() -> list[dict[str, Any]]:
     order_names = {
         order["order_code"]: order["order_name"] for order in _orders()
     }
+    wafer_specs = {
+        machine_code: next(
+            line["wafer_spec"]
+            for line in _lines()
+            if line["line_code"] == line_code
+        )
+        for machine_code, _, line_code, _, _ in _machine_definitions()
+    }
     return [
         {
             "equipmentid": machine_code,
             "equipmentname": _machine_name(machine_code, process_code),
             "lastlinecode": order_code,
             "lastlinename": order_names[order_code],
+            "waferspec": wafer_specs[machine_code],
             "createtime": "2026-07-17 07:55:00",
         }
         for machine_code, process_code, _, _, order_code in _machine_definitions()
@@ -347,7 +356,13 @@ def _set_agv_binding(
     payload: dict[str, Any],
     machine_code: str,
     order_code: str,
+    *,
+    order_name: str | None = None,
+    wafer_spec: str | None = None,
+    binding_time: str = "2026-07-17 07:55:00",
 ) -> None:
+    """Replace a raw AGV binding, with line spec only as a fixture default."""
+
     payload["agv_relations"] = [
         relation
         for relation in payload["agv_relations"]
@@ -366,13 +381,23 @@ def _set_agv_binding(
         for item in payload["orders"]
         if item["order_code"] == order_code
     )
+    if wafer_spec is None:
+        machine_line = next(
+            item
+            for item in payload["machine_lines"]
+            if item["machine_code"] == machine_code
+        )
+        wafer_spec = machine_line["wafer_spec"]
     payload["agv_relations"].append(
         {
             "equipmentid": machine_code,
             "equipmentname": machine["machine_name"],
             "lastlinecode": order_code,
-            "lastlinename": order["order_name"],
-            "createtime": "2026-07-17 07:55:00",
+            "lastlinename": (
+                order["order_name"] if order_name is None else order_name
+            ),
+            "waferspec": wafer_spec,
+            "createtime": binding_time,
         }
     )
 
@@ -385,6 +410,9 @@ def _set_runtime(
     order_code: str,
     input_quantity: float,
     output_quantity: float,
+    order_name: str | None = None,
+    wafer_spec: str | None = None,
+    binding_time: str = "2026-07-17 07:55:00",
 ) -> None:
     runtime = _runtime(payload, machine_code)
     runtime.update(
@@ -399,7 +427,14 @@ def _set_runtime(
             ),
         }
     )
-    _set_agv_binding(payload, machine_code, order_code)
+    _set_agv_binding(
+        payload,
+        machine_code,
+        order_code,
+        order_name=order_name,
+        wafer_spec=wafer_spec,
+        binding_time=binding_time,
+    )
 
 
 def _buffer(payload: dict[str, Any], buffer_code: str) -> dict[str, Any]:
@@ -879,6 +914,7 @@ def build_mixing_failure_payload() -> dict[str, Any]:
         order_code=SUPPORT_ORDER_CODE,
         input_quantity=300,
         output_quantity=300,
+        wafer_spec="N",
     )
     ea023_line = next(
         item

@@ -64,7 +64,7 @@ def payload():
         "process_routes": [{"process_code": "P1", "process_name": "工序1", "sequence": 1, "cache_type": "BUFFER", "workshop_code": "S1", "workshop_name": "车间1", "loop_code": "LOOP1", "loop_name": "循环1", "upstream_process_code": None, "upstream_process_name": None, "downstream_process_code": None, "downstream_process_name": None}],
         "buffer_realtime": [{"main_id": None, "buffer_code": "B1", "bound_source_name": "source", "current_quantity": 0, "current_utilization_rate": 0}],
         "buffer_master": [{"buffer_code": "B1", "buffer_name": "缓存1", "buffer_type": "LINE", "buffer_type_title": "线边库", "max_capacity": 1, "safety_low": 0, "served_process_codes": [], "served_process_names": [], "loop_code": "LOOP1", "loop_name": "循环1"}],
-        "agv_relations": [{"machine_code": "M1", "machine_name": "机台1", "order_code": "O1", "order_name": "source", "binding_time": "2026-07-13T16:20:00Z"}],
+        "agv_relations": [{"machine_code": "M1", "machine_name": "机台1", "order_code": "O1", "order_name": "source", "wafer_spec": "N", "binding_time": "2026-07-13T16:20:00Z"}],
     }
 
 

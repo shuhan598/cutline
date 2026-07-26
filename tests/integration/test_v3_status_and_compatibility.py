@@ -71,11 +71,16 @@ def test_v3_abnormal_machine_quantities_do_not_enter_net_rate_calculation():
     assert first_buffer.net_consumption_rate == 0
 
 
-def test_v3_abnormal_machine_cannot_determine_order_wafer_spec():
+def test_v3_missing_agv_relation_cannot_determine_order_wafer_spec():
     payload = build_base_request_payload()
     next(item for item in payload["machine_realtime"] if item["machine_code"] == "EA023")[
         "status"
     ] = "异常"
+    payload["agv_relations"] = [
+        relation
+        for relation in payload["agv_relations"]
+        if relation["equipmentid"] != "EA023"
+    ]
     payload["buffer_realtime"].append(
         {
             "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
@@ -126,8 +131,11 @@ def test_v3_r_and_p_specs_are_compatible_only_at_allowed_s2_non_silk_boundary():
     )
 
 
-def test_v3_r_and_p_order_specs_are_inferred_independently_from_machine_lines():
+def test_v3_r_and_p_order_specs_come_from_agv_relations_not_machine_lines():
     payload = build_base_request_payload()
+    for relation in payload["machine_lines"]:
+        if relation["machine_code"] in {"EA023", "EA024"}:
+            relation["wafer_spec"] = "N"
     payload["buffer_realtime"].extend(
         [
             {
