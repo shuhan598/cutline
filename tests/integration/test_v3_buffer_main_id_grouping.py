@@ -67,7 +67,7 @@ def test_v3_buffer_masters_without_realtime_generate_no_upper_flow_results():
     assert result.overflow_warnings == []
 
 
-def test_v3_multilayer_stockout_creates_one_plan_and_one_activity_event():
+def test_v3_multilayer_stockout_creates_one_plan_without_activity_event():
     result = CutlinePipeline().evaluate_algorithm(
         snapshot(build_multilayer_stockout_payload())
     )
@@ -86,5 +86,4 @@ def test_v3_multilayer_stockout_creates_one_plan_and_one_activity_event():
     assert plan is not None
     assert plan.buffer_code == MULTILAYER_BUFFER_CODES[0]
     assert [item.machine_code for item in plan.selected_machines] == ["EA004"]
-    assert len(result.new_active_cutline_events) == 1
-    assert result.new_active_cutline_events[0].plan_id == plan.plan_id
+    assert result.new_active_cutline_events == []

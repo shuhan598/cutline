@@ -15,7 +15,10 @@ from app.adapters.backend_request_validator import (
     BackendRequestValidationResult,
 )
 from app.schemas.request_schema import CutlineAlgorithmRequest
-from app.schemas.response_schema import CutlineAlgorithmResponse
+from app.schemas.response_schema import (
+    CutlineAlgorithmResponse,
+    CutlineEvaluateResponse,
+)
 from app.service.cutline_service import CutlineService
 
 
@@ -72,10 +75,10 @@ def run_stub_algorithm_request(
 ) -> CutlineAlgorithmResponse:
     return service.evaluate_algorithm(_load_cutline_request(payload))
 
-@router.post("/cutline/evaluate", response_model=CutlineAlgorithmResponse)
+@router.post("/cutline/evaluate", response_model=CutlineEvaluateResponse)
 def evaluate_cutline_request(
     payload: dict[str, Any] = Body(...),
     service: CutlineService = Depends(get_cutline_service),
-) -> CutlineAlgorithmResponse:
+) -> CutlineEvaluateResponse:
     return service.evaluate_algorithm(_load_cutline_request(payload))
 

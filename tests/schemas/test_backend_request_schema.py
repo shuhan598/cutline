@@ -128,6 +128,82 @@ def test_optional_line_collections_default_to_independent_empty_lists():
     )
 
 
+def test_persistence_collections_parse_and_default_independently():
+    first_payload = sample_payload()
+    first_payload["active_cutline_events"] = [
+        {
+            "event_id": "EVENT-001",
+            "plan_id": "PLAN-001",
+            "warning_id": "WARNING-001",
+            "machine_code": "MC-001",
+            "source_order_code": "ORD-001",
+            "target_order_code": "ORD-002",
+            "workshop_code": "S1",
+            "target_buffer_code": "BUF-001",
+            "upstream_process_code": "PROC-01",
+            "downstream_process_code": "PROC-02",
+            "target_wafer_size": "182",
+            "target_wafer_spec": "N",
+            "cutline_start_time": "2026-07-14T08:00:00+08:00",
+            "negative_start_time": None,
+            "status": "return_recommended",
+        }
+    ]
+    first_payload["return_suggested_event_ids"] = ["EVENT-001"]
+    first_payload["mixed_cutline_event_ids"] = ["EVENT-OLDER"]
+
+    first = BackendAlgorithmRequest.model_validate(first_payload)
+    second = BackendAlgorithmRequest.model_validate(sample_payload())
+
+    assert first.active_cutline_events[0].warning_id == "WARNING-001"
+    assert first.active_cutline_events[0].status == "return_recommended"
+    assert first.return_suggested_event_ids == ["EVENT-001"]
+    assert first.mixed_cutline_event_ids == ["EVENT-OLDER"]
+    assert second.active_cutline_events == []
+    assert second.return_suggested_event_ids == []
+    assert second.mixed_cutline_event_ids == []
+    assert second.active_cutline_events is not first.active_cutline_events
+
+
+def test_backend_active_event_rejects_blank_warning_id():
+    payload = sample_payload()
+    payload["active_cutline_events"] = [
+        {
+            "event_id": "EVENT-001",
+            "warning_id": "   ",
+            "machine_code": "MC-001",
+            "source_order_code": "ORD-001",
+            "target_order_code": "ORD-002",
+            "workshop_code": "S1",
+            "target_buffer_code": "BUF-001",
+            "upstream_process_code": "PROC-01",
+            "downstream_process_code": "PROC-02",
+            "target_wafer_size": "182",
+            "target_wafer_spec": "N",
+            "cutline_start_time": "2026-07-14T08:00:00+08:00",
+            "negative_start_time": None,
+        }
+    ]
+
+    with pytest.raises(ValidationError, match="warning_id"):
+        BackendAlgorithmRequest.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("return_suggested_event_ids", ["EVENT-1", "EVENT-1"]),
+        ("mixed_cutline_event_ids", ["   "]),
+    ],
+)
+def test_backend_rejects_invalid_persistence_watermarks(field, value):
+    payload = sample_payload()
+    payload[field] = value
+
+    with pytest.raises(ValidationError, match=field):
+        BackendAlgorithmRequest.model_validate(payload)
+
+
 @pytest.mark.parametrize(
     ("dataset", "field"),
     [

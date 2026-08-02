@@ -19,14 +19,58 @@
       "message": "当前订单尚未进入清台准备提醒窗口。"
     }
   ],
-  "mixing_trace_records": [],
-  "new_active_cutline_events": [],
-  "updated_active_cutline_events": [
+  "mixing_trace_records": [
+    {
+      "mix_trace_id": "MIX-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
+      "plan_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+      "cutline_event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
+      "machine_code": "EA004",
+      "workshop_code": "S2",
+      "process_code": "制绒",
+      "process_name": "制绒",
+      "source_order_code": "ORD-S2-002",
+      "target_order_code": "ORD-S2-001",
+      "source_product_code": "PROD-S2-N-SUPPORT",
+      "target_product_code": "PROD-S2-N-TARGET",
+      "mix_start_time": "2026-07-17T10:10:00+08:00",
+      "mixed_basket_start_index": 1,
+      "mixed_basket_end_index": 10,
+      "mixed_basket_count": 10,
+      "estimated_total_mixed_pieces": 1200,
+      "compositions": [
+        {
+          "order_code": "ORD-S2-002",
+          "product_code": "PROD-S2-N-SUPPORT",
+          "sequence": 1,
+          "estimated_pieces": 600
+        },
+        {
+          "order_code": "ORD-S2-001",
+          "product_code": "PROD-S2-N-TARGET",
+          "sequence": 2,
+          "estimated_pieces": 600
+        }
+      ],
+      "notification_status": "scheduled"
+    }
+  ],
+  "new_active_cutline_events": [
     {
       "event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
+      "machine_code": "EA004",
+      "source_order_code": "ORD-S2-002",
+      "target_order_code": "ORD-S2-001",
+      "workshop_code": "S2",
+      "target_buffer_code": "310110302",
+      "upstream_process_code": "制绒",
+      "downstream_process_code": "碱抛",
+      "target_wafer_size": "182",
+      "target_wafer_spec": "N",
+      "cutline_start_time": "2026-07-17T08:03:00+08:00",
       "negative_start_time": "2026-07-17T08:05:00+08:00"
     }
   ],
+  "updated_active_cutline_events": [],
   "closed_active_cutline_event_ids": [],
   "errors": []
 }

@@ -57,7 +57,6 @@
 | --- | --- |
 | 机台编码 | `machine_code` |
 | 当前生产状态 | `status` |
-| 订单编号 | `order_code` |
 | 切线时间 | `tangent_time` |
 | 上料数量 | `input_quantity` |
 | 出料数量 | `output_quantity` |
@@ -67,6 +66,9 @@
 
 - 当前实现额外保留 `period_quantity`，用于表达当前时段产量。
 - 当前实现额外保留 `out_time`，用于表达运行态出料时间。
+- `machine_realtime.machine_code` 使用 P166 集团编号，通过
+  `machine_master.p166_jt_group` 映射为内部标准 `machine_code`；当前订单不由实时状态
+  直接提供，而由最新有效 AGV 产品型号绑定解析。
 - 这两个字段属于设计明确保留的运行态补充，不是对文档字段的删除或替换。
 
 ## `machine_master`
@@ -76,6 +78,7 @@
 | 文档字段 | 当前外发字段 |
 | --- | --- |
 | 机台编码 | `machine_code` |
+| P166 集团机台编码 | `p166_jt_group` |
 | 机台名称 | `machine_name` |
 | 所属工序编号.编码 | `process_code` |
 | 所属工序编号.名称 | `process_name` |
@@ -224,6 +227,9 @@
 | 当前库存量 | `current_quantity` |
 | 当前占用率 | `current_utilization_rate` |
 
+`bound_source_name` 当前表示产品型号名称，通过唯一的 `orders.product_name` 解析为
+内部 `order_code`。
+
 ## `buffer_master`
 
 对应文档分类：Buffer基础数据
@@ -254,8 +260,8 @@
 | --- | --- |
 | `equipmentid` | `machine_code` |
 | `equipmentname` | `machine_name` |
-| `lastlinecode` | `order_code` |
-| `lastlinename` | `order_name` |
+| `linename` | `product_name` |
+| `lastlinename` | `previous_product_name` |
 | `waferspec` | `wafer_spec` |
 | `createtime` | `binding_time` |
 
@@ -266,12 +272,23 @@
 - 机台工序始终来自 `machine_master.process_code/process_name`。
 - `waferspec` 是必填且不可为 `null` 的字符串，并映射为 `wafer_spec`。当前业务数据
   和示例使用 `N`、`R`、`P`，本次变更不新增枚举校验。
-- `binding_time` 不晚于快照时间的最新有效记录提供机台当前订单编码、订单名称和
-  硅片规格。
+- `binding_time` 不晚于快照时间的最新有效记录通过 `linename` 精确匹配产品和唯一当前
+  订单，并提供内部订单编码及硅片规格。
+- `lastlinename` 允许为空，只表达上一产品，不参与当前订单匹配；`lastlinecode` 已从新
+  契约删除。
 - 当前订单硅片规格以 AGV 绑定为唯一权威；缺失时明确报错，不从产线字段回退。
 - `AlgorithmMachineRuntime` 不保存 `current_wafer_spec`；产线规格字段仅保留兼容性，
   机台所属车间改由 `machine_master.process_code -> process_routes.workshop_code`
   解析。
+- 待执行确认时，后端必须保留每台相关机台在方案 `created_at` 前的最新 AGV 绑定，
+  并在后续请求中同时回传完整 `pending_cutline_plans` 和窗口内 AGV 历史。算法比较
+  保存基线与 `created_at < createtime <= expire_at` 的新绑定，不能只看
+  `linename != lastlinename`。
+- `createtime` 当前按“算法可观察到的 AGV 绑定记录时间”处理，并作为真实活动事件的
+  `cutline_start_time`。该字段是否等于现场实际换型发生时间需要接口提供方确认。
+- 机台实时接口的 `machine_code` 先通过 `machine_master.p166_jt_group` 映射；AGV
+  `equipmentid` 直接对应 `machine_master.machine_code`。Pending、核心 Snapshot、
+  Active 和 Response 只传播后者这一套标准机台编号。
 
 ## 额外说明
 

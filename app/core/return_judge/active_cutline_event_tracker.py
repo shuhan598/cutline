@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from datetime import datetime
+from typing import Literal
 from uuid import uuid4
 
 from app.schemas.common_schema import AlgorithmActiveCutlineEvent
@@ -18,11 +19,12 @@ class ActiveCutlineEventTracker:
         self,
         *,
         plan_id: str,
+        warning_id: str | None = None,
         machine_code: str,
         source_order_code: str,
         target_order_code: str,
         workshop_code: str,
-        source_buffer_code: str,
+        source_buffer_code: str | None,
         target_buffer_code: str,
         upstream_process_code: str,
         downstream_process_code: str,
@@ -32,7 +34,12 @@ class ActiveCutlineEventTracker:
         target_wafer_spec: str,
         cutline_start_time: datetime,
         contribution_capacity: float | None = None,
-        warning_type: str | None = None,
+        warning_type: Literal["stockout", "overflow"] | None = None,
+        process_code: str | None = None,
+        warning_buffer_code: str | None = None,
+        warning_upstream_process_code: str | None = None,
+        warning_downstream_process_code: str | None = None,
+        is_recommended_candidate: bool | None = None,
         event_id: str | None = None,
     ) -> AlgorithmActiveCutlineEvent:
         return AlgorithmActiveCutlineEvent(
@@ -42,6 +49,7 @@ class ActiveCutlineEventTracker:
                 else self._event_id_factory()
             ),
             plan_id=plan_id,
+            warning_id=warning_id,
             machine_code=machine_code,
             source_order_code=source_order_code,
             target_order_code=target_order_code,
@@ -59,6 +67,15 @@ class ActiveCutlineEventTracker:
             status="active",
             contribution_capacity=contribution_capacity,
             warning_type=warning_type,
+            process_code=process_code,
+            warning_buffer_code=warning_buffer_code,
+            warning_upstream_process_code=(
+                warning_upstream_process_code
+            ),
+            warning_downstream_process_code=(
+                warning_downstream_process_code
+            ),
+            is_recommended_candidate=is_recommended_candidate,
         )
 
     def update_negative_start_time(

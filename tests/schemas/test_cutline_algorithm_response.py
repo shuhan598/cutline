@@ -100,6 +100,72 @@ def test_empty_response_has_only_the_final_public_top_level_contract():
         response.CutlineAlgorithmResponse()
 
 
+def test_evaluate_response_adds_persistence_state_without_changing_base_response():
+    value = response.CutlineEvaluateResponse(calculation_time=NOW)
+
+    assert set(response.CutlineAlgorithmResponse.model_fields) == {
+        "calculation_time", *LIST_FIELDS
+    }
+    assert set(value.model_fields) == {
+        "calculation_time", *LIST_FIELDS, "persistence_state"
+    }
+    assert isinstance(value.persistence_state, response.PersistenceStateResponse)
+
+
+def test_persistence_state_response_keeps_complete_active_event_state():
+    active = response.ActiveCutlineEventPersistenceResponse(
+        event_id="CUT-001",
+        plan_id="PLAN-001",
+        machine_code="EA004",
+        source_order_code="ORD-S2-002",
+        target_order_code="ORD-S2-001",
+        workshop_code="S2",
+        source_buffer_code="310110301",
+        target_buffer_code="310110302",
+        upstream_process_code="制绒",
+        downstream_process_code="碱抛",
+        source_wafer_size="182",
+        source_wafer_spec="N",
+        target_wafer_size="182",
+        target_wafer_spec="N",
+        cutline_start_time=NOW,
+        negative_start_time=None,
+        status="active",
+    )
+    state = response.PersistenceStateResponse(
+        active_cutline_events=[active],
+        return_suggested_event_ids=[active.event_id],
+        mixed_cutline_event_ids=[active.event_id],
+    )
+
+    assert state.active_cutline_events[0].status == "active"
+    with pytest.raises(ValidationError):
+        response.PersistenceStateResponse(unexpected=True)
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [
+        ("return_suggested_event_ids", ["CUT-1", "CUT-1"]),
+        ("mixed_cutline_event_ids", ["CUT-1", "CUT-1"]),
+        ("return_suggested_event_ids", ["   "]),
+        ("mixed_cutline_event_ids", [""]),
+    ],
+)
+def test_persistence_state_response_rejects_duplicate_or_blank_watermarks(
+    field_name, value
+):
+    with pytest.raises(ValidationError, match=field_name):
+        response.PersistenceStateResponse(**{field_name: value})
+
+
+def test_active_persistence_response_rejects_blank_plan_id():
+    with pytest.raises(ValidationError, match="plan_id"):
+        response.ActiveCutlineEventPersistenceResponse(
+            **active_event().model_dump(), plan_id="   "
+        )
+
+
 def test_all_response_lists_use_independent_default_factories():
     first = response.CutlineAlgorithmResponse(calculation_time=NOW)
     second = response.CutlineAlgorithmResponse(calculation_time=NOW)

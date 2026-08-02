@@ -40,7 +40,6 @@ ALGORITHM_MODEL_FIELDS = {
     ),
     "AlgorithmOrder": (
         "order_code",
-        "order_name",
         "order_status",
         "product_code",
         "product_name",
@@ -101,7 +100,10 @@ ALGORITHM_MODEL_FIELDS = {
         "machine_code",
         "machine_name",
         "order_code",
-        "order_name",
+        "product_code",
+        "product_name",
+        "previous_product_code",
+        "previous_product_name",
         "wafer_spec",
         "binding_time",
     ),
@@ -126,7 +128,6 @@ def _runtime_payload(**updates):
 def _order_payload(**updates):
     payload = {
         "order_code": "ORD-01",
-        "order_name": "订单一",
         "order_status": "生产中",
         "product_code": "PROD-01",
         "product_name": "产品一",
@@ -164,10 +165,20 @@ def _buffer_master_payload(**updates):
 )
 def test_algorithm_models_have_exact_required_fields(model_name, expected_fields):
     model = getattr(schema, model_name)
+    optional_fields = {
+        "AlgorithmAgvRelation": {
+            "previous_product_code",
+            "previous_product_name",
+        }
+    }.get(model_name, set())
 
     assert issubclass(model, schema.AlgorithmModel)
     assert tuple(model.model_fields) == expected_fields
-    assert all(field.is_required() for field in model.model_fields.values())
+    assert {
+        field_name
+        for field_name, field in model.model_fields.items()
+        if not field.is_required()
+    } == optional_fields
     assert model.model_config["extra"] == "forbid"
 
 
@@ -182,6 +193,8 @@ def test_algorithm_model_field_types_and_nullable_contracts_are_explicit():
         ("AlgorithmProcessRoute", "upstream_process_name"),
         ("AlgorithmProcessRoute", "downstream_process_code"),
         ("AlgorithmProcessRoute", "downstream_process_name"),
+        ("AlgorithmAgvRelation", "previous_product_code"),
+        ("AlgorithmAgvRelation", "previous_product_name"),
     }
     special_types = {
         ("AlgorithmMachineRuntime", "tangent_time"): datetime | None,
@@ -348,13 +361,20 @@ def test_machine_product_capacity_requires_positive_actual_capacity():
         schema.AlgorithmMachineProductCapacity(**payload)
 
 
-@pytest.mark.parametrize("field", ("order_name", "product_name", "workshop_name"))
+@pytest.mark.parametrize("field", ("product_name", "workshop_name"))
 def test_algorithm_order_requires_name_fields(field):
     payload = _order_payload()
     del payload[field]
 
     with pytest.raises(ValidationError):
         schema.AlgorithmOrder(**payload)
+
+
+def test_algorithm_order_rejects_removed_order_name():
+    with pytest.raises(ValidationError) as error:
+        schema.AlgorithmOrder(**_order_payload(order_name="旧订单名称"))
+
+    assert error.value.errors()[0]["type"] == "extra_forbidden"
 
 
 def test_algorithm_order_accepts_null_workshop_name():
@@ -551,6 +571,99 @@ def test_buffer_process_relations_support_interval_lookup():
     }
 
 
+def test_algorithm_agv_relation_preserves_current_product_identity():
+    relation = schema.AlgorithmAgvRelation(
+        machine_code="MC-01",
+        machine_name="machine-1",
+        order_code="ORD-01",
+        product_code="PROD-01",
+        product_name="product-1",
+        wafer_spec="N",
+        binding_time=datetime(2026, 8, 2, 10, 0),
+    )
+
+    assert relation.product_code == "PROD-01"
+    assert relation.previous_product_code is None
+    assert relation.previous_product_name is None
+
+
+def test_algorithm_agv_relation_requires_current_product_code():
+    with pytest.raises(ValidationError) as error:
+        schema.AlgorithmAgvRelation(
+            machine_code="MC-01",
+            machine_name="machine-1",
+            order_code="ORD-01",
+            product_name="product-1",
+            wafer_spec="N",
+            binding_time=datetime(2026, 8, 2, 10, 0),
+        )
+
+    assert error.value.errors()[0]["loc"] == ("product_code",)
+    assert error.value.errors()[0]["type"] == "missing"
+
+
+def test_algorithm_active_event_hidden_metadata_defaults_and_round_trips():
+    payload = {
+        "event_id": "CUT-PLAN-01-MC-01",
+        "machine_code": "MC-01",
+        "source_order_code": "ORD-A",
+        "target_order_code": "ORD-B",
+        "workshop_code": "WS-01",
+        "target_buffer_code": "BUF-B",
+        "upstream_process_code": "PROC-UP",
+        "downstream_process_code": "PROC-DOWN",
+        "target_wafer_size": "182",
+        "target_wafer_spec": "N",
+        "cutline_start_time": datetime(2026, 8, 2, 10, 0),
+    }
+    optional_metadata = {
+        "plan_id": "PLAN-01",
+        "source_buffer_code": "BUF-A",
+        "source_wafer_size": "182",
+        "source_wafer_spec": "N",
+        "contribution_capacity": 120.0,
+        "warning_type": "stockout",
+        "process_code": "PROC-OUT",
+        "warning_buffer_code": "BUF-WARNING",
+        "warning_upstream_process_code": "PROC-UP",
+        "warning_downstream_process_code": "PROC-DOWN",
+        "is_recommended_candidate": True,
+    }
+
+    legacy = schema.AlgorithmActiveCutlineEvent(**payload)
+    enriched = schema.AlgorithmActiveCutlineEvent(
+        **payload,
+        **optional_metadata,
+    )
+
+    assert all(
+        getattr(legacy, field_name) is None
+        for field_name in optional_metadata
+    )
+    assert {
+        field_name: getattr(enriched, field_name)
+        for field_name in optional_metadata
+    } == optional_metadata
+
+
+def test_algorithm_active_event_rejects_blank_internal_plan_id():
+    with pytest.raises(ValidationError, match="plan_id must not be blank"):
+        schema.AlgorithmActiveCutlineEvent(
+            event_id="CUT-PLAN-01-MC-01",
+            plan_id="   ",
+            machine_code="MC-01",
+            source_order_code="ORD-A",
+            target_order_code="ORD-B",
+            workshop_code="WS-01",
+            target_buffer_code="BUF-B",
+            upstream_process_code="PROC-UP",
+            downstream_process_code="PROC-DOWN",
+            target_wafer_size="182",
+            target_wafer_spec="N",
+            cutline_start_time=datetime(2026, 8, 2, 10, 0),
+        )
+
+
 def test_algorithm_config_time_parameter_defaults_are_floats():
     config = schema.AlgorithmConfig()
 
@@ -561,17 +674,40 @@ def test_algorithm_config_time_parameter_defaults_are_floats():
             config.overflow_warning_lead_minutes,
             config.stability_window_minutes,
             config.silk_screen_clear_minutes,
+            config.cutline_confirmation_window_minutes,
         )
     )
 
 
-def test_algorithm_config_cutline_execution_delay_defaults_to_immediate_cutline():
+def test_algorithm_config_cutline_confirmation_window_defaults_to_30_minutes():
+    config = schema.AlgorithmConfig()
+
+    assert config.cutline_confirmation_window_minutes == 30.0
+    assert schema.AlgorithmConfig.model_fields[
+        "cutline_confirmation_window_minutes"
+    ].annotation is float
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    [0, -1, float("nan"), float("inf"), float("-inf"), True, "30"],
+)
+def test_cutline_confirmation_window_requires_finite_positive_strict_float(
+    invalid_value,
+):
+    with pytest.raises(ValidationError):
+        schema.AlgorithmConfig(
+            cutline_confirmation_window_minutes=invalid_value
+        )
+
+
+def test_algorithm_config_cutline_execution_delay_defaults_for_mixing_prediction():
     config = schema.AlgorithmConfig()
 
     assert config.cutline_execution_delay_minutes == 0.0
     assert schema.AlgorithmConfig.model_fields[
         "cutline_execution_delay_minutes"
-    ].description == "当前默认方案生成后立即切线，单位：分钟"
+    ].description == "方案混料预测使用的预计执行延迟，单位：分钟"
 
 
 @pytest.mark.parametrize("valid_value", [0, 7.5])

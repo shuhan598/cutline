@@ -114,7 +114,7 @@ def test_context_returns_selected_agv_relation_with_current_order_context():
     candidate_agv = context.candidate_agv("M-01")
 
     assert candidate_agv.order_code == "ORD-CURRENT"
-    assert candidate_agv.order_name == "Current Order"
+    assert candidate_agv.product_name == "Current Product"
     assert candidate_agv.wafer_spec == "N"
 
 

@@ -47,7 +47,6 @@ LEGACY_RESPONSE_SCHEMA_NAMES = (
     "CutlinePlan",
     "ManualIntervention",
     "ReturnSuggestion",
-    "CutlineEvaluateResponse",
     "MixTraceNotification",
     "MixTraceResponse",
 )

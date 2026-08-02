@@ -5,6 +5,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.schemas import common_schema
 from app.schemas import request_schema as schema
+from app.schemas.pending_cutline_schema import PendingCutlinePlan
 
 
 SNAPSHOT_FIELDS = (
@@ -22,7 +23,11 @@ SNAPSHOT_FIELDS = (
     "buffer_process_relations",
     "buffer_order_inventories",
     "agv_relations",
+    "pending_cutline_plans",
+    "agv_binding_history",
     "active_cutline_events",
+    "return_suggested_event_ids",
+    "mixed_cutline_event_ids",
     "config",
 )
 
@@ -53,8 +58,16 @@ SNAPSHOT_DESCRIPTIONS = {
     "buffer_process_relations": "物理Buffer与所属车间、上下游工序区间之间的关系列表",
     "buffer_order_inventories": "当前快照时刻，各订单在各物理Buffer中的实时库存明细列表",
     "agv_relations": "算法使用的AGV调度关系列表",
+    "pending_cutline_plans": "后端持久化并回传的待确认切线方案列表",
+    "agv_binding_history": "待确认切线窗口内的AGV绑定历史列表",
     "active_cutline_events": "当前仍需跟踪的切线事件列表",
     "config": "切线算法运行参数配置",
+    "return_suggested_event_ids": (
+        "Backend-persisted event ids that already produced a return suggestion"
+    ),
+    "mixed_cutline_event_ids": (
+        "Backend-persisted event ids that already produced a real mixing record"
+    ),
 }
 
 LIST_MODEL_TYPES = {
@@ -87,7 +100,10 @@ CUTLINE_REQUEST_FIELDS = (
     "buffer_realtime",
     "buffer_master",
     "agv_relations",
+    "pending_cutline_plans",
     "active_cutline_events",
+    "return_suggested_event_ids",
+    "mixed_cutline_event_ids",
 )
 
 @pytest.fixture
@@ -146,7 +162,6 @@ def snapshot_payload():
         "orders": [
             {
                 "order_code": "ORD-01",
-                "order_name": "订单一",
                 "order_status": "生产中",
                 "product_code": "PROD-01",
                 "product_name": "产品一",
@@ -159,7 +174,6 @@ def snapshot_payload():
             },
             {
                 "order_code": "ORD-02",
-                "order_name": "订单二",
                 "order_status": "待生产",
                 "product_code": "PROD-01",
                 "product_name": "产品一",
@@ -262,7 +276,8 @@ def snapshot_payload():
                 "machine_code": "MC-01",
                 "machine_name": "一号机",
                 "order_code": "ORD-01",
-                "order_name": "订单一",
+                "product_code": "PROD-01",
+                "product_name": "产品一",
                 "wafer_spec": "N",
                 "binding_time": "2026-07-15T08:55:00+08:00",
             }
@@ -277,6 +292,45 @@ def test_minimal_complete_algorithm_snapshot_parses_typed_data(snapshot_payload)
     for field_name, model_type in LIST_MODEL_TYPES.items():
         assert getattr(snapshot, field_name)
         assert isinstance(getattr(snapshot, field_name)[0], model_type)
+
+
+def test_algorithm_snapshot_parses_typed_pending_and_agv_history(snapshot_payload):
+    snapshot_payload["pending_cutline_plans"] = [
+        {
+            "plan_id": "PLAN-01",
+            "warning_id": "WARN-01",
+            "warning_type": "stockout",
+            "warning_time": "2026-07-15T08:59:00+08:00",
+            "created_at": "2026-07-15T09:00:00+08:00",
+            "expire_at": "2026-07-15T09:30:00+08:00",
+            "status": "PENDING",
+            "workshop_code": "WS-01",
+            "buffer_code": "BUF-A",
+            "upstream_process_code": "PROC-01",
+            "downstream_process_code": "PROC-02",
+            "monitored_order_code": "ORD-01",
+            "before_machine_count": 0,
+            "before_machine_codes": [],
+            "expected_machine_count": 1,
+            "expected_delta_direction": "increase",
+        }
+    ]
+    snapshot_payload["agv_binding_history"] = [
+        {
+            **snapshot_payload["agv_relations"][0],
+            "previous_product_code": "PROD-OLD",
+            "previous_product_name": "old-product",
+        }
+    ]
+
+    snapshot = schema.AlgorithmSnapshot.model_validate(snapshot_payload)
+
+    assert isinstance(snapshot.pending_cutline_plans[0], PendingCutlinePlan)
+    assert isinstance(
+        snapshot.agv_binding_history[0],
+        common_schema.AlgorithmAgvRelation,
+    )
+    assert snapshot.agv_binding_history[0].previous_product_code == "PROD-OLD"
 
 
 def test_algorithm_snapshot_has_exact_field_order_and_descriptions():
@@ -340,6 +394,10 @@ def test_algorithm_snapshot_uses_only_allowed_defaults(snapshot_payload):
 
     assert first.active_cutline_events == []
     assert first.active_cutline_events is not second.active_cutline_events
+    assert first.pending_cutline_plans == []
+    assert first.pending_cutline_plans is not second.pending_cutline_plans
+    assert first.agv_binding_history == []
+    assert first.agv_binding_history is not second.agv_binding_history
     assert first.config.model_dump() == common_schema.AlgorithmConfig().model_dump()
     assert all(
         schema.AlgorithmSnapshot.model_fields[name].is_required()
@@ -352,6 +410,18 @@ def test_algorithm_snapshot_uses_only_allowed_defaults(snapshot_payload):
     assert not schema.AlgorithmSnapshot.model_fields[
         "active_cutline_events"
     ].is_required()
+    assert not schema.AlgorithmSnapshot.model_fields[
+        "pending_cutline_plans"
+    ].is_required()
+    assert not schema.AlgorithmSnapshot.model_fields[
+        "agv_binding_history"
+    ].is_required()
+    assert schema.AlgorithmSnapshot.model_fields[
+        "pending_cutline_plans"
+    ].default_factory is list
+    assert schema.AlgorithmSnapshot.model_fields[
+        "agv_binding_history"
+    ].default_factory is list
     assert not schema.AlgorithmSnapshot.model_fields["config"].is_required()
 
 

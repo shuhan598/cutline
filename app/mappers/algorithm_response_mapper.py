@@ -2,10 +2,12 @@
 
 from app.schemas.common_schema import AlgorithmActiveCutlineEvent
 from app.schemas.response_schema import (
+    ActiveCutlineEventPersistenceResponse,
     ActiveCutlineEventResponse,
     ActiveCutlineEventUpdateResponse,
     AutomaticCutlineDecisionResponse,
     CutlineAlgorithmResponse,
+    CutlineEvaluateResponse,
     ManualCutlineDecisionResponse,
     ManualInterventionResponse,
     MixingCompositionResponse,
@@ -15,6 +17,7 @@ from app.schemas.response_schema import (
     OverflowSelectedMachineResponse,
     OverflowWarningResponse,
     PipelineErrorResponse,
+    PersistenceStateResponse,
     ReturnRecommendationResponse,
     SilkScreenClearanceResponse,
     StockoutCutlinePlanResponse,
@@ -47,9 +50,18 @@ class AlgorithmResponseMapper:
         result: AlgorithmEvaluateResult,
     ) -> CutlineAlgorithmResponse:
         recommendations, updates, closed_ids = self._map_return_results(
-            result.return_results
+            result.return_results,
+            new_event_ids={
+                event.event_id
+                for event in result.new_active_cutline_events
+            },
         )
-        errors = [self._map_pipeline_error(item) for item in result.errors]
+        errors: list[
+            PipelineErrorResponse | MixingTraceErrorResponse
+        ] = [
+            self._map_pipeline_error(item)
+            for item in result.errors
+        ]
         errors.extend(
             MixingTraceErrorResponse(
                 machine_code=item.machine_code,
@@ -91,6 +103,42 @@ class AlgorithmResponseMapper:
             updated_active_cutline_events=updates,
             closed_active_cutline_event_ids=closed_ids,
             errors=errors,
+        )
+
+    def to_evaluate_response(
+        self,
+        result: AlgorithmEvaluateResult,
+    ) -> CutlineEvaluateResponse:
+        business_response = self.to_response(result)
+        state = result.persistence_state
+        return CutlineEvaluateResponse(
+            **business_response.model_dump(),
+            persistence_state=PersistenceStateResponse(
+                pending_cutline_plans=[
+                    plan.model_copy(deep=True)
+                    for plan in state.pending_cutline_plans
+                ],
+                active_cutline_events=[
+                    ActiveCutlineEventPersistenceResponse(
+                        **event.model_dump()
+                    )
+                    for event in state.active_cutline_events
+                ],
+                expired_pending_plan_ids=list(
+                    state.expired_pending_plan_ids
+                ),
+                completed_pending_plan_ids=list(
+                    state.completed_pending_plan_ids
+                ),
+                return_suggested_event_ids=list(
+                    state.return_suggested_event_ids
+                ),
+                mixed_cutline_event_ids=list(state.mixed_cutline_event_ids),
+                new_mixing_trace_records=[
+                    self._map_mixing_trace_record(item)
+                    for item in state.new_mixing_trace_records
+                ],
+            ),
         )
 
     def _map_stockout_warning(
@@ -257,6 +305,8 @@ class AlgorithmResponseMapper:
     def _map_return_results(
         self,
         items: list[AlgorithmReturnResult],
+        *,
+        new_event_ids: set[str],
     ) -> tuple[
         list[ReturnRecommendationResponse],
         list[ActiveCutlineEventUpdateResponse],
@@ -279,7 +329,8 @@ class AlgorithmResponseMapper:
                 closed_ids.append(item.event_id)
                 continue
             if (
-                item.previous_negative_start_time
+                item.event_id not in new_event_ids
+                and item.previous_negative_start_time
                 != item.updated_negative_start_time
             ):
                 updates.append(

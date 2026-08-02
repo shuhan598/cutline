@@ -5,6 +5,7 @@ from importlib.util import find_spec
 import pytest
 
 from app.schemas.common_schema import (
+    AlgorithmActiveCutlineEvent,
     AlgorithmConfig,
     AlgorithmMachineMaster,
     AlgorithmMachineProductCapacity,
@@ -86,7 +87,6 @@ def selected_machine(
 def order(order_code, product_code, workshop_code="S2"):
     return AlgorithmOrder(
         order_code=order_code,
-        order_name=order_code,
         order_status="RUNNING",
         product_code=product_code,
         product_name=product_code,
@@ -219,6 +219,39 @@ def snapshot(
     )
 
 
+def mixing_event(
+    *,
+    event_id="EVENT-REAL-001",
+    plan_id="PLAN001",
+    cutline_start_time=PLAN_TIME,
+):
+    return AlgorithmActiveCutlineEvent(
+        event_id=event_id,
+        plan_id=plan_id,
+        warning_id="WARNING-001",
+        machine_code="pk03",
+        source_order_code="ORD-A",
+        target_order_code="ORD-B",
+        workshop_code="S2",
+        source_buffer_code="BUF-SOURCE-pk03",
+        target_buffer_code="BUF-TARGET-pk03",
+        upstream_process_code="PK",
+        downstream_process_code="NEXT",
+        source_wafer_size="210",
+        source_wafer_spec="R",
+        target_wafer_size="182",
+        target_wafer_spec="N",
+        cutline_start_time=cutline_start_time,
+        status="active",
+        warning_type="stockout",
+        process_code="PK",
+        warning_buffer_code="BUF-TARGET",
+        warning_upstream_process_code="PK",
+        warning_downstream_process_code="NEXT",
+        is_recommended_candidate=True,
+    )
+
+
 def stockout_plan(*machines, plan_id="PLAN001", calculation_time=PLAN_TIME):
     selected = list(machines) or [selected_machine()]
     return AlgorithmStockoutCutlinePlan(
@@ -333,6 +366,25 @@ def test_explicit_fifteen_minute_execution_delay_is_preserved():
     )
 
     assert result.records[0].mix_start_time == datetime(2026, 7, 16, 11, 27, 30)
+
+
+def test_event_uses_observed_cutline_time_without_plan_execution_delay():
+    observed_time = datetime(2026, 7, 16, 10, 7)
+    result = calculator().calculate_for_event(
+        snapshot=snapshot(
+            config=AlgorithmConfig(cutline_execution_delay_minutes=15)
+        ),
+        event=mixing_event(cutline_start_time=observed_time),
+    )
+
+    assert result.failures == []
+    assert len(result.records) == 1
+    record = result.records[0]
+    assert record.cutline_event_id == "EVENT-REAL-001"
+    assert record.mix_trace_id == "MIX-PLAN001-pk03"
+    assert record.source_product_code == "HG210R"
+    assert record.target_product_code == "HG182T"
+    assert record.mix_start_time == datetime(2026, 7, 16, 11, 19, 30)
 
 
 def test_custom_timing_and_basket_config_use_independent_fields():

@@ -16,8 +16,8 @@ from app.schemas.request_schema import CutlineAlgorithmRequest
 _RAW_AGV_FIELD_MAP = {
     "equipmentid": "machine_code",
     "equipmentname": "machine_name",
-    "lastlinecode": "order_code",
-    "lastlinename": "order_name",
+    "linename": "product_name",
+    "lastlinename": "previous_product_name",
     "waferspec": "wafer_spec",
     "createtime": "binding_time",
 }

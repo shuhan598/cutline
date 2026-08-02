@@ -70,7 +70,7 @@ def _add_machine(
     wafer_spec: str = "N",
     input_quantity_30m: float = 10000,
     output_quantity_30m: float = 8000,
-    order_name: str | None = None,
+    product_name: str | None = None,
 ) -> None:
     line_code = f"LINE-{machine_code}"
     candidate_snapshot.lines.append(
@@ -95,7 +95,7 @@ def _add_machine(
         agv_relation(
             machine_code=machine_code,
             order_code=order_code or "ORD-CURRENT",
-            order_name=order_name or order_code or "ORD-CURRENT",
+            product_name=product_name or order_code or "ORD-CURRENT",
             wafer_spec=wafer_spec,
         )
     )
@@ -149,7 +149,7 @@ def test_stockout_candidate_result_contains_complete_realtime_context():
     assert candidate.process_code == "P01"
     assert candidate.process_name == "制绒"
     assert candidate.current_order_code == "ORD-CURRENT"
-    assert candidate.current_order_name == "Current Order"
+    assert candidate.current_order_name == "Current Product"
     assert candidate.current_product_code == "PROD-CURRENT"
     assert candidate.current_wafer_size == "182"
     assert candidate.current_wafer_spec == "N"
@@ -176,7 +176,7 @@ def test_stockout_candidate_runs_without_line_data():
 
     assert candidate.machine_code == "M-01"
     assert candidate.current_order_code == "ORD-CURRENT"
-    assert candidate.current_order_name == "Current Order"
+    assert candidate.current_order_name == "Current Product"
     assert candidate.current_wafer_spec == "N"
     assert candidate.workshop_code == "S1"
 
@@ -402,7 +402,7 @@ def test_stockout_uses_agv_order_when_runtime_order_is_missing_or_different(
     candidate = _find(candidate_snapshot).candidates[0]
 
     assert candidate.current_order_code == "ORD-CURRENT"
-    assert candidate.current_order_name == "Current Order"
+    assert candidate.current_order_name == "Current Product"
 
 
 def test_stockout_excludes_warning_order_from_agv_relation():
@@ -411,7 +411,7 @@ def test_stockout_excludes_warning_order_from_agv_relation():
         candidate_snapshot.agv_relations[0].model_copy(
             update={
                 "order_code": "ORD-TARGET",
-                "order_name": "Target Order",
+                "product_name": "Target Product",
             }
         )
     )
@@ -430,10 +430,10 @@ def test_stockout_running_candidate_without_agv_fails_explicitly():
         _find(candidate_snapshot)
 
 
-def test_stockout_candidate_dump_contains_agv_order_name():
+def test_stockout_candidate_dump_contains_agv_product_name():
     candidate = _find(_candidate_snapshot()).candidates[0]
 
-    assert candidate.model_dump()["current_order_name"] == "Current Order"
+    assert candidate.model_dump()["current_order_name"] == "Current Product"
 
 
 @pytest.mark.parametrize(

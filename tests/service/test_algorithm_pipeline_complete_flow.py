@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 import pytest
-from pydantic import ValidationError
 
 from app.core.mixing_trace.mixing_trace_calculator import MixingTraceCalculator
 from app.core.return_judge.return_evaluator import (
@@ -23,12 +22,13 @@ from app.schemas.result_schema import (
     AlgorithmManualInterventionResult,
     AlgorithmMixingTraceBatchResult,
 )
-from app.schemas.common_schema import AlgorithmConfig
 from app.service.cutline_pipeline import CutlinePipeline
 from tests.core.cutline_plan.helpers import overflow_warning, stockout_warning
 from tests.core.mixing_trace.test_mixing_trace_calculator import (
     capacity,
     machine_master,
+    mixing_event,
+    PLAN_TIME,
     runtime,
     selected_machine,
     snapshot as mixing_snapshot,
@@ -37,6 +37,7 @@ from tests.core.mixing_trace.test_mixing_trace_calculator import (
 )
 from tests.core.return_judge.helpers import (
     CURRENT_TIME,
+    CUTLINE_START_TIME,
     active_event,
     algorithm_snapshot,
     interval,
@@ -157,7 +158,7 @@ def test_pipeline_initializes_single_remaining_stage_components():
     assert isinstance(pipeline._active_event_tracker, ActiveCutlineEventTracker)
 
 
-def test_formal_plan_creates_exact_active_event_with_matching_mixing_id(
+def test_formal_plan_waits_for_confirmation_without_future_mixing_record(
     monkeypatch,
 ):
     calculation_time = datetime(2026, 7, 16, 10, 0)
@@ -174,144 +175,47 @@ def test_formal_plan_creates_exact_active_event_with_matching_mixing_id(
         calculation_time=calculation_time,
         machines=[machine],
     )
-    snapshot = mixing_snapshot(
-        config=AlgorithmConfig(cutline_execution_delay_minutes=15)
-    )
+    snapshot = mixing_snapshot()
     pipeline = CutlinePipeline()
     _stub_upper_flow(monkeypatch, pipeline)
     _inject_stockout_decisions(monkeypatch, pipeline, [decision])
 
     result = pipeline.evaluate_algorithm(snapshot)
 
-    assert [event.model_dump() for event in result.new_active_cutline_events] == [
-        {
-            "event_id": "CUT-PLAN-EVENT-pk03",
-            "plan_id": "PLAN-EVENT",
-            "machine_code": "pk03",
-            "source_order_code": "ORD-A",
-            "target_order_code": "ORD-B",
-            "workshop_code": "S2",
-            "source_buffer_code": "BUF-SOURCE-pk03",
-            "target_buffer_code": "BUF-TARGET-pk03",
-            "upstream_process_code": "PK",
-            "downstream_process_code": "NEXT",
-            "source_wafer_size": "210",
-            "source_wafer_spec": "P",
-            "target_wafer_size": "210",
-            "target_wafer_spec": "N",
-            "cutline_start_time": calculation_time + timedelta(minutes=15),
-            "negative_start_time": None,
-            "status": "active",
-            "contribution_capacity": 7.0,
-            "warning_type": "stockout",
-        }
-    ]
-    assert [record.cutline_event_id for record in result.mixing_trace_records] == [
-        "CUT-PLAN-EVENT-pk03"
-    ]
+    assert len(result.stockout_warnings) == 1
+    assert result.cutline_decisions == [decision]
+    assert result.new_active_cutline_events == []
+    assert result.mixing_trace_records == []
     assert result.return_results == []
     assert result.updated_active_cutline_events == []
 
 
-@pytest.mark.parametrize(
-    ("error_type", "error_message"),
-    [
-        (ValueError, "bad active event value"),
-        (TypeError, "bad active event type"),
-        (OverflowError, "bad active event overflow"),
-        (ValidationError, None),
-    ],
-    ids=["value_error", "type_error", "overflow_error", "validation_error"],
-)
-def test_active_event_creation_error_is_isolated_and_later_machine_continues(
+def test_repeated_unconfirmed_plan_never_calls_active_event_tracker(
     monkeypatch,
-    error_type,
-    error_message,
 ):
-    machines = [selected_machine("MC-BAD"), selected_machine("MC-GOOD")]
-    snapshot = mixing_snapshot(
-        machine_runtimes=[runtime(code) for code in ("MC-BAD", "MC-GOOD")],
-        machine_masters=[
-            machine_master(code) for code in ("MC-BAD", "MC-GOOD")
-        ],
-        machine_product_capacities=[capacity("MC-BAD"), capacity("MC-GOOD")],
-    )
-    decision = _formal_decision(plan_id="PLAN-ISOLATE", machines=machines)
+    decision = _formal_decision(plan_id="PLAN-STABLE")
+    snapshot = mixing_snapshot()
     pipeline = CutlinePipeline()
     _stub_upper_flow(monkeypatch, pipeline)
     _inject_stockout_decisions(monkeypatch, pipeline, [decision])
-    create_event = pipeline._active_event_tracker.create_event
-    validation_messages = []
-
-    def create_with_one_failure(**kwargs):
-        if kwargs["machine_code"] == "MC-BAD":
-            if error_type is ValidationError:
-                try:
-                    return create_event(**(kwargs | {"event_id": ""}))
-                except ValidationError as error:
-                    validation_messages.append(str(error))
-                    raise
-            raise error_type(error_message)
-        return create_event(**kwargs)
-
     monkeypatch.setattr(
         pipeline._active_event_tracker,
         "create_event",
-        create_with_one_failure,
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("unconfirmed plan must not create an active event")
+        ),
     )
-
-    result = pipeline.evaluate_algorithm(snapshot)
-
-    assert [event.event_id for event in result.new_active_cutline_events] == [
-        "CUT-PLAN-ISOLATE-MC-GOOD"
-    ]
-    active_errors = [
-        error for error in result.errors if error.stage == "active_event_creation"
-    ]
-    expected_message = (
-        validation_messages[0]
-        if error_type is ValidationError
-        else error_message
-    )
-    assert [error.model_dump() for error in active_errors] == [
-        {
-            "stage": "active_event_creation",
-            "warning_type": "stockout",
-            "warning_key": "PLAN-ISOLATE:MC-BAD",
-            "reason": "active_event_creation_error",
-            "message": expected_message,
-        }
-    ]
-
-
-def test_repeated_plan_keeps_stable_event_id_and_default_zero_delay(
-    monkeypatch,
-):
-    calculation_time = datetime(2026, 7, 16, 8, 30)
-    decision = _formal_decision(
-        plan_id="PLAN-STABLE",
-        calculation_time=calculation_time,
-    )
-    snapshot = mixing_snapshot()
-    pipeline = CutlinePipeline()
-    tracker = pipeline._active_event_tracker
-    _stub_upper_flow(monkeypatch, pipeline)
-    _inject_stockout_decisions(monkeypatch, pipeline, [decision])
 
     first = pipeline.evaluate_algorithm(snapshot)
     second = pipeline.evaluate_algorithm(snapshot)
 
-    assert pipeline._active_event_tracker is tracker
-    assert [event.event_id for event in first.new_active_cutline_events] == [
-        "CUT-PLAN-STABLE-pk03"
-    ]
-    assert [event.event_id for event in second.new_active_cutline_events] == [
-        "CUT-PLAN-STABLE-pk03"
-    ]
-    assert first.new_active_cutline_events[0].cutline_start_time == calculation_time
+    assert first.new_active_cutline_events == []
+    assert second.new_active_cutline_events == []
+    assert first.mixing_trace_records == []
+    assert second.mixing_trace_records == []
 
 
-def test_overflow_event_uses_reduced_capacity(monkeypatch):
+def test_unconfirmed_overflow_plan_does_not_create_active_event(monkeypatch):
     machine = selected_machine("pk03").model_copy(
         update={"contribution_capacity": None, "reduced_capacity": 9}
     )
@@ -326,34 +230,8 @@ def test_overflow_event_uses_reduced_capacity(monkeypatch):
 
     result = pipeline.evaluate_algorithm(snapshot)
 
-    event = result.new_active_cutline_events[0]
-    assert event.warning_type == "overflow"
-    assert event.contribution_capacity == 9
-    assert event.event_id == "CUT-PLAN-OVERFLOW-EVENT-pk03"
-
-
-@pytest.mark.parametrize(
-    "unexpected_error",
-    [MemoryError("event oom"), RuntimeError("event bug")],
-    ids=["memory_error", "runtime_error"],
-)
-def test_unexpected_active_event_creation_error_propagates(
-    monkeypatch,
-    unexpected_error,
-):
-    snapshot = mixing_snapshot()
-    decision = _formal_decision(plan_id="PLAN-UNEXPECTED")
-    pipeline = CutlinePipeline()
-    _stub_upper_flow(monkeypatch, pipeline)
-    _inject_stockout_decisions(monkeypatch, pipeline, [decision])
-    monkeypatch.setattr(
-        pipeline._active_event_tracker,
-        "create_event",
-        lambda **kwargs: (_ for _ in ()).throw(unexpected_error),
-    )
-
-    with pytest.raises(type(unexpected_error), match=str(unexpected_error)):
-        pipeline.evaluate_algorithm(snapshot)
+    assert result.new_active_cutline_events == []
+    assert result.return_results == []
 
 
 def test_empty_remaining_inputs_return_accessible_complete_result(monkeypatch):
@@ -550,7 +428,7 @@ def test_real_silk_transition_result_is_included(monkeypatch):
     assert silk_result.reason == "not_yet_time_to_prepare"
 
 
-def test_silk_error_is_recorded_and_mixing_still_runs(monkeypatch):
+def test_silk_error_is_recorded_without_decision_driven_mixing(monkeypatch):
     snapshot = mixing_snapshot()
     decision = _formal_decision()
     pipeline = CutlinePipeline()
@@ -567,18 +445,27 @@ def test_silk_error_is_recorded_and_mixing_still_runs(monkeypatch):
     result = pipeline.evaluate_algorithm(snapshot)
 
     assert result.silk_screen_results == []
-    assert len(result.mixing_trace_records) == 1
+    assert result.mixing_trace_records == []
     assert result.mixing_trace_failures == []
-    assert len(result.errors) == 1
-    error = result.errors[0]
+    silk_errors = [
+        error
+        for error in result.errors
+        if error.stage == "silk_screen_transition"
+    ]
+    assert len(silk_errors) == 1
+    error = silk_errors[0]
     assert error.stage == "silk_screen_transition"
     assert error.warning_type is None
     assert error.warning_key is None
     assert error.reason == "silk_screen_transition_calculation_error"
     assert error.message == "silk failed"
+    assert any(
+        error.stage == "pending_cutline_creation"
+        for error in result.errors
+    )
 
 
-def test_formal_plan_generates_mixing_record_and_manual_decision_does_not(
+def test_decisions_do_not_generate_mixing_records(
     monkeypatch,
 ):
     snapshot = mixing_snapshot()
@@ -587,19 +474,31 @@ def test_formal_plan_generates_mixing_record_and_manual_decision_does_not(
     pipeline = CutlinePipeline()
     _stub_upper_flow(monkeypatch, pipeline)
     _inject_stockout_decisions(monkeypatch, pipeline, [formal, manual])
+    factory_calls = []
+    create_pending = pipeline._pending_plan_factory.create
+
+    def record_factory_call(snapshot, decision):
+        factory_calls.append(decision)
+        return create_pending(snapshot, decision)
+
+    monkeypatch.setattr(
+        pipeline._pending_plan_factory,
+        "create",
+        record_factory_call,
+    )
 
     result = pipeline.evaluate_algorithm(snapshot)
 
-    assert len(result.mixing_trace_records) == 1
-    assert result.mixing_trace_records[0].plan_id == "PLAN001"
-    assert [event.plan_id for event in result.new_active_cutline_events] == [
-        "PLAN001"
-    ]
+    assert result.mixing_trace_records == []
+    assert result.new_active_cutline_events == []
     assert result.mixing_trace_failures == []
-    assert result.errors == []
+    assert [error.stage for error in result.errors] == [
+        "pending_cutline_creation"
+    ]
+    assert factory_calls == [formal]
 
 
-def test_multi_machine_mixing_failures_stay_out_of_pipeline_errors(monkeypatch):
+def test_unconfirmed_multi_machine_plan_does_not_attempt_mixing(monkeypatch):
     successful = selected_machine("pk03")
     failing = selected_machine("pk04")
     second_successful = selected_machine("pk05")
@@ -619,21 +518,15 @@ def test_multi_machine_mixing_failures_stay_out_of_pipeline_errors(monkeypatch):
 
     result = pipeline.evaluate_algorithm(snapshot)
 
-    assert [item.machine_code for item in result.mixing_trace_records] == [
-        "pk03",
-        "pk05",
+    assert result.mixing_trace_records == []
+    assert result.mixing_trace_failures == []
+    assert result.new_active_cutline_events == []
+    assert [error.stage for error in result.errors] == [
+        "pending_cutline_creation"
     ]
-    assert [item.machine_code for item in result.mixing_trace_failures] == ["pk04"]
-    assert result.mixing_trace_failures[0].reason == "process_duration_not_found"
-    assert [item.machine_code for item in result.new_active_cutline_events] == [
-        "pk03",
-        "pk04",
-        "pk05",
-    ]
-    assert result.errors == []
 
 
-def test_multiple_plans_get_global_record_and_failure_sorting(monkeypatch):
+def test_multiple_unconfirmed_plans_do_not_attempt_mixing(monkeypatch):
     machines = ["Z-REC", "Z-FAIL", "A-REC", "A-FAIL"]
     snapshot = mixing_snapshot(
         machine_runtimes=[runtime(code) for code in machines],
@@ -656,23 +549,9 @@ def test_multiple_plans_get_global_record_and_failure_sorting(monkeypatch):
 
     result = pipeline.evaluate_algorithm(snapshot)
 
-    assert [item.machine_code for item in result.mixing_trace_records] == [
-        "A-REC",
-        "Z-REC",
-    ]
-    assert [item.machine_code for item in result.mixing_trace_failures] == [
-        "A-FAIL",
-        "Z-FAIL",
-    ]
-    assert [
-        (item.plan_id, item.machine_code)
-        for item in result.new_active_cutline_events
-    ] == [
-        ("PLAN-LATE", "Z-REC"),
-        ("PLAN-LATE", "Z-FAIL"),
-        ("PLAN-EARLY", "A-REC"),
-        ("PLAN-EARLY", "A-FAIL"),
-    ]
+    assert result.mixing_trace_records == []
+    assert result.mixing_trace_failures == []
+    assert result.new_active_cutline_events == []
 
 
 def test_complete_flow_does_not_mutate_snapshot_decision_or_plan(monkeypatch):
@@ -694,12 +573,220 @@ def test_complete_flow_does_not_mutate_snapshot_decision_or_plan(monkeypatch):
     assert decision.model_dump() == before_decision
 
 
+def test_complete_active_event_generates_one_mixing_record(monkeypatch):
+    event = mixing_event(
+        event_id="EVENT-ACTIVE-001",
+        plan_id="PLAN-ACTIVE-001",
+    )
+    snapshot = mixing_snapshot().model_copy(
+        update={"active_cutline_events": [event]},
+        deep=True,
+    )
+    pipeline = CutlinePipeline()
+    _stub_upper_flow(monkeypatch, pipeline)
+    monkeypatch.setattr(
+        pipeline._return,
+        "evaluate_algorithm",
+        lambda *, snapshot, interval_results: [],
+    )
+
+    result = pipeline.evaluate_algorithm(snapshot)
+
+    assert [item.cutline_event_id for item in result.mixing_trace_records] == [
+        event.event_id
+    ]
+    assert result.persistence_state.new_mixing_trace_records == (
+        result.mixing_trace_records
+    )
+    assert result.persistence_state.mixed_cutline_event_ids == [event.event_id]
+
+
+def test_blank_process_legacy_event_is_skipped_without_recurring_failure(
+    monkeypatch,
+):
+    event = mixing_event(event_id="EVENT-LEGACY-BLANK").model_copy(
+        update={"process_code": "   "},
+        deep=True,
+    )
+    snapshot = mixing_snapshot().model_copy(
+        update={"active_cutline_events": [event]},
+        deep=True,
+    )
+    pipeline = CutlinePipeline()
+    _stub_upper_flow(monkeypatch, pipeline)
+    monkeypatch.setattr(
+        pipeline._return,
+        "evaluate_algorithm",
+        lambda *, snapshot, interval_results: [],
+    )
+    monkeypatch.setattr(
+        pipeline._mixing_trace,
+        "calculate_for_event",
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("incomplete legacy event must not be calculated")
+        ),
+    )
+
+    result = pipeline.evaluate_algorithm(snapshot)
+
+    assert result.mixing_trace_records == []
+    assert result.mixing_trace_failures == []
+    assert result.persistence_state.mixed_cutline_event_ids == []
+
+
+def test_mixed_event_watermark_prevents_replayed_calculation(monkeypatch):
+    event = mixing_event(event_id="EVENT-MIXED")
+    snapshot = mixing_snapshot().model_copy(
+        update={
+            "active_cutline_events": [event],
+            "mixed_cutline_event_ids": [event.event_id],
+        },
+        deep=True,
+    )
+    pipeline = CutlinePipeline()
+    _stub_upper_flow(monkeypatch, pipeline)
+    monkeypatch.setattr(
+        pipeline._return,
+        "evaluate_algorithm",
+        lambda *, snapshot, interval_results: [],
+    )
+    monkeypatch.setattr(
+        pipeline._mixing_trace,
+        "calculate_for_event",
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("mixed event must not be recalculated")
+        ),
+    )
+
+    result = pipeline.evaluate_algorithm(snapshot)
+
+    assert result.mixing_trace_records == []
+    assert result.mixing_trace_failures == []
+    assert result.persistence_state.new_mixing_trace_records == []
+    assert result.persistence_state.mixed_cutline_event_ids == [event.event_id]
+
+
+def test_failed_event_does_not_advance_watermark_and_can_retry(monkeypatch):
+    event = mixing_event(event_id="EVENT-RETRY", plan_id="PLAN-RETRY")
+    failing_snapshot = mixing_snapshot(
+        machine_product_capacities=[]
+    ).model_copy(update={"active_cutline_events": [event]}, deep=True)
+    pipeline = CutlinePipeline()
+    _stub_upper_flow(monkeypatch, pipeline)
+    monkeypatch.setattr(
+        pipeline._return,
+        "evaluate_algorithm",
+        lambda *, snapshot, interval_results: [],
+    )
+
+    failed = pipeline.evaluate_algorithm(failing_snapshot)
+
+    assert failed.mixing_trace_records == []
+    assert [item.cutline_event_id for item in failed.mixing_trace_failures] == [
+        event.event_id
+    ]
+    assert failed.persistence_state.mixed_cutline_event_ids == []
+
+    corrected_snapshot = mixing_snapshot().model_copy(
+        update={"active_cutline_events": [event]},
+        deep=True,
+    )
+    retried = pipeline.evaluate_algorithm(corrected_snapshot)
+
+    assert [item.cutline_event_id for item in retried.mixing_trace_records] == [
+        event.event_id
+    ]
+    assert retried.persistence_state.mixed_cutline_event_ids == [event.event_id]
+
+
+def test_same_machine_later_event_can_generate_new_mixing_record(monkeypatch):
+    first = mixing_event(event_id="EVENT-FIRST", plan_id="PLAN-FIRST")
+    second = mixing_event(
+        event_id="EVENT-SECOND",
+        plan_id="PLAN-SECOND",
+        cutline_start_time=PLAN_TIME + timedelta(minutes=5),
+    )
+    snapshot = mixing_snapshot().model_copy(
+        update={
+            "active_cutline_events": [first, second],
+            "mixed_cutline_event_ids": [first.event_id],
+        },
+        deep=True,
+    )
+    pipeline = CutlinePipeline()
+    _stub_upper_flow(monkeypatch, pipeline)
+    monkeypatch.setattr(
+        pipeline._return,
+        "evaluate_algorithm",
+        lambda *, snapshot, interval_results: [],
+    )
+
+    result = pipeline.evaluate_algorithm(snapshot)
+
+    assert [item.cutline_event_id for item in result.mixing_trace_records] == [
+        second.event_id
+    ]
+    assert result.persistence_state.mixed_cutline_event_ids == [
+        first.event_id,
+        second.event_id,
+    ]
+
+
+def test_input_return_watermark_skips_only_that_active_event(monkeypatch):
+    suggested = active_event(event_id="EVENT-SUGGESTED", machine_code="MC-01")
+    remaining = active_event(
+        event_id="EVENT-REMAINING",
+        machine_code="MC-02",
+        target_buffer_code="BUF-SECOND",
+        target_order_code="ORD-SECOND",
+        cutline_start_time=CUTLINE_START_TIME + timedelta(minutes=1),
+    )
+    snapshot = algorithm_snapshot(
+        active_cutline_events=[suggested, remaining]
+    ).model_copy(
+        update={"return_suggested_event_ids": [suggested.event_id]},
+        deep=True,
+    )
+    pipeline = CutlinePipeline()
+    _stub_upper_flow(monkeypatch, pipeline)
+    evaluated: list[str] = []
+    monkeypatch.setattr(
+        pipeline._return,
+        "evaluate_algorithm",
+        lambda *, snapshot, interval_results: evaluated.append(
+            snapshot.active_cutline_events[0].event_id
+        )
+        or [],
+    )
+
+    result = pipeline.evaluate_algorithm(snapshot)
+
+    assert evaluated == [remaining.event_id]
+    assert result.return_results == []
+    persisted = {
+        item.event_id: item
+        for item in result.persistence_state.active_cutline_events
+    }
+    assert persisted[suggested.event_id].status == "return_recommended"
+    assert persisted[remaining.event_id].status == "active"
+    assert result.persistence_state.return_suggested_event_ids == [
+        suggested.event_id
+    ]
+
+
 def test_complete_algorithm_stage_call_order(monkeypatch):
     stock_decision = _formal_decision(plan_id="PLAN-STOCK")
     overflow_decision = _formal_decision(plan_id="PLAN-OVERFLOW")
     stock_warning = stockout_warning()
     overflow_warning_result = overflow_warning()
-    events = [active_event(event_id="EVENT-01"), active_event(event_id="EVENT-02")]
+    events = [
+        mixing_event(event_id="EVENT-01", plan_id="PLAN-EVENT-01"),
+        mixing_event(
+            event_id="EVENT-02",
+            plan_id="PLAN-EVENT-02",
+            cutline_start_time=PLAN_TIME + timedelta(minutes=1),
+        ),
+    ]
     snapshot = algorithm_snapshot(active_cutline_events=events)
     pipeline = CutlinePipeline()
     calls = []
@@ -737,9 +824,9 @@ def test_complete_algorithm_stage_call_order(monkeypatch):
     )
     monkeypatch.setattr(
         pipeline._mixing_trace,
-        "calculate_for_decision",
-        lambda *, snapshot, decision: calls.append(
-            f"mixing:{decision.plan.plan_id}"
+        "calculate_for_event",
+        lambda *, snapshot, event: calls.append(
+            f"mixing:{event.event_id}"
         )
         or AlgorithmMixingTraceBatchResult(),
     )
@@ -748,17 +835,17 @@ def test_complete_algorithm_stage_call_order(monkeypatch):
 
     assert calls == [
         "net_rate",
+        "return:EVENT-01",
+        "return:EVENT-02",
         "depletion",
         "overflow_time",
         "stockout_warning",
         "overflow_warning",
         "stockout_decision",
         "overflow_decision",
-        "return:EVENT-01",
-        "return:EVENT-02",
         "silk",
-        "mixing:PLAN-STOCK",
-        "mixing:PLAN-OVERFLOW",
+        "mixing:EVENT-01",
+        "mixing:EVENT-02",
     ]
 
 
@@ -791,13 +878,21 @@ def test_unexpected_silk_exception_propagates(monkeypatch):
 
 
 def test_unexpected_mixing_exception_propagates(monkeypatch):
-    snapshot = mixing_snapshot()
+    event = mixing_event(event_id="EVENT-ERROR")
+    snapshot = mixing_snapshot().model_copy(
+        update={"active_cutline_events": [event]},
+        deep=True,
+    )
     pipeline = CutlinePipeline()
     _stub_upper_flow(monkeypatch, pipeline)
-    _inject_stockout_decisions(monkeypatch, pipeline, [_formal_decision()])
+    monkeypatch.setattr(
+        pipeline._return,
+        "evaluate_algorithm",
+        lambda *, snapshot, interval_results: [],
+    )
     monkeypatch.setattr(
         pipeline._mixing_trace,
-        "calculate_for_decision",
+        "calculate_for_event",
         lambda **kwargs: (_ for _ in ()).throw(RuntimeError("mixing bug")),
     )
 

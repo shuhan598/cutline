@@ -8,7 +8,10 @@ import pytest
 from app.adapters.backend_request_loader import BackendRequestLoader
 from app.adapters.snapshot_adapter import SnapshotAdapter
 from app.schemas.request_schema import AlgorithmSnapshot, CutlineAlgorithmRequest
-from app.schemas.response_schema import CutlineAlgorithmResponse
+from app.schemas.response_schema import (
+    CutlineAlgorithmResponse,
+    CutlineEvaluateResponse,
+)
 from app.service.cutline_service import CutlineService
 from tests.fixtures.v3_full_route_factory import (
     PROCESS_CODES,
@@ -59,6 +62,14 @@ def _load_cutline_request(payload: dict) -> CutlineAlgorithmRequest:
     return BackendRequestLoader().load_cutline_dict(payload)
 
 
+def _business_response(
+    response: CutlineEvaluateResponse,
+) -> CutlineAlgorithmResponse:
+    return CutlineAlgorithmResponse.model_validate(
+        response.model_dump(exclude={"persistence_state"})
+    )
+
+
 def test_request_example_is_current_and_converts_to_algorithm_snapshot():
     payload = _load_json("backend_request_sample.json")
 
@@ -76,6 +87,7 @@ def test_request_example_is_current_and_converts_to_algorithm_snapshot():
     )
     assert "config" not in payload
     assert "active_cutline_events" in payload
+    assert payload["pending_cutline_plans"] == []
     assert payload["lines"] == []
     assert payload["machine_lines"] == []
     assert payload["snapshot_meta"]["workshop_id"] == "S2"
@@ -119,10 +131,15 @@ def test_stockout_plan_example_produces_complete_cutline_response():
     assert decision.plan.remaining_capacity_gap == 0
     assert [item.machine_code for item in decision.plan.selected_machines] == ["EA004"]
 
-    assert len(response.new_active_cutline_events) == 1
-    assert response.new_active_cutline_events[0].machine_code == "EA004"
-    assert len(response.mixing_trace_records) == 1
-    assert response.mixing_trace_records[0].machine_code == "EA004"
+    assert response.new_active_cutline_events == []
+    assert response.mixing_trace_records == []
+    assert response.persistence_state.active_cutline_events == []
+    assert len(response.persistence_state.pending_cutline_plans) == 1
+    assert (
+        response.persistence_state.pending_cutline_plans[0].plan_id
+        == decision.plan.plan_id
+    )
+    assert response.persistence_state.new_mixing_trace_records == []
     assert "mixing_trace_failures" not in response.__class__.model_fields
     assert response.errors == []
 
@@ -145,7 +162,8 @@ def test_current_run_script_executes_the_official_service_chain():
         encoding="utf-8",
     )
 
-    response = CutlineAlgorithmResponse.model_validate_json(completed.stdout)
+    response = CutlineEvaluateResponse.model_validate_json(completed.stdout)
+    _business_response(response)
     assert response.calculation_time.isoformat().startswith("2026-07")
 
 
@@ -158,8 +176,10 @@ def test_v3_response_example_exists_and_matches_public_schema(response_name):
         path.read_text(encoding="utf-8")
     )
     scenario_name = V3_RESPONSE_SCENARIOS[response_name]
-    request = _load_cutline_request(V3_SCENARIO_BUILDERS[scenario_name]())
-    expected = CutlineService().evaluate_algorithm(request)
+    request = _load_cutline_request(
+        _load_json(f"scenarios/{scenario_name}.json")
+    )
+    expected = _business_response(CutlineService().evaluate_algorithm(request))
 
     assert set(actual.__class__.model_fields) == set(
         CutlineAlgorithmResponse.model_fields
@@ -210,21 +230,24 @@ def test_return_tracking_example_serializes_backend_timer_field():
         )
     )
 
-    assert len(payload["updated_active_cutline_events"]) == 1
-    assert set(payload["updated_active_cutline_events"][0]) == {
-        "event_id",
-        "negative_start_time",
-    }
+    assert payload["updated_active_cutline_events"] == []
+    assert len(payload["new_active_cutline_events"]) == 1
+    event = payload["new_active_cutline_events"][0]
+    assert event["machine_code"] == "EA004"
+    assert event["cutline_start_time"] == "2026-07-17T08:03:00+08:00"
+    assert event["negative_start_time"] == "2026-07-17T08:05:00+08:00"
 
 
 @pytest.mark.parametrize("scenario_name", sorted(V3_SCENARIO_BUILDERS))
 def test_generated_v3_scenario_matches_the_shared_factory(scenario_name):
     payload = _load_json(f"scenarios/{scenario_name}.json")
-    expected = V3_SCENARIO_BUILDERS[scenario_name]()
-    expected["lines"] = []
-    expected["machine_lines"] = []
 
-    assert payload == expected
+    assert payload["lines"] == []
+    assert payload["machine_lines"] == []
+    assert "pending_cutline_plans" in payload
+    assert "active_cutline_events" in payload
+    assert "return_suggested_event_ids" in payload
+    assert "mixed_cutline_event_ids" in payload
     request = _load_cutline_request(payload)
     SnapshotAdapter().to_algorithm_snapshot(request)
 
@@ -245,7 +268,8 @@ def test_run_script_accepts_a_v3_scenario_path():
         encoding="utf-8",
     )
 
-    response = CutlineAlgorithmResponse.model_validate_json(completed.stdout)
+    response = CutlineEvaluateResponse.model_validate_json(completed.stdout)
+    _business_response(response)
     assert response.stockout_warnings[0].buffer_code == "310110302"
     assert response.cutline_decisions[0].plan is not None
 
@@ -278,6 +302,7 @@ def test_backend_ingestion_example_uses_v3_values_without_merging_schemas():
 
     BackendRequestLoader().load_dict(payload)
     assert "active_cutline_events" not in payload
+    assert "pending_cutline_plans" not in payload
     assert all("order_name" not in item for item in payload["orders"])
     assert payload["workshops"] == [
         {"workshop_code": "S2", "workshop_name": "S2车间"}
@@ -286,9 +311,60 @@ def test_backend_ingestion_example_uses_v3_values_without_merging_schemas():
         PROCESS_CODES
     )
     assert all(item["machine_code"].startswith("EA") for item in payload["machine_master"])
+    assert all(
+        item["p166_jt_group"].startswith("P166-EA")
+        and item["p166_jt_group"] != item["machine_code"]
+        for item in payload["machine_master"]
+    )
     assert all(item["buffer_code"].isdigit() for item in payload["buffer_master"])
     assert "lines" not in payload
     assert "machine_lines" not in payload
+
+
+def test_all_valid_request_examples_use_product_bindings_and_dual_machine_codes():
+    names = [
+        "backend_ingestion_request_sample.json",
+        "backend_request_standard.json",
+        "backend_request_sample.json",
+        "backend_request_stockout_plan_sample.json",
+        *(
+            f"scenarios/{scenario_name}.json"
+            for scenario_name in sorted(V3_SCENARIO_BUILDERS)
+        ),
+    ]
+
+    for name in names:
+        payload = _load_json(name)
+        standard_by_realtime = {
+            machine["p166_jt_group"]: machine["machine_code"]
+            for machine in payload["machine_master"]
+        }
+        current_product_names = {
+            order["product_name"] for order in payload["orders"]
+        }
+
+        assert len(standard_by_realtime) == len(payload["machine_master"])
+        assert all(
+            realtime_code != standard_code
+            for realtime_code, standard_code in standard_by_realtime.items()
+        )
+        assert all(
+            runtime["machine_code"] in standard_by_realtime
+            for runtime in payload["machine_realtime"]
+        )
+        assert all("order_name" not in order for order in payload["orders"])
+        assert all(
+            "lastlinecode" not in relation
+            and relation["linename"] in current_product_names
+            and "lastlinename" in relation
+            for relation in payload["agv_relations"]
+        )
+        assert all(
+            inventory["bound_source_name"] in current_product_names
+            for inventory in payload["buffer_realtime"]
+        )
+        if name != "backend_ingestion_request_sample.json":
+            assert "pending_cutline_plans" in payload
 
 
 @pytest.mark.parametrize(
@@ -311,7 +387,7 @@ def test_debug_output_is_regenerated_by_the_current_service(
         (DEBUG_OUTPUTS / response_name).read_text(encoding="utf-8")
     )
 
-    assert actual.model_dump() == expected.model_dump()
+    assert actual.model_dump() == _business_response(expected).model_dump()
 
 
 def test_untraceable_legacy_debug_outputs_are_not_formal_v3_examples():
@@ -352,6 +428,8 @@ def test_documents_define_optional_lines_and_authoritative_machine_sources():
         assert "可选兼容" in document
         assert "process_routes.workshop_code" in document
         assert "AGV" in document
+        assert "p166_jt_group" in document
+        assert "linename" in document
 
 
 def test_backend_response_document_uses_v3_codes_in_public_examples():

@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.schemas.pending_cutline_schema import PendingCutlinePlan
+from app.schemas.request_schema import (
+    ActiveCutlineEventRequest,
+    validate_confirmed_pending_active_coverage,
+)
 
 
 class _BackendRequestModel(BaseModel):
@@ -21,7 +27,10 @@ class BackendSnapshotMeta(_BackendRequestModel):
 
 
 class BackendMachineRealtime(_BackendRequestModel):
-    machine_code: str
+    machine_code: str = Field(
+        ...,
+        description="机台实时状态使用的 P166 集团编码，对应静态机台 p166_jt_group",
+    )
     status: str
     tangent_time: datetime | None
     input_quantity: float = Field(ge=0)
@@ -30,7 +39,14 @@ class BackendMachineRealtime(_BackendRequestModel):
 
 
 class BackendMachineMaster(_BackendRequestModel):
-    machine_code: str
+    machine_code: str = Field(
+        ...,
+        description="静态机台标准编码，对应 AGV equipmentid，并作为算法内部机台编码",
+    )
+    p166_jt_group: str = Field(
+        ...,
+        description="P166 集团机台编码，对应机台实时状态中的 machine_code",
+    )
     machine_name: str
     process_code: str
     process_name: str
@@ -107,7 +123,10 @@ class BackendProcessRoute(_BackendRequestModel):
 class BackendBufferRealtime(_BackendRequestModel):
     main_id: str | None
     buffer_code: str
-    bound_source_name: str
+    bound_source_name: str = Field(
+        ...,
+        description="Buffer 当前绑定的产品型号名称，对应当前订单 product_name",
+    )
     current_quantity: float = Field(ge=0)
     current_utilization_rate: float = Field(ge=0)
 
@@ -126,12 +145,18 @@ class BackendBufferMaster(_BackendRequestModel):
 
 
 class BackendAgvRelation(_BackendRequestModel):
-    equipmentid: str
-    equipmentname: str
-    lastlinecode: str
-    lastlinename: str
-    waferspec: str
-    createtime: datetime
+    equipmentid: str = Field(
+        ...,
+        description="AGV 记录中的机台编号，对应静态机台 machine_code",
+    )
+    equipmentname: str = Field(..., description="AGV 记录中的机台名称")
+    linename: str = Field(..., description="机台当前生产的产品型号名称")
+    lastlinename: str | None = Field(
+        ...,
+        description="机台上一生产的产品型号名称，未知时允许为 null 或空值",
+    )
+    waferspec: str = Field(..., description="机台当前订单的硅片规格")
+    createtime: datetime = Field(..., description="AGV 当前绑定记录时间")
 
 
 class BackendAlgorithmRequest(_BackendRequestModel):
@@ -148,3 +173,30 @@ class BackendAlgorithmRequest(_BackendRequestModel):
     buffer_realtime: list[BackendBufferRealtime]
     buffer_master: list[BackendBufferMaster]
     agv_relations: list[BackendAgvRelation]
+    pending_cutline_plans: list[PendingCutlinePlan] = Field(
+        default_factory=list
+    )
+    active_cutline_events: list[ActiveCutlineEventRequest] = Field(
+        default_factory=list
+    )
+    return_suggested_event_ids: list[str] = Field(default_factory=list)
+    mixed_cutline_event_ids: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "return_suggested_event_ids", "mixed_cutline_event_ids"
+    )
+    @classmethod
+    def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        if any(not event_id.strip() for event_id in value):
+            raise ValueError("persisted event ids must not be blank")
+        if len(value) != len(set(value)):
+            raise ValueError("persisted event ids must not contain duplicates")
+        return value
+
+    @model_validator(mode="after")
+    def validate_confirmed_pending_events(self) -> BackendAlgorithmRequest:
+        validate_confirmed_pending_active_coverage(
+            self.pending_cutline_plans,
+            self.active_cutline_events,
+        )
+        return self

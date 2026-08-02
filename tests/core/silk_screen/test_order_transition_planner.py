@@ -91,7 +91,6 @@ def _order(
 ) -> AlgorithmOrder:
     return AlgorithmOrder(
         order_code=order_code,
-        order_name=order_code,
         order_status="running",
         product_code=product_code or f"PROD-{order_code}",
         product_name=product_code or f"PROD-{order_code}",

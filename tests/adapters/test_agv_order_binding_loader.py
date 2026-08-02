@@ -15,8 +15,8 @@ def raw_agv_record() -> dict:
     return {
         "equipmentid": "EA003",
         "equipmentname": "EA003制绒机",
-        "lastlinecode": "ORD-S2-001",
-        "lastlinename": "至上",
+        "linename": "182N至上产品",
+        "lastlinename": "210R上一产品",
         "waferspec": "N",
         "createtime": "2026-07-23 10:23:39",
     }
@@ -26,14 +26,14 @@ def standard_agv_record() -> dict:
     return {
         "machine_code": "EA003",
         "machine_name": "EA003制绒机",
-        "order_code": "ORD-S2-001",
-        "order_name": "至上",
+        "product_name": "182N至上产品",
+        "previous_product_name": "210R上一产品",
         "wafer_spec": "N",
         "binding_time": "2026-07-23 10:23:39",
     }
 
 
-def test_normalize_payload_maps_raw_agv_fields_without_mutating_input():
+def test_normalize_payload_maps_product_names_without_mutating_input():
     payload = {"agv_relations": [raw_agv_record()]}
     original = deepcopy(payload)
 
@@ -46,7 +46,7 @@ def test_normalize_payload_maps_raw_agv_fields_without_mutating_input():
     assert normalized["agv_relations"][0] is not payload["agv_relations"][0]
 
 
-def test_raw_agv_onsite_fields_are_filtered_including_process_fields():
+def test_raw_agv_onsite_fields_are_filtered_but_linename_is_preserved():
     record = raw_agv_record()
     record.update(
         {
@@ -54,7 +54,6 @@ def test_raw_agv_onsite_fields_are_filtered_including_process_fields():
             "processcode": "WRONG-PROCESS",
             "processname": "错误工序",
             "linecode": "ONSITE-LINE",
-            "linename": "现场路线",
             "inputQuantity": 123,
             "unknownOnsiteField": "ignored",
         }
@@ -68,11 +67,24 @@ def test_raw_agv_onsite_fields_are_filtered_including_process_fields():
     assert set(normalized["agv_relations"][0]) == {
         "machine_code",
         "machine_name",
-        "order_code",
-        "order_name",
+        "product_name",
+        "previous_product_name",
         "wafer_spec",
         "binding_time",
     }
+
+
+def test_removed_lastlinecode_is_filtered_and_never_becomes_order_code():
+    record = raw_agv_record()
+    record["lastlinecode"] = "ORD-LEGACY-WRONG"
+
+    normalized = BackendRequestLoader().normalize_payload(
+        {"agv_relations": [record]}
+    )
+
+    assert normalized["agv_relations"][0] == standard_agv_record()
+    assert "order_code" not in normalized["agv_relations"][0]
+    assert "lastlinecode" not in normalized["agv_relations"][0]
 
 
 def test_equipmentcode_is_never_used_as_machine_code():
@@ -106,8 +118,8 @@ def test_standard_agv_record_is_preserved_for_strict_schema_validation():
     [
         ("equipmentid", "machine_code"),
         ("equipmentname", "machine_name"),
-        ("lastlinecode", "order_code"),
-        ("lastlinename", "order_name"),
+        ("linename", "product_name"),
+        ("lastlinename", "previous_product_name"),
         ("waferspec", "wafer_spec"),
         ("createtime", "binding_time"),
     ],
@@ -154,8 +166,8 @@ def test_equivalent_raw_and_standard_binding_times_do_not_conflict():
     [
         ("equipmentid", "machine_code", "EA004"),
         ("equipmentname", "machine_name", "另一台机"),
-        ("lastlinecode", "order_code", "ORD-S2-002"),
-        ("lastlinename", "order_name", "另一订单"),
+        ("linename", "product_name", "另一当前产品"),
+        ("lastlinename", "previous_product_name", "另一上一产品"),
         ("waferspec", "wafer_spec", "R"),
         ("createtime", "binding_time", "2026-07-23 10:24:00"),
     ],
@@ -181,24 +193,49 @@ def test_conflicting_raw_and_standard_fields_raise_explicit_load_error(
     assert repr(standard_value) in message
 
 
-def test_missing_createtime_is_not_defaulted_by_loader():
+@pytest.mark.parametrize(
+    ("raw_field", "standard_field"),
+    [
+        ("linename", "product_name"),
+        ("createtime", "binding_time"),
+    ],
+)
+def test_required_raw_agv_fields_are_not_defaulted_by_loader(
+    raw_field: str,
+    standard_field: str,
+):
     record = raw_agv_record()
-    del record["createtime"]
+    del record[raw_field]
 
     normalized = BackendRequestLoader().normalize_payload(
         {"agv_relations": [record]}
     )
 
-    assert "binding_time" not in normalized["agv_relations"][0]
+    assert standard_field not in normalized["agv_relations"][0]
     with pytest.raises(ValidationError) as error:
         AgvRelationRequest.model_validate(normalized["agv_relations"][0])
-    assert error.value.errors()[0]["loc"] == ("binding_time",)
+    assert error.value.errors()[0]["loc"] == (standard_field,)
     assert error.value.errors()[0]["type"] == "missing"
+
+
+@pytest.mark.parametrize("previous_name", [None, ""])
+def test_previous_product_name_can_be_null_or_empty(previous_name):
+    record = raw_agv_record()
+    record["lastlinename"] = previous_name
+
+    normalized = BackendRequestLoader().normalize_payload(
+        {"agv_relations": [record]}
+    )
+
+    relation = AgvRelationRequest.model_validate(
+        normalized["agv_relations"][0]
+    )
+    assert relation.previous_product_name == previous_name
 
 
 def test_non_agv_payload_content_is_deep_copied_but_not_changed():
     payload = {
-        "machine_realtime": [{"machine_code": "EA003"}],
+        "machine_realtime": [{"machine_code": "P166-EA003"}],
         "orders": [{"order_code": "ORD-S2-001"}],
         "agv_relations": [],
     }

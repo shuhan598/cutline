@@ -16,7 +16,7 @@ def _internal_result(payload):
     return CutlinePipeline().evaluate_algorithm(snapshot(payload))
 
 
-def test_v3_stockout_auto_generates_plan_event_and_mixing_trace():
+def test_v3_stockout_auto_generates_pending_plan_without_future_mixing():
     payload = build_stockout_auto_payload()
 
     response = evaluate(payload)
@@ -44,19 +44,11 @@ def test_v3_stockout_auto_generates_plan_event_and_mixing_trace():
     assert internal_plan is not None
     assert internal_plan.risk_resolved is True
 
-    event = response.new_active_cutline_events[0]
-    mixing = response.mixing_trace_records[0]
-    assert event.event_id == mixing.cutline_event_id
-    assert plan.plan_id == mixing.plan_id
-    assert event.event_id == f"CUT-{plan.plan_id}-EA004"
-    assert event.machine_code == mixing.machine_code == "EA004"
-    assert event.cutline_start_time == plan.calculation_time
-    assert mixing.mixed_basket_start_index == 1
-    assert mixing.mixed_basket_end_index == 10
-    assert mixing.mixed_basket_count == 10
-    assert mixing.estimated_total_mixed_pieces == 1200
-    assert [item.estimated_pieces for item in mixing.compositions] == [600, 600]
-    assert "mixing_trace_failures" not in response.model_fields
+    assert response.new_active_cutline_events == []
+    assert response.mixing_trace_records == []
+    assert response.persistence_state.new_mixing_trace_records == []
+    assert response.persistence_state.mixed_cutline_event_ids == []
+    assert "mixing_trace_failures" not in response.__class__.model_fields
     assert response.errors == []
 
 

@@ -52,6 +52,10 @@ def _machine_name(machine_code: str, process_code: str) -> str:
     return f"{machine_code}{process_label}"
 
 
+def _p166_jt_group(machine_code: str) -> str:
+    return f"P166-{machine_code}"
+
+
 def _lines() -> list[dict[str, Any]]:
     return [
         {
@@ -124,15 +128,14 @@ def _products() -> list[dict[str, Any]]:
 
 def _orders() -> list[dict[str, Any]]:
     definitions = (
-        (TARGET_ORDER_CODE, "至上", "PROD-S2-N-TARGET", "182N至上产品"),
-        (SUPPORT_ORDER_CODE, "至上支援单", "PROD-S2-N-SUPPORT", "182N支援产品"),
-        ("ORD-S2-003", "华晟", "PROD-S2-R", "210R华晟产品"),
-        ("ORD-S2-004", "晶澳", "PROD-S2-P", "210P晶澳产品"),
+        (TARGET_ORDER_CODE, "PROD-S2-N-TARGET", "182N至上产品"),
+        (SUPPORT_ORDER_CODE, "PROD-S2-N-SUPPORT", "182N支援产品"),
+        ("ORD-S2-003", "PROD-S2-R", "210R华晟产品"),
+        ("ORD-S2-004", "PROD-S2-P", "210P晶澳产品"),
     )
     return [
         {
             "order_code": order_code,
-            "order_name": order_name,
             "order_status": "生产中",
             "total_quantity": 100000.0,
             "piece_source": "A",
@@ -144,7 +147,7 @@ def _orders() -> list[dict[str, Any]]:
             "produced_quantity": 0.0,
             "remaining_quantity": 100000.0,
         }
-        for order_code, order_name, product_code, product_name in definitions
+        for order_code, product_code, product_name in definitions
     ]
 
 
@@ -213,6 +216,7 @@ def _machine_master() -> list[dict[str, Any]]:
     return [
         {
             "machine_code": machine_code,
+            "p166_jt_group": _p166_jt_group(machine_code),
             "machine_name": _machine_name(machine_code, process_code),
             "process_code": process_code,
             "process_name": process_code,
@@ -224,7 +228,7 @@ def _machine_master() -> list[dict[str, Any]]:
 def _machine_realtime() -> list[dict[str, Any]]:
     return [
         {
-            "machine_code": machine_code,
+            "machine_code": _p166_jt_group(machine_code),
             "status": status,
             "tangent_time": None,
             "input_quantity": 100.0 if status == "运行" else 0.0,
@@ -273,7 +277,7 @@ def _buffer_realtime() -> list[dict[str, Any]]:
         {
             "main_id": f"MAIN-{buffer_code}",
             "buffer_code": buffer_code,
-            "bound_source_name": "至上",
+            "bound_source_name": "182N至上产品",
             "current_quantity": 1000.0,
             "current_utilization_rate": 0.01,
         }
@@ -282,8 +286,8 @@ def _buffer_realtime() -> list[dict[str, Any]]:
 
 
 def _agv_relations() -> list[dict[str, Any]]:
-    order_names = {
-        order["order_code"]: order["order_name"] for order in _orders()
+    product_names = {
+        order["order_code"]: order["product_name"] for order in _orders()
     }
     wafer_specs = {
         machine_code: next(
@@ -297,8 +301,8 @@ def _agv_relations() -> list[dict[str, Any]]:
         {
             "equipmentid": machine_code,
             "equipmentname": _machine_name(machine_code, process_code),
-            "lastlinecode": order_code,
-            "lastlinename": order_names[order_code],
+            "linename": product_names[order_code],
+            "lastlinename": None,
             "waferspec": wafer_specs[machine_code],
             "createtime": "2026-07-17 07:55:00",
         }
@@ -331,6 +335,7 @@ def _build_base_template() -> dict[str, Any]:
         "buffer_realtime": _buffer_realtime(),
         "buffer_master": _buffer_master(),
         "agv_relations": _agv_relations(),
+        "pending_cutline_plans": [],
         "active_cutline_events": [],
     }
 
@@ -345,10 +350,15 @@ def build_base_request_payload() -> dict[str, Any]:
 
 
 def _runtime(payload: dict[str, Any], machine_code: str) -> dict[str, Any]:
+    machine = next(
+        item
+        for item in payload["machine_master"]
+        if item["machine_code"] == machine_code
+    )
     return next(
         item
         for item in payload["machine_realtime"]
-        if item["machine_code"] == machine_code
+        if item["machine_code"] == machine["p166_jt_group"]
     )
 
 
@@ -357,7 +367,8 @@ def _set_agv_binding(
     machine_code: str,
     order_code: str,
     *,
-    order_name: str | None = None,
+    product_name: str | None = None,
+    previous_product_name: str | None = None,
     wafer_spec: str | None = None,
     binding_time: str = "2026-07-17 07:55:00",
 ) -> None:
@@ -370,6 +381,31 @@ def _set_agv_binding(
     ]
     if not order_code:
         return
+
+    payload["agv_relations"].append(
+        _agv_binding_record(
+            payload,
+            machine_code,
+            order_code,
+            product_name=product_name,
+            previous_product_name=previous_product_name,
+            wafer_spec=wafer_spec,
+            binding_time=binding_time,
+        )
+    )
+
+
+def _agv_binding_record(
+    payload: dict[str, Any],
+    machine_code: str,
+    order_code: str,
+    *,
+    product_name: str | None = None,
+    previous_product_name: str | None = None,
+    wafer_spec: str | None = None,
+    binding_time: str = "2026-07-17 07:55:00",
+) -> dict[str, Any]:
+    """Build one raw AGV history record without replacing earlier records."""
 
     machine = next(
         item
@@ -388,18 +424,16 @@ def _set_agv_binding(
             if item["machine_code"] == machine_code
         )
         wafer_spec = machine_line["wafer_spec"]
-    payload["agv_relations"].append(
-        {
-            "equipmentid": machine_code,
-            "equipmentname": machine["machine_name"],
-            "lastlinecode": order_code,
-            "lastlinename": (
-                order["order_name"] if order_name is None else order_name
-            ),
-            "waferspec": wafer_spec,
-            "createtime": binding_time,
-        }
-    )
+    return {
+        "equipmentid": machine_code,
+        "equipmentname": machine["machine_name"],
+        "linename": (
+            order["product_name"] if product_name is None else product_name
+        ),
+        "lastlinename": previous_product_name,
+        "waferspec": wafer_spec,
+        "createtime": binding_time,
+    }
 
 
 def _set_runtime(
@@ -410,7 +444,8 @@ def _set_runtime(
     order_code: str,
     input_quantity: float,
     output_quantity: float,
-    order_name: str | None = None,
+    product_name: str | None = None,
+    previous_product_name: str | None = None,
     wafer_spec: str | None = None,
     binding_time: str = "2026-07-17 07:55:00",
 ) -> None:
@@ -431,7 +466,8 @@ def _set_runtime(
         payload,
         machine_code,
         order_code,
-        order_name=order_name,
+        product_name=product_name,
+        previous_product_name=previous_product_name,
         wafer_spec=wafer_spec,
         binding_time=binding_time,
     )
@@ -448,13 +484,13 @@ def _buffer(payload: dict[str, Any], buffer_code: str) -> dict[str, Any]:
 def _inventory(
     payload: dict[str, Any],
     buffer_code: str,
-    order_name: str,
+    product_name: str,
 ) -> dict[str, Any]:
     return next(
         item
         for item in payload["buffer_realtime"]
         if item["buffer_code"] == buffer_code
-        and item["bound_source_name"] == order_name
+        and item["bound_source_name"] == product_name
     )
 
 
@@ -462,8 +498,7 @@ def _upsert_inventory(
     payload: dict[str, Any],
     *,
     buffer_code: str,
-    order_code: str,
-    order_name: str,
+    product_name: str,
     quantity: float,
     capacity: float | None = None,
 ) -> None:
@@ -471,7 +506,7 @@ def _upsert_inventory(
         item
         for item in payload["buffer_realtime"]
         if item["buffer_code"] == buffer_code
-        and item["bound_source_name"] == order_name
+        and item["bound_source_name"] == product_name
     ]
     if matches:
         item = matches[0]
@@ -479,7 +514,7 @@ def _upsert_inventory(
         item = {
             "main_id": f"MAIN-{buffer_code}",
             "buffer_code": buffer_code,
-            "bound_source_name": order_name,
+            "bound_source_name": product_name,
             "current_quantity": 0.0,
             "current_utilization_rate": 0.0,
         }
@@ -527,8 +562,8 @@ def build_multilayer_buffer_payload() -> dict[str, Any]:
         )
         payload["buffer_master"].append(layer)
 
-    order_names = {
-        item["order_code"]: item["order_name"]
+    product_names = {
+        item["order_code"]: item["product_name"]
         for item in payload["orders"]
     }
     first_code, second_code = MULTILAYER_BUFFER_CODES
@@ -537,21 +572,21 @@ def build_multilayer_buffer_payload() -> dict[str, Any]:
             {
                 "main_id": MULTILAYER_MAIN_ID,
                 "buffer_code": first_code,
-                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "bound_source_name": product_names[TARGET_ORDER_CODE],
                 "current_quantity": 3600.0,
                 "current_utilization_rate": 0.36,
             },
             {
                 "main_id": MULTILAYER_MAIN_ID,
                 "buffer_code": second_code,
-                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "bound_source_name": product_names[TARGET_ORDER_CODE],
                 "current_quantity": 7200.0,
                 "current_utilization_rate": 0.36,
             },
             {
                 "main_id": MULTILAYER_MAIN_ID,
                 "buffer_code": second_code,
-                "bound_source_name": order_names[SUPPORT_ORDER_CODE],
+                "bound_source_name": product_names[SUPPORT_ORDER_CODE],
                 "current_quantity": 2000.0,
                 "current_utilization_rate": 0.1,
             },
@@ -597,15 +632,13 @@ def _stockout_payload(name: str) -> dict[str, Any]:
     _upsert_inventory(
         payload,
         buffer_code=TARGET_BUFFER_CODE,
-        order_code=TARGET_ORDER_CODE,
-        order_name="至上",
+        product_name="182N至上产品",
         quantity=100,
     )
     _upsert_inventory(
         payload,
         buffer_code=TARGET_BUFFER_CODE,
-        order_code=SUPPORT_ORDER_CODE,
-        order_name="至上支援单",
+        product_name="182N支援产品",
         quantity=2000,
     )
     return payload
@@ -635,8 +668,8 @@ def build_multilayer_stockout_payload() -> dict[str, Any]:
         for item in payload["buffer_realtime"]
         if item["buffer_code"] != TARGET_BUFFER_CODE
     ]
-    order_names = {
-        item["order_code"]: item["order_name"]
+    product_names = {
+        item["order_code"]: item["product_name"]
         for item in payload["orders"]
     }
     first_code, second_code = MULTILAYER_BUFFER_CODES
@@ -645,21 +678,21 @@ def build_multilayer_stockout_payload() -> dict[str, Any]:
             {
                 "main_id": MULTILAYER_MAIN_ID,
                 "buffer_code": first_code,
-                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "bound_source_name": product_names[TARGET_ORDER_CODE],
                 "current_quantity": 40.0,
                 "current_utilization_rate": 0.0008,
             },
             {
                 "main_id": MULTILAYER_MAIN_ID,
                 "buffer_code": second_code,
-                "bound_source_name": order_names[TARGET_ORDER_CODE],
+                "bound_source_name": product_names[TARGET_ORDER_CODE],
                 "current_quantity": 60.0,
                 "current_utilization_rate": 0.0012,
             },
             {
                 "main_id": MULTILAYER_MAIN_ID,
                 "buffer_code": second_code,
-                "bound_source_name": order_names[SUPPORT_ORDER_CODE],
+                "bound_source_name": product_names[SUPPORT_ORDER_CODE],
                 "current_quantity": 2000.0,
                 "current_utilization_rate": 0.04,
             },
@@ -732,16 +765,14 @@ def build_overflow_warning_payload() -> dict[str, Any]:
     _upsert_inventory(
         payload,
         buffer_code=TARGET_BUFFER_CODE,
-        order_code=TARGET_ORDER_CODE,
-        order_name="至上",
+        product_name="182N至上产品",
         quantity=450,
         capacity=1000,
     )
     _upsert_inventory(
         payload,
         buffer_code=TARGET_BUFFER_CODE,
-        order_code=SUPPORT_ORDER_CODE,
-        order_name="至上支援单",
+        product_name="182N支援产品",
         quantity=450,
         capacity=1000,
     )
@@ -786,16 +817,14 @@ def build_overflow_manual_payload() -> dict[str, Any]:
     _upsert_inventory(
         payload,
         buffer_code=TARGET_BUFFER_CODE,
-        order_code=TARGET_ORDER_CODE,
-        order_name="至上",
+        product_name="182N至上产品",
         quantity=200,
         capacity=1000,
     )
     _upsert_inventory(
         payload,
         buffer_code=TARGET_BUFFER_CODE,
-        order_code=SUPPORT_ORDER_CODE,
-        order_name="至上支援单",
+        product_name="182N支援产品",
         quantity=750,
         capacity=1000,
     )
@@ -812,6 +841,108 @@ def _round_one_plan_id() -> str:
         "stockout:2026-07-17T08:00:00+08:00:"
         f"{TARGET_BUFFER_CODE}:{TARGET_ORDER_CODE}"
     )
+
+
+def _order_product(
+    payload: dict[str, Any],
+    order_code: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    order = next(
+        item for item in payload["orders"] if item["order_code"] == order_code
+    )
+    product = next(
+        item
+        for item in payload["products"]
+        if item["product_code"] == order["product_code"]
+    )
+    return order, product
+
+
+def _pending_baseline(
+    payload: dict[str, Any],
+    machine_code: str,
+) -> dict[str, Any]:
+    relation = next(
+        item
+        for item in payload["agv_relations"]
+        if item["equipmentid"] == machine_code
+    )
+    order = next(
+        item
+        for item in payload["orders"]
+        if item["product_name"] == relation["linename"]
+    )
+    _, product = _order_product(payload, order["order_code"])
+    machine = next(
+        item
+        for item in payload["machine_master"]
+        if item["machine_code"] == machine_code
+    )
+    return {
+        "machine_code": machine_code,
+        "order_code": order["order_code"],
+        "product_code": product["product_code"],
+        "product_name": product["product_name"],
+        "wafer_size": product["wafer_size"],
+        "wafer_spec": relation["waferspec"],
+        "source_grade": product["source_grade"],
+        "process_code": machine["process_code"],
+        "workshop_code": "S2",
+        "agv_record_time": CATALOG_TIME,
+    }
+
+
+def _round_one_pending_plan(payload: dict[str, Any]) -> dict[str, Any]:
+    plan_id = _round_one_plan_id()
+    target_order, target_product = _order_product(payload, TARGET_ORDER_CODE)
+    support_order, support_product = _order_product(payload, SUPPORT_ORDER_CODE)
+    candidate_baseline = _pending_baseline(payload, "EA004")
+    return {
+        "plan_id": plan_id,
+        "warning_id": plan_id,
+        "warning_type": "stockout",
+        "warning_time": SNAPSHOT_TIME,
+        "created_at": SNAPSHOT_TIME,
+        "expire_at": "2026-07-17T08:30:00+08:00",
+        "status": "PENDING",
+        "workshop_code": "S2",
+        "buffer_code": TARGET_BUFFER_CODE,
+        "upstream_process_code": "制绒",
+        "downstream_process_code": "碱抛",
+        "monitored_order_code": target_order["order_code"],
+        "before_machine_count": 1,
+        "before_machine_codes": ["EA003"],
+        "expected_machine_count": 2,
+        "expected_delta_direction": "increase",
+        "candidate_machines": [
+            {
+                "machine_code": "EA004",
+                "baseline_order_code": support_order["order_code"],
+                "baseline_product_code": support_product["product_code"],
+                "baseline_product_name": support_product["product_name"],
+                "baseline_wafer_size": support_product["wafer_size"],
+                "baseline_wafer_spec": candidate_baseline["wafer_spec"],
+                "baseline_source_grade": support_product["source_grade"],
+                "expected_target_order_code": target_order["order_code"],
+                "expected_target_product_code": target_product["product_code"],
+                "expected_target_product_name": target_product["product_name"],
+                "expected_target_wafer_size": target_product["wafer_size"],
+                "expected_target_wafer_spec": "N",
+                "expected_target_source_grade": target_product["source_grade"],
+                "process_code": "制绒",
+                "workshop_code": "S2",
+                "source_buffer_code": TARGET_BUFFER_CODE,
+                "target_buffer_code": TARGET_BUFFER_CODE,
+                "target_upstream_process_code": "制绒",
+                "target_downstream_process_code": "碱抛",
+            }
+        ],
+        "baseline_machine_bindings": [
+            _pending_baseline(payload, machine_code)
+            for machine_code in ("EA003", "EA004", "EA023", "EA024")
+        ],
+        "confirmed_machine_codes": [],
+    }
 
 
 def build_return_round_2_payload() -> dict[str, Any]:
@@ -833,6 +964,25 @@ def build_return_round_2_payload() -> dict[str, Any]:
         input_quantity=100,
         output_quantity=100,
     )
+    payload["pending_cutline_plans"] = [_round_one_pending_plan(payload)]
+    payload["active_cutline_events"] = []
+    payload["agv_relations"].append(
+        _agv_binding_record(
+            payload,
+            "EA004",
+            TARGET_ORDER_CODE,
+            previous_product_name="182N支援产品",
+            wafer_spec="N",
+            binding_time="2026-07-17 08:03:00",
+        )
+    )
+    return payload
+
+
+def build_return_recommended_payload() -> dict[str, Any]:
+    payload = build_return_round_2_payload()
+    payload["snapshot_meta"]["snapshot_time"] = "2026-07-17T08:26:00+08:00"
+    payload["pending_cutline_plans"] = []
     plan_id = _round_one_plan_id()
     payload["active_cutline_events"] = [
         {
@@ -846,23 +996,14 @@ def build_return_round_2_payload() -> dict[str, Any]:
             "downstream_process_code": "碱抛",
             "target_wafer_size": "182",
             "target_wafer_spec": "N",
-            "cutline_start_time": SNAPSHOT_TIME,
-            "negative_start_time": None,
+            "cutline_start_time": "2026-07-17T08:03:00+08:00",
+            "negative_start_time": "2026-07-17T08:05:00+08:00",
         }
     ]
-    return payload
-
-
-def build_return_recommended_payload() -> dict[str, Any]:
-    payload = build_return_round_2_payload()
-    payload["snapshot_meta"]["snapshot_time"] = "2026-07-17T08:26:00+08:00"
-    payload["active_cutline_events"][0]["negative_start_time"] = (
-        "2026-07-17T08:05:00+08:00"
-    )
     _inventory(
         payload,
         TARGET_BUFFER_CODE,
-        "至上",
+        "182N至上产品",
     )["current_quantity"] = 1000.0
     return payload
 

@@ -5,7 +5,7 @@ from typing import Optional
 from app.adapters.snapshot_adapter import SnapshotAdapter
 from app.mappers.algorithm_response_mapper import AlgorithmResponseMapper
 from app.schemas.request_schema import CutlineAlgorithmRequest
-from app.schemas.response_schema import CutlineAlgorithmResponse
+from app.schemas.response_schema import CutlineEvaluateResponse
 from app.service.cutline_pipeline import CutlinePipeline
 
 
@@ -25,7 +25,7 @@ class CutlineService:
     def evaluate_algorithm(
         self,
         request: CutlineAlgorithmRequest,
-    ) -> CutlineAlgorithmResponse:
+    ) -> CutlineEvaluateResponse:
         snapshot = self._adapter.to_algorithm_snapshot(request)
         result = self._pipeline.evaluate_algorithm(snapshot)
-        return self._mapper.to_response(result)
+        return self._mapper.to_evaluate_response(result)

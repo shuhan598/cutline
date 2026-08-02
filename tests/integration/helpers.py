@@ -18,10 +18,15 @@ def snapshot(payload: dict[str, Any]):
 
 
 def runtime(payload: dict[str, Any], machine_code: str) -> dict[str, Any]:
+    machine = next(
+        item
+        for item in payload["machine_master"]
+        if item["machine_code"] == machine_code
+    )
     return next(
         item
         for item in payload["machine_realtime"]
-        if item["machine_code"] == machine_code
+        if item["machine_code"] == machine["p166_jt_group"]
     )
 
 

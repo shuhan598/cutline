@@ -1,14 +1,34 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from app.adapters.agv_binding_selector import select_latest_effective_bindings
+from app.adapters.agv_binding_selector import (
+    normalize_local_time,
+    select_latest_effective_bindings,
+)
 from app.adapters.backend_request_loader import BackendRequestLoader
-from app.schemas.backend_request_schema import BackendAlgorithmRequest
+from app.adapters.snapshot_reference_index import is_current_order_status
+from app.core.workshop.buffer_process_resolver import (
+    BufferProcessResolution,
+    BufferProcessResolutionError,
+    BufferProcessResolver,
+)
+from app.schemas.backend_request_schema import (
+    BackendAlgorithmRequest,
+    BackendBufferMaster,
+    BackendMachineMaster,
+    BackendOrder,
+    BackendProduct,
+)
 from app.schemas.request_schema import AgvRelationRequest
+from app.schemas.pending_cutline_schema import (
+    PendingCutlinePlan,
+    PendingCutlinePlanStatus,
+)
 
 
 class BackendValidationIssue(BaseModel):
@@ -46,7 +66,12 @@ _REQUIRED_NULLABLE_FIELDS = (
 )
 
 _RELATIONSHIPS = (
-    ("machine_realtime", "machine_code", "machine_master", "machine_code"),
+    (
+        "machine_realtime",
+        "machine_code",
+        "machine_master",
+        "p166_jt_group",
+    ),
     ("orders", "product_code", "products", "product_code"),
     ("orders", "workshop_code", "workshops", "workshop_code"),
     (
@@ -72,6 +97,7 @@ _RECORD_KEY_FIELDS = {
     "buffer_realtime": "buffer_code",
     "buffer_master": "buffer_code",
     "agv_relations": "equipmentid",
+    "pending_cutline_plans": "plan_id",
 }
 
 
@@ -99,7 +125,15 @@ class BackendRequestCompletenessValidator:
         self._validate_empty_datasets(request, issues)
         self._validate_required_nullable_fields(request, issues)
         self._validate_empty_codes(request, issues)
+        self._validate_pending_plans(
+            request.pending_cutline_plans,
+            snapshot_time=request.snapshot_meta.snapshot_time,
+            issues=issues,
+        )
+        self._validate_unique_reference_fields(request, issues)
         self._validate_references(request, issues)
+        self._validate_order_products(request, issues)
+        self._validate_buffer_bindings(request, issues)
         self._validate_agv_bindings(
             request,
             selected_agv_relations,
@@ -109,6 +143,123 @@ class BackendRequestCompletenessValidator:
         self._validate_served_processes(request, issues)
         self._validate_capacity(request, issues)
         return BackendRequestValidationResult(valid=not issues, issues=issues)
+
+    def _validate_pending_plans(
+        self,
+        plans: list[PendingCutlinePlan],
+        *,
+        snapshot_time: datetime,
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        by_plan_id: dict[str, list[PendingCutlinePlan]] = defaultdict(list)
+        by_business_key: dict[
+            tuple[str, str, str, str, str, str],
+            list[PendingCutlinePlan],
+        ] = defaultdict(list)
+        for plan in plans:
+            by_plan_id[plan.plan_id].append(plan)
+            if (
+                plan.status
+                in {
+                    PendingCutlinePlanStatus.PENDING,
+                    PendingCutlinePlanStatus.PARTIALLY_CONFIRMED,
+                }
+                and normalize_local_time(plan.expire_at)
+                > normalize_local_time(snapshot_time)
+            ):
+                key = (
+                    plan.warning_type,
+                    plan.workshop_code,
+                    plan.buffer_code,
+                    plan.upstream_process_code,
+                    plan.downstream_process_code,
+                    plan.monitored_order_code,
+                )
+                by_business_key[key].append(plan)
+            self._validate_pending_nested_codes(plan, issues)
+
+        for plan_id, duplicates in by_plan_id.items():
+            if len(duplicates) < 2:
+                continue
+            issues.append(
+                self._issue(
+                    code="duplicate_key",
+                    dataset="pending_cutline_plans",
+                    field="plan_id",
+                    record_key=plan_id,
+                    message=(
+                        f"pending_cutline_plans.plan_id={plan_id!r} must be "
+                        f"unique; conflicting count={len(duplicates)}"
+                    ),
+                )
+            )
+        for key, duplicates in by_business_key.items():
+            if len(duplicates) < 2:
+                continue
+            plan_ids = sorted(plan.plan_id for plan in duplicates)
+            issues.append(
+                self._issue(
+                    code="duplicate_key",
+                    dataset="pending_cutline_plans",
+                    field="business_key",
+                    record_key="|".join(plan_ids),
+                    message=(
+                        f"pending_cutline_plans business_key={key!r} must be "
+                        f"unique; conflicting plan_ids={plan_ids!r}"
+                    ),
+                )
+            )
+
+    def _validate_pending_nested_codes(
+        self,
+        plan: PendingCutlinePlan,
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        collections = (
+            ("before_machine_codes", plan.before_machine_codes),
+            ("confirmed_machine_codes", plan.confirmed_machine_codes),
+        )
+        for field, codes in collections:
+            for index, code in enumerate(codes):
+                if not code.strip():
+                    issues.append(
+                        self._issue(
+                            code="empty_code",
+                            dataset="pending_cutline_plans",
+                            field=f"{field}[{index}]",
+                            record_key=plan.plan_id,
+                            message=(
+                                f"pending_cutline_plans.{field}[{index}] "
+                                "must not be blank"
+                            ),
+                        )
+                    )
+        nested_collections = (
+            ("baseline_machine_bindings", plan.baseline_machine_bindings),
+            ("candidate_machines", plan.candidate_machines),
+        )
+        for collection_name, records in nested_collections:
+            for index, record in enumerate(records):
+                for field in type(record).model_fields:
+                    value = getattr(record, field)
+                    if (
+                        field.endswith("_code")
+                        and isinstance(value, str)
+                        and not value.strip()
+                    ):
+                        location = f"{collection_name}[{index}].{field}"
+                        issues.append(
+                            self._issue(
+                                code="empty_code",
+                                dataset="pending_cutline_plans",
+                                field=location,
+                                record_key=plan.plan_id,
+                                message=(
+                                    f"pending_cutline_plans.{location} "
+                                    "must not be blank"
+                                ),
+                            )
+                        )
 
     def _validate_empty_datasets(
         self,
@@ -158,7 +309,11 @@ class BackendRequestCompletenessValidator:
                 continue
             for index, record in enumerate(records):
                 for field, value in record.model_dump().items():
-                    if field.endswith("_code") and value == "":
+                    if (
+                        field.endswith("_code")
+                        and isinstance(value, str)
+                        and not value.strip()
+                    ):
                         issues.append(
                             self._issue(
                                 code="empty_code",
@@ -174,7 +329,7 @@ class BackendRequestCompletenessValidator:
                         )
                     if field == "served_process_codes":
                         for code_index, process_code in enumerate(value):
-                            if process_code == "":
+                            if not process_code.strip():
                                 issues.append(
                                     self._issue(
                                         code="empty_code",
@@ -194,6 +349,204 @@ class BackendRequestCompletenessValidator:
                                     )
                                 )
 
+    def _validate_unique_reference_fields(
+        self,
+        request: BackendAlgorithmRequest,
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        specifications = (
+            ("machine_master", "machine_code"),
+            ("machine_master", "p166_jt_group"),
+            ("products", "product_code"),
+            ("products", "product_name"),
+            ("orders", "order_code"),
+            ("orders", "product_name"),
+        )
+        for dataset, field in specifications:
+            grouped: dict[str, list[tuple[int, BaseModel]]] = defaultdict(list)
+            for index, record in enumerate(getattr(request, dataset)):
+                raw_value = getattr(record, field)
+                value = raw_value.strip()
+                if not value:
+                    issues.append(
+                        self._issue(
+                            code="empty_value",
+                            dataset=dataset,
+                            field=field,
+                            record_key=self._record_key(dataset, record, index),
+                            message=f"{dataset}.{field} must not be blank",
+                        )
+                    )
+                    continue
+                if (
+                    dataset == "orders"
+                    and field == "product_name"
+                    and not is_current_order_status(record.order_status)
+                ):
+                    continue
+                grouped[value].append((index, record))
+
+            for value, records in grouped.items():
+                if len(records) < 2:
+                    continue
+                record_keys = [
+                    self._record_key(dataset, record, index)
+                    for index, record in records
+                ]
+                issues.append(
+                    self._issue(
+                        code="duplicate_key",
+                        dataset=dataset,
+                        field=field,
+                        record_key="|".join(record_keys),
+                        message=(
+                            f"{dataset}.{field}={value!r} must be unique; "
+                            f"conflicting records={record_keys}"
+                        ),
+                    )
+                )
+
+    def _validate_order_products(
+        self,
+        request: BackendAlgorithmRequest,
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        products_by_code: dict[str, list[BackendProduct]] = defaultdict(list)
+        for product in request.products:
+            products_by_code[product.product_code.strip()].append(product)
+
+        for index, order in enumerate(request.orders):
+            matches = products_by_code.get(order.product_code.strip(), [])
+            if len(matches) != 1:
+                continue
+            product = matches[0]
+            if order.product_name.strip() == product.product_name.strip():
+                continue
+            issues.append(
+                self._issue(
+                    code="name_mismatch",
+                    dataset="orders",
+                    field="product_name",
+                    record_key=self._record_key("orders", order, index),
+                    message=(
+                        f"Order {order.order_code!r} product_code "
+                        f"{order.product_code!r} maps to product_name "
+                        f"{product.product_name!r}, not "
+                        f"{order.product_name!r}"
+                    ),
+                )
+            )
+
+    def _validate_buffer_bindings(
+        self,
+        request: BackendAlgorithmRequest,
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        orders_by_product_name: dict[
+            str,
+            list[BackendOrder],
+        ] = defaultdict(list)
+        for order in request.orders:
+            if not is_current_order_status(order.order_status):
+                continue
+            orders_by_product_name[order.product_name.strip()].append(order)
+
+        buffers_by_code: dict[
+            str,
+            list[tuple[int, BackendBufferMaster]],
+        ] = defaultdict(list)
+        for index, buffer in enumerate(request.buffer_master):
+            buffers_by_code[buffer.buffer_code.strip()].append((index, buffer))
+
+        resolver = BufferProcessResolver(request.process_routes)
+        resolutions_by_buffer: dict[str, BufferProcessResolution] = {}
+        for buffer_code, matches in buffers_by_code.items():
+            if len(matches) != 1:
+                continue
+            index, buffer = matches[0]
+            try:
+                resolutions_by_buffer[buffer_code] = resolver.resolve(buffer)
+            except BufferProcessResolutionError as exc:
+                issues.append(
+                    self._issue(
+                        code="invalid_reference",
+                        dataset="buffer_master",
+                        field="served_process_codes",
+                        record_key=self._record_key(
+                            "buffer_master",
+                            buffer,
+                            index,
+                        ),
+                        message=str(exc),
+                    )
+                )
+
+        for index, realtime in enumerate(request.buffer_realtime):
+            record_key = self._record_key("buffer_realtime", realtime, index)
+            product_name = realtime.bound_source_name.strip()
+            if not product_name:
+                issues.append(
+                    self._issue(
+                        code="empty_value",
+                        dataset="buffer_realtime",
+                        field="bound_source_name",
+                        record_key=record_key,
+                        message=(
+                            "buffer_realtime.bound_source_name must not be blank"
+                        ),
+                    )
+                )
+                continue
+
+            order_matches = orders_by_product_name.get(product_name, [])
+            if len(order_matches) != 1:
+                issues.append(
+                    self._issue(
+                        code=(
+                            "missing_reference"
+                            if not order_matches
+                            else "ambiguous_reference"
+                        ),
+                        dataset="buffer_realtime",
+                        field="bound_source_name",
+                        record_key=record_key,
+                        message=(
+                            "buffer_realtime.bound_source_name="
+                            f"{realtime.bound_source_name!r} did not uniquely "
+                            "match a current orders.product_name"
+                        ),
+                    )
+                )
+                continue
+
+            buffer_code = realtime.buffer_code.strip()
+            buffer_matches = buffers_by_code.get(buffer_code, [])
+            if len(buffer_matches) != 1:
+                continue
+            resolution = resolutions_by_buffer.get(buffer_code)
+            if resolution is None:
+                continue
+
+            order = order_matches[0]
+            order_workshop = order.workshop_code.strip()
+            buffer_workshop = resolution.workshop_code.strip()
+            if buffer_workshop == order_workshop:
+                continue
+            issues.append(
+                self._issue(
+                    code="workshop_mismatch",
+                    dataset="buffer_realtime",
+                    field="bound_source_name",
+                    record_key=record_key,
+                    message=(
+                        f"Buffer {realtime.buffer_code!r} resolves to workshop "
+                        f"{buffer_workshop!r}, but current order "
+                        f"{order.order_code!r} resolves to workshop "
+                        f"{order_workshop!r}"
+                    ),
+                )
+            )
+
     def _validate_references(
         self,
         request: BackendAlgorithmRequest,
@@ -201,7 +554,7 @@ class BackendRequestCompletenessValidator:
     ) -> None:
         for source_dataset, source_field, target_dataset, target_field in _RELATIONSHIPS:
             targets = {
-                value
+                self._normalized_reference_value(value)
                 for record in getattr(request, target_dataset)
                 if (value := getattr(record, target_field)) not in (None, "")
             }
@@ -209,7 +562,7 @@ class BackendRequestCompletenessValidator:
                 value = getattr(record, source_field)
                 if value in (None, ""):
                     continue
-                if value not in targets:
+                if self._normalized_reference_value(value) not in targets:
                     issues.append(
                         self._issue(
                             code="missing_reference",
@@ -232,27 +585,63 @@ class BackendRequestCompletenessValidator:
         request: BackendAlgorithmRequest,
         selected_relations: dict[
             str,
-            tuple[Any, list[AgvRelationRequest]],
+            tuple[datetime, list[AgvRelationRequest]],
         ],
         issues: list[BackendValidationIssue],
     ) -> None:
-        machine_by_code = {
-            machine.machine_code: machine for machine in request.machine_master
-        }
-        order_codes = {order.order_code for order in request.orders}
+        machines_by_standard_code: dict[
+            str,
+            list[BackendMachineMaster],
+        ] = defaultdict(list)
+        machines_by_realtime_code: dict[
+            str,
+            list[BackendMachineMaster],
+        ] = defaultdict(list)
+        for machine in request.machine_master:
+            machines_by_standard_code[machine.machine_code.strip()].append(
+                machine
+            )
+            machines_by_realtime_code[machine.p166_jt_group.strip()].append(
+                machine
+            )
+
+        products_by_name: dict[str, list[BackendProduct]] = defaultdict(list)
+        for product in request.products:
+            products_by_name[product.product_name.strip()].append(product)
+
+        orders_by_product_name: dict[
+            str,
+            list[BackendOrder],
+        ] = defaultdict(list)
+        for order in request.orders:
+            if not is_current_order_status(order.order_status):
+                continue
+            orders_by_product_name[order.product_name.strip()].append(order)
+
+        workshops_by_process: dict[str, set[str]] = defaultdict(set)
+        for route in request.process_routes:
+            workshops_by_process[route.process_code.strip()].add(
+                route.workshop_code.strip()
+            )
+
         relation_machine_codes: set[str] = set()
 
-        for machine_code, (_, latest) in selected_relations.items():
-            record_key = machine_code or "machine_code:<empty>"
-            order_values = {relation.order_code for relation in latest}
-            order_name_values = {relation.order_name for relation in latest}
+        for raw_machine_code, (_, latest) in selected_relations.items():
+            machine_code = raw_machine_code.strip()
+            record_key = raw_machine_code or "equipmentid:<empty>"
             has_conflict = False
-            for field, values in (
-                ("order_code", order_values),
-                ("order_name", order_name_values),
+            for field, attribute in (
+                ("equipmentname", "machine_name"),
+                ("linename", "product_name"),
+                ("lastlinename", "previous_product_name"),
+                ("waferspec", "wafer_spec"),
             ):
+                values = {getattr(relation, attribute) for relation in latest}
                 if len(values) > 1:
                     has_conflict = True
+                    rendered_values = sorted(
+                        (repr(value) for value in values),
+                    )
                     issues.append(
                         self._issue(
                             code="binding_conflict",
@@ -261,7 +650,8 @@ class BackendRequestCompletenessValidator:
                             record_key=record_key,
                             message=(
                                 f"latest AGV {field} values conflict for "
-                                f"machine {machine_code}: {sorted(values)}"
+                                f"machine {raw_machine_code}: "
+                                f"{rendered_values}"
                             ),
                         )
                     )
@@ -269,87 +659,196 @@ class BackendRequestCompletenessValidator:
                 continue
 
             relation = latest[0]
-            relation_machine_codes.add(machine_code)
-            for field, value, targets, target_name in (
-                (
-                    "machine_code",
-                    relation.machine_code,
-                    machine_by_code,
-                    "machine_master.machine_code",
-                ),
-                (
-                    "order_code",
-                    relation.order_code,
-                    order_codes,
-                    "orders.order_code",
-                ),
-            ):
-                if value == "":
-                    issues.append(
-                        self._issue(
-                            code="empty_code",
-                            dataset="agv_relations",
-                            field=field,
-                            record_key=record_key,
-                            message=f"agv_relations.{field} must not be empty",
-                        )
+            machine_matches = machines_by_standard_code.get(machine_code, [])
+            if not machine_code:
+                issues.append(
+                    self._issue(
+                        code="empty_code",
+                        dataset="agv_relations",
+                        field="equipmentid",
+                        record_key=record_key,
+                        message="agv_relations.equipmentid must not be empty",
                     )
-                elif value not in targets:
-                    issues.append(
-                        self._issue(
-                            code="missing_reference",
-                            dataset="agv_relations",
-                            field=field,
-                            record_key=record_key,
-                            message=(
-                                f"agv_relations.{field}={value!r} was not "
-                                f"found in {target_name}"
-                            ),
-                        )
-                    )
-
-            machine = machine_by_code.get(machine_code)
-            if (
-                machine is not None
-                and any(
-                    relation.machine_name != machine.machine_name
-                    for relation in latest
                 )
-            ):
+            elif len(machine_matches) != 1:
+                issues.append(
+                    self._issue(
+                        code="missing_reference"
+                        if not machine_matches
+                        else "ambiguous_reference",
+                        dataset="agv_relations",
+                        field="equipmentid",
+                        record_key=record_key,
+                        message=(
+                            "agv_relations.equipmentid="
+                            f"{relation.machine_code!r} did not uniquely match "
+                            "machine_master.machine_code"
+                        ),
+                    )
+                )
+
+            product_name = relation.product_name.strip()
+            product_matches = products_by_name.get(product_name, [])
+            order_matches = orders_by_product_name.get(product_name, [])
+            if not product_name:
+                issues.append(
+                    self._issue(
+                        code="empty_value",
+                        dataset="agv_relations",
+                        field="linename",
+                        record_key=record_key,
+                        message="agv_relations.linename must not be blank",
+                    )
+                )
+            elif len(product_matches) != 1:
+                issues.append(
+                    self._issue(
+                        code="missing_reference"
+                        if not product_matches
+                        else "ambiguous_reference",
+                        dataset="agv_relations",
+                        field="linename",
+                        record_key=record_key,
+                        message=(
+                            f"agv_relations.linename={relation.product_name!r} "
+                            "did not uniquely match products.product_name"
+                        ),
+                    )
+                )
+            elif len(order_matches) != 1:
+                issues.append(
+                    self._issue(
+                        code="missing_reference"
+                        if not order_matches
+                        else "ambiguous_reference",
+                        dataset="agv_relations",
+                        field="linename",
+                        record_key=record_key,
+                        message=(
+                            f"agv_relations.linename={relation.product_name!r} "
+                            "did not uniquely match a current "
+                            "orders.product_name"
+                        ),
+                    )
+                )
+
+            machine = machine_matches[0] if len(machine_matches) == 1 else None
+            product = (
+                product_matches[0] if len(product_matches) == 1 else None
+            )
+            order = order_matches[0] if len(order_matches) == 1 else None
+            machine_name_mismatch = (
+                machine is not None
+                and relation.machine_name.strip() != machine.machine_name.strip()
+            )
+            if machine_name_mismatch:
                 issues.append(
                     self._issue(
                         code="name_mismatch",
                         dataset="agv_relations",
-                        field="machine_name",
+                        field="equipmentname",
                         record_key=record_key,
                         message=(
-                            "agv_relations.machine_name does not match "
+                            "agv_relations.equipmentname does not match "
                             f"machine_master for {machine_code}"
                         ),
                     )
                 )
 
-        for index, runtime in enumerate(request.machine_realtime):
-            if (
-                self._is_running(runtime.status)
-                and runtime.machine_code not in relation_machine_codes
-            ):
-                issues.append(
-                    self._issue(
-                        code="missing_agv_binding",
-                        dataset="machine_realtime",
-                        field="machine_code",
-                        record_key=self._record_key(
-                            "machine_realtime",
-                            runtime,
-                            index,
-                        ),
-                        message=(
-                            f"running machine {runtime.machine_code} must have "
-                            "at least one AGV binding record"
-                        ),
-                    )
+            workshop_matches = False
+            if machine is not None and order is not None:
+                workshop_codes = workshops_by_process.get(
+                    machine.process_code.strip(),
+                    set(),
                 )
+                if len(workshop_codes) != 1:
+                    issues.append(
+                        self._issue(
+                            code="ambiguous_reference"
+                            if workshop_codes
+                            else "missing_reference",
+                            dataset="agv_relations",
+                            field="equipmentid",
+                            record_key=record_key,
+                            message=(
+                                f"machine {machine.machine_code!r} process "
+                                f"{machine.process_code!r} did not uniquely "
+                                "resolve a process_routes workshop"
+                            ),
+                        )
+                    )
+                else:
+                    machine_workshop = next(iter(workshop_codes))
+                    order_workshop = order.workshop_code.strip()
+                    if machine_workshop != order_workshop:
+                        issues.append(
+                            self._issue(
+                                code="workshop_mismatch",
+                                dataset="agv_relations",
+                                field="linename",
+                                record_key=record_key,
+                                message=(
+                                    f"machine {machine.machine_code!r} resolves "
+                                    f"to workshop {machine_workshop!r}, but "
+                                    f"current order {order.order_code!r} resolves "
+                                    f"to workshop {order_workshop!r}"
+                                ),
+                            )
+                        )
+                    else:
+                        workshop_matches = True
+
+            if (
+                machine is not None
+                and product is not None
+                and order is not None
+                and not machine_name_mismatch
+                and order.product_code.strip() == product.product_code.strip()
+                and workshop_matches
+            ):
+                relation_machine_codes.add(machine.machine_code.strip())
+
+        for index, runtime in enumerate(request.machine_realtime):
+            realtime_code = runtime.machine_code.strip()
+            machine_matches = machines_by_realtime_code.get(realtime_code, [])
+            if not self._is_running(runtime.status):
+                continue
+            standard_code = (
+                machine_matches[0].machine_code.strip()
+                if len(machine_matches) == 1
+                else None
+            )
+            if (
+                standard_code is not None
+                and standard_code in relation_machine_codes
+            ):
+                continue
+            mapping_detail = (
+                f"maps to standard machine {standard_code!r}"
+                if standard_code is not None
+                else "does not uniquely match machine_master.p166_jt_group"
+            )
+            issues.append(
+                self._issue(
+                    code="missing_agv_binding",
+                    dataset="machine_realtime",
+                    field="machine_code",
+                    record_key=self._record_key(
+                        "machine_realtime",
+                        runtime,
+                        index,
+                    ),
+                    message=(
+                        f"running realtime machine {runtime.machine_code!r} "
+                        f"{mapping_detail} and therefore has no valid "
+                        "effective AGV binding record"
+                    ),
+                )
+            )
+
+    @staticmethod
+    def _normalized_reference_value(value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
     def _validate_routes(
         self,

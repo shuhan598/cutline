@@ -18,7 +18,7 @@ from tests.fixtures.v3_full_route_factory import (
     build_base_request_payload,
     build_stockout_manual_payload,
 )
-from tests.integration.helpers import evaluate, snapshot
+from tests.integration.helpers import evaluate, runtime, snapshot
 
 
 def test_v3_backend_running_and_abnormal_statuses_map_and_filter_consistently():
@@ -45,11 +45,7 @@ def test_v3_backend_running_and_abnormal_statuses_map_and_filter_consistently():
 
 def test_v3_abnormal_machine_quantities_do_not_enter_net_rate_calculation():
     payload = build_base_request_payload()
-    abnormal = next(
-        item
-        for item in payload["machine_realtime"]
-        if item["machine_code"] == "EA002"
-    )
+    abnormal = runtime(payload, "EA002")
     abnormal.update(
         {
             "status": "异常",
@@ -73,9 +69,7 @@ def test_v3_abnormal_machine_quantities_do_not_enter_net_rate_calculation():
 
 def test_v3_missing_agv_relation_cannot_determine_order_wafer_spec():
     payload = build_base_request_payload()
-    next(item for item in payload["machine_realtime"] if item["machine_code"] == "EA023")[
-        "status"
-    ] = "异常"
+    runtime(payload, "EA023")["status"] = "异常"
     payload["agv_relations"] = [
         relation
         for relation in payload["agv_relations"]
@@ -85,7 +79,7 @@ def test_v3_missing_agv_relation_cannot_determine_order_wafer_spec():
         {
             "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
             "buffer_code": TARGET_BUFFER_CODE,
-            "bound_source_name": "华晟",
+            "bound_source_name": "210R华晟产品",
             "current_quantity": 100,
             "current_utilization_rate": 0.001,
         }
@@ -141,14 +135,14 @@ def test_v3_r_and_p_order_specs_come_from_agv_relations_not_machine_lines():
             {
                 "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
                 "buffer_code": TARGET_BUFFER_CODE,
-                "bound_source_name": "华晟",
+                "bound_source_name": "210R华晟产品",
                 "current_quantity": 100,
                 "current_utilization_rate": 0.001,
             },
             {
                 "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
                 "buffer_code": TARGET_BUFFER_CODE,
-                "bound_source_name": "晶澳",
+                "bound_source_name": "210P晶澳产品",
                 "current_quantity": 100,
                 "current_utilization_rate": 0.001,
             },

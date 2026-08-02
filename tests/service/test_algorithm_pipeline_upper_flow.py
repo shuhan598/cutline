@@ -48,7 +48,7 @@ def _isolate_remaining_algorithm_stages(monkeypatch):
     )
     monkeypatch.setattr(
         MixingTraceCalculator,
-        "calculate_for_decision",
+        "calculate_for_event",
         lambda self, **kwargs: AlgorithmMixingTraceBatchResult(),
     )
 
@@ -56,7 +56,6 @@ def _isolate_remaining_algorithm_stages(monkeypatch):
 def _order(order_code: str) -> AlgorithmOrder:
     return AlgorithmOrder(
         order_code=order_code,
-        order_name=order_code,
         order_status="RUNNING",
         product_code="PROD-001",
         product_name="Product 001",
@@ -218,7 +217,8 @@ def _snapshot(
                 machine_code=machine_code,
                 machine_name=machine_code,
                 order_code=order_code,
-                order_name=order_code,
+                product_code="PROD-001",
+                product_name="Product 001",
                 wafer_spec="N",
                 binding_time=NOW,
             )

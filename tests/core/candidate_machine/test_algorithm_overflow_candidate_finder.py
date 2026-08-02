@@ -117,7 +117,7 @@ def _candidate_snapshot():
     ]
     candidate_snapshot.agv_relations[0] = agv_relation(
         order_code="ORD-SOURCE",
-        order_name="Source Order",
+        product_name="Source Product",
         wafer_spec="N",
     )
     return candidate_snapshot
@@ -135,7 +135,7 @@ def _add_machine(
     wafer_spec: str = "N",
     input_quantity_30m: float = 10000,
     output_quantity_30m: float = 8000,
-    order_name: str | None = None,
+    product_name: str | None = None,
 ) -> None:
     line_code = f"LINE-{machine_code}"
     candidate_snapshot.lines.append(
@@ -160,7 +160,7 @@ def _add_machine(
         agv_relation(
             machine_code=machine_code,
             order_code=order_code or "ORD-SOURCE",
-            order_name=order_name or order_code or "ORD-SOURCE",
+            product_name=product_name or order_code or "ORD-SOURCE",
             wafer_spec=wafer_spec,
         )
     )
@@ -217,7 +217,7 @@ def test_overflow_result_contains_selected_source_candidate_and_target_context()
     assert candidate.process_code == "P01"
     assert candidate.process_name == "制绒"
     assert candidate.current_order_code == "ORD-SOURCE"
-    assert candidate.current_order_name == "Source Order"
+    assert candidate.current_order_name == "Source Product"
     assert candidate.current_product_code == "PROD-SOURCE"
     assert candidate.current_wafer_size == "182"
     assert candidate.current_wafer_spec == "N"
@@ -247,7 +247,7 @@ def test_overflow_candidate_runs_without_line_data():
 
     assert candidate.machine_code == "M-01"
     assert candidate.current_order_code == "ORD-SOURCE"
-    assert candidate.current_order_name == "Source Order"
+    assert candidate.current_order_name == "Source Product"
     assert candidate.current_wafer_spec == "N"
     assert candidate.workshop_code == "S1"
 
@@ -363,7 +363,7 @@ def test_overflow_source_machine_requires_strict_source_identity(case: str):
             candidate_snapshot.agv_relations[0].model_copy(
                 update={
                     "order_code": "ORD-TARGET",
-                    "order_name": "Target Order",
+                    "product_name": "Target Product",
                 }
             )
         )
@@ -580,7 +580,7 @@ def test_overflow_uses_agv_current_context_and_ignores_runtime_and_line():
     candidate_snapshot.agv_relations[0] = (
         candidate_snapshot.agv_relations[0].model_copy(
             update={
-                "order_name": "AGV Source Order",
+                "product_name": "AGV Source Product",
                 "wafer_spec": "N",
             }
         )
@@ -589,7 +589,7 @@ def test_overflow_uses_agv_current_context_and_ignores_runtime_and_line():
     candidate = _find(candidate_snapshot).candidates[0]
 
     assert candidate.current_order_code == "ORD-SOURCE"
-    assert candidate.current_order_name == "AGV Source Order"
+    assert candidate.current_order_name == "AGV Source Product"
     assert candidate.current_wafer_spec == "N"
 
 
@@ -602,10 +602,10 @@ def test_overflow_target_compatibility_uses_agv_spec_instead_of_line_spec():
     assert _find(candidate_snapshot).candidates
 
 
-def test_overflow_candidate_dump_contains_agv_order_name():
+def test_overflow_candidate_dump_contains_agv_product_name():
     candidate = _find(_candidate_snapshot()).candidates[0]
 
-    assert candidate.model_dump()["current_order_name"] == "Source Order"
+    assert candidate.model_dump()["current_order_name"] == "Source Product"
 
 
 @pytest.mark.parametrize(

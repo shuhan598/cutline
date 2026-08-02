@@ -1,21 +1,24 @@
-# 切线算法后端请求与响应接口
+# 切线算法后端响应与持久化状态接口
 
 ## 1. 正式调用链
 
-当前正式同步 HTTP 路由为 `POST /stub/algo/run`。后端调用入口及唯一正式数据链为：
+需要 Pending 跨轮闭环时使用 `POST /cutline/evaluate`：
 
 ```text
 CutlineAlgorithmRequest
   -> SnapshotAdapter.to_algorithm_snapshot
   -> CutlinePipeline.evaluate_algorithm
-  -> AlgorithmResponseMapper.to_response
-  -> CutlineAlgorithmResponse
+  -> AlgorithmResponseMapper.to_evaluate_response
+  -> CutlineEvaluateResponse
+       = CutlineAlgorithmResponse 原有字段
+       + persistence_state
 ```
 
-后端只应接收 `CutlineAlgorithmResponse`，不得依赖内部
+兼容路由 `POST /stub/algo/run` 仍以 `CutlineAlgorithmResponse` 作为响应模型，字段集合
+保持不变，不输出 `persistence_state`。两个路由都不得依赖内部
 `AlgorithmEvaluateResult` 的净速率、候选排序或模拟诊断字段。
 
-## 2. 顶层响应
+## 2. 基础业务响应
 
 ```json
 {
@@ -44,6 +47,39 @@ CutlineAlgorithmRequest
 
 正式响应不再包含 `return_results` 和 `mixing_trace_failures`。这两类完整
 诊断结果仍可保留在算法内部。
+
+### 2.1 增强评估响应
+
+`CutlineEvaluateResponse` 平铺保留上面全部基础字段，仅增加一个状态隔离字段：
+
+```json
+{
+  "calculation_time": "2026-07-17T08:00:00+08:00",
+  "stockout_warnings": [],
+  "overflow_warnings": [],
+  "cutline_decisions": [],
+  "return_recommendations": [],
+  "silk_screen_results": [],
+  "mixing_trace_records": [],
+  "new_active_cutline_events": [],
+  "updated_active_cutline_events": [],
+  "closed_active_cutline_event_ids": [],
+  "errors": [],
+  "persistence_state": {
+    "pending_cutline_plans": [],
+    "active_cutline_events": [],
+    "expired_pending_plan_ids": [],
+    "completed_pending_plan_ids": [],
+    "return_suggested_event_ids": [],
+    "mixed_cutline_event_ids": [],
+    "new_mixing_trace_records": []
+  }
+}
+```
+
+这里没有重复嵌套的 `business_response` 对象：基础业务字段仍位于顶层，
+`persistence_state` 只承载后端保存和下一轮回传的完整状态。基础
+`CutlineAlgorithmResponse` 仍可独立严格校验增强响应的业务字段投影。
 
 ## 3. 预警
 
@@ -95,7 +131,8 @@ CutlineAlgorithmRequest
 
 ## 4. 切线决策
 
-每条决策通过 `warning_id` 关联预警。正式方案和人工介入使用两个独立模型，
+每条决策通过 `warning_id` 关联预警。正式方案是算法建议，不代表现场已经切线；
+自动方案同轮只在 `persistence_state` 创建 Pending，不创建 Active 或混料。正式方案和人工介入使用两个独立模型，
 最终 JSON 只出现实际存在的分支。
 
 自动方案：
@@ -176,11 +213,13 @@ CutlineAlgorithmRequest
 
 `return_recommendations` 是给甲方展示的业务结果，不用于后端持续计时。
 `return_recommended_time` 是算法首次满足全部切回条件的计算时间。
-现场实际完成切回的 `returned_time` 由后端或现场系统记录，算法不推测。
+同轮事件 ID 会写入累计 `persistence_state.return_suggested_event_ids`，完整 Active 状态
+改为 `return_recommended`；后续原样回传后不会重复输出建议。现场实际完成切回的
+`returned_time` 由后端或现场系统记录，算法不推测，也不创建 PendingReturnPlan。
 
-## 6. 活动事件请求与新事件响应
+## 6. 活动事件的业务投影与完整状态
 
-请求 `active_cutline_events` 与响应 `new_active_cutline_events` 使用同一最小字段集：
+基础业务响应 `new_active_cutline_events` 继续使用原有 12 字段：
 
 ```json
 {
@@ -194,13 +233,31 @@ CutlineAlgorithmRequest
   "downstream_process_code": "碱抛",
   "target_wafer_size": "182",
   "target_wafer_spec": "N",
-  "cutline_start_time": "2026-07-17T08:00:00+08:00",
+  "cutline_start_time": "2026-07-17T08:03:00+08:00",
   "negative_start_time": null
 }
 ```
 
-后端不再回传 `plan_id`、源 Buffer、源硅片尺寸/规格、贡献产能、预警类型和
-`status`。`negative_start_time` 必须显式存在并允许为 `null`。
+`negative_start_time` 必须显式存在并允许为 `null`。该业务投影不增加生命周期字段，
+因此不能单独承担完整跨轮持久化。
+
+`persistence_state.active_cutline_events` 返回完整对象；除上述公开字段外，还保留：
+
+- `plan_id`、`warning_id`
+- `status`：`active`、`return_recommended`、`returned` 或 `cancelled`
+- `source_buffer_code`、`source_wafer_size`、`source_wafer_spec`
+- `contribution_capacity`
+- `warning_type`、`process_code`
+- `warning_buffer_code`、`warning_upstream_process_code`、
+  `warning_downstream_process_code`
+- `is_recommended_candidate`
+
+后端应保存并回传这个完整对象。`is_recommended_candidate=true` 表示方案推荐机台，
+`false` 表示客户在相同车间、工序、精确订单映射、时间窗口和切换方向约束内实际选择的
+非候选机台；非候选确认不附加候选影响筛选或全局优化。
+
+`cutline_start_time` 取窗口内证明绑定变化的 AGV `createtime`，其语义是“本轮首次观察
+到绑定变化的记录时间”，不是精确物理换型时刻，也不是方案 `calculation_time`。
 
 ## 7. 更新与关闭事件
 
@@ -226,11 +283,31 @@ CutlineAlgorithmRequest
 }
 ```
 
-同一响应中，`return_recommendations[].event_id` 与
-`closed_active_cutline_event_ids[]` 必须一一对应。满足切回条件的事件不会再
-出现在 `updated_active_cutline_events`。
+同一基础业务响应中，`return_recommendations[].event_id` 与
+`closed_active_cutline_event_ids[]` 仍一一对应。增强响应还会在完整 Active 上保存
+`status=return_recommended` 并累计事件 ID 水位；满足切回条件的事件不会再出现在
+`updated_active_cutline_events`。
 
-## 8. 事件生命周期
+## 8. Pending 与 Active 生命周期
+
+### 8.1 Pending 确认
+
+首轮自动方案在 `persistence_state.pending_cutline_plans` 创建 `PENDING`。后端回传
+Pending、完整 AGV 历史和 Active 后，算法仅认领
+`created_at < observed_at <= expire_at` 且不晚于本轮快照的逐台订单变化：
+
+- 断料：`baseline_order_code != target_order_code` 且
+  `current_order_code == target_order_code`。
+- 溢满：机台从监控源订单切到保存的合法其他订单；目标区间仅是持久化上下文，
+  不用当轮净速率否认已经发生的真实切换，缺失或歧义会明确报错。
+- 推荐机台标记 `is_recommended_candidate=true`；合法非候选机台标记 `false`。
+- 部分执行为 `PARTIALLY_CONFIRMED`；全部执行为 `CONFIRMED`；窗口结束后未完成部分为
+  `EXPIRED`。边界记录先确认，再处理到期。
+
+同一 Pending 不重复确认已确认机台；同一物理变化若可被多个 Pending 认领会明确报错，
+不会按推荐优先或输入顺序猜测。终态 Pending 重放安全，不重新创建 Active。
+
+### 8.2 切回跟踪
 
 事件未产生切回建议时继续观察：
 
@@ -255,8 +332,9 @@ safe_inventory_quantity
   ÷ 60
 ```
 
-稳定窗口和库存阈值均使用严格大于。算法给出建议后立即结束跟踪，不等待现场
-真实切回。后端收到关闭 ID 后必须移除事件，下一轮不得再次提交。
+稳定窗口和库存阈值均使用严格大于。ReturnEvaluator 三个条件保持不变，但只处理
+状态为 `active` 且事件 ID 尚未进入 `return_suggested_event_ids` 的真实 Active。
+算法给出建议后不等待现场真实切回；后端保存完整状态和累计水位，后续不会重复建议。
 
 如果目标 Buffer、订单、净速率无法关联，或 ReturnEvaluator 出现局部异常，
 算法只返回 `errors`，不会建议切回、不会关闭事件；后端保留原事件并在下一轮
@@ -281,7 +359,19 @@ safe_inventory_quantity
 
 ## 10. 混料追踪与错误
 
-成功的 `mixing_trace_records` 保持现有字段。单机混料失败转换为：
+成功的 `mixing_trace_records` 保持现有字段，但触发入口改为确认后的完整 Active：
+
+- 首轮业务方案和 Pending 不创建混料。
+- Active 必须处于 `active` 或 `return_recommended`，且 `plan_id`、`warning_id`、
+  `process_code`、`is_recommended_candidate` 完整。
+- 同一事件 ID 不在 `mixed_cutline_event_ids` 时才计算。
+- `mix_start_time` 从 Active 的 `cutline_start_time` 起算，不额外增加计划执行延迟；
+  残余、AGV、工艺、篮数、S2 P/R 和组成公式不变。
+- 成功记录同时出现在业务 `mixing_trace_records` 和
+  `persistence_state.new_mixing_trace_records`，并累计混料水位。
+- 失败不推进水位，数据修复后可重试；同一机台后续的新事件仍可再次生成。
+
+单机混料失败转换为：
 
 ```json
 {
@@ -293,21 +383,23 @@ safe_inventory_quantity
 ```
 
 每个失败只进入 `errors` 一次；不会再出现在已删除的
-`mixing_trace_failures`。其它机台成功记录、正式方案和新活动事件继续返回。
+`mixing_trace_failures`。其它 Active 的成功记录和状态继续返回。
 
 ## 11. 后端处理顺序
 
-1. 展示或转发甲方业务结果。
-2. 将 `new_active_cutline_events` 加入活动事件集合。
-3. 按 `event_id` 应用 `updated_active_cutline_events`；允许把
-   `negative_start_time` 更新为 `null`。
-4. 按 `closed_active_cutline_event_ids` 移除事件。
-5. 下一轮只提交仍在活动集合且未关闭的事件。
-6. 独立保存 `errors`，不得因局部错误丢弃其它成功结果。
+1. 通过 `/cutline/evaluate` 调用并展示或转发顶层业务结果。
+2. 原子保存整个 `persistence_state`，不要根据公开事件 ID 反向解析 Pending。
+3. 下一轮把 `pending_cutline_plans`、`active_cutline_events`、
+   `return_suggested_event_ids`、`mixed_cutline_event_ids` 映射回请求同名字段。
+4. 完整保存终态和两个累计水位；不要因业务 `closed_active_cutline_event_ids` 丢失
+   `return_recommended` 状态。
+5. 独立保存 `errors`，不得因局部错误丢弃其它成功结果；混料失败保留事件并允许重试。
 
 ## 12. 可执行样例
 
-请求场景位于 `examples/scenarios/`。正式响应样例位于 `debug_outputs/`，包括：
+请求场景位于 `examples/scenarios/`。基础响应样例为
+`examples/cutline_algorithm_response_sample.json`；首轮、确认轮和切回轮增强响应为
+`examples/cutline_evaluate_*_response.json`。场景调试输出位于 `debug_outputs/`，包括：
 
 - `v3_stockout_auto_response.json`
 - `v3_stockout_manual_no_candidate_response.json`
@@ -317,6 +409,9 @@ safe_inventory_quantity
 - `v3_silk_prepare_response.json`
 - `v3_mixing_failure_response.json`
 
-所有文件均由 `python examples/generate_v3_scenarios.py` 通过真实 Service 链生成。
+所有文件均由 `python examples/generate_v3_scenarios.py` 通过真实 Loader、Service 和
+Mapper 链生成。`v3_stockout_auto` 展示首轮 Pending 且无 Active/混料；
+`v3_return_round_2` 展示确认轮创建 Active、单次混料和水位推进；
+`v3_return_recommended` 展示已混料事件首次产生切回建议。
 
 

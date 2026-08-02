@@ -22,7 +22,7 @@ def _payload() -> dict:
         },
         "machine_realtime": [
             {
-                "machine_code": "MC-001",
+                "machine_code": "P166-MC-001",
                 "status": "RUNNING",
                 "tangent_time": "2026-07-15T07:30:00Z",
                 "input_quantity": 11,
@@ -35,6 +35,7 @@ def _payload() -> dict:
         "machine_master": [
             {
                 "machine_code": "MC-001",
+                "p166_jt_group": "P166-MC-001",
                 "machine_name": "机台一",
                 "process_code": "PROC-01",
                 "process_name": "工序一",
@@ -75,7 +76,6 @@ def _payload() -> dict:
         "orders": [
             {
                 "order_code": "ORD-001",
-                "order_name": "至上",
                 "order_status": "RUNNING",
                 "total_quantity": 10000,
                 "piece_source": "A",
@@ -89,13 +89,12 @@ def _payload() -> dict:
             },
             {
                 "order_code": "ORD-002",
-                "order_name": "华晟",
-                "order_status": "WAITING",
+                "order_status": "OPEN",
                 "total_quantity": 5000,
                 "piece_source": "B",
                 "estimated_yield": "98.5%",
-                "product_code": "PROD-001",
-                "product_name": "产品一",
+                "product_code": "PROD-002",
+                "product_name": "产品二",
                 "workshop_code": "S1",
                 "workshop_name": "一车间",
                 "produced_quantity": 1000,
@@ -110,7 +109,15 @@ def _payload() -> dict:
                 "source_grade": "A",
                 "material_code": "MAT-001",
                 "material_name": "物料一",
-            }
+            },
+            {
+                "product_code": "PROD-002",
+                "product_name": "产品二",
+                "wafer_size": "210",
+                "source_grade": "B",
+                "material_code": "MAT-002",
+                "material_name": "物料二",
+            },
         ],
         "process_routes": [
             {
@@ -146,21 +153,21 @@ def _payload() -> dict:
             {
                 "main_id": "MAIN-001",
                 "buffer_code": "BUF-001",
-                "bound_source_name": "至上",
+                "bound_source_name": "产品一",
                 "current_quantity": 1200,
                 "current_utilization_rate": 0.6,
             },
             {
                 "main_id": "MAIN-001",
                 "buffer_code": "BUF-001",
-                "bound_source_name": "华晟",
+                "bound_source_name": "产品二",
                 "current_quantity": 800,
                 "current_utilization_rate": 0.4,
             },
             {
                 "main_id": "MAIN-001",
                 "buffer_code": "BUF-002",
-                "bound_source_name": "至上",
+                "bound_source_name": "产品一",
                 "current_quantity": 100,
                 "current_utilization_rate": 0.2,
             },
@@ -195,8 +202,8 @@ def _payload() -> dict:
             {
                 "machine_code": "MC-001",
                 "machine_name": "机台一",
-                "order_code": "ORD-001",
-                "order_name": "至上",
+                "product_name": "产品一",
+                "previous_product_name": "产品二",
                 "wafer_spec": "N",
                 "binding_time": "2026-07-15 16:00:00",
             }
@@ -295,6 +302,26 @@ def test_snapshot_time_is_used_as_current_time():
 def test_machine_runtime_current_order_code_comes_from_agv_binding():
     assert _convert().machine_runtimes[0].current_order_code == "ORD-001"
 
+
+def test_realtime_machine_code_is_normalized_to_static_standard_code():
+    snapshot = _convert()
+
+    assert snapshot.machine_runtimes[0].machine_code == "MC-001"
+    assert snapshot.agv_relations[0].machine_code == "MC-001"
+    assert snapshot.machine_masters[0].machine_code == "MC-001"
+    assert "P166-MC-001" not in snapshot.model_dump_json()
+
+
+def test_unknown_realtime_p166_code_fails_with_mapping_field():
+    payload = _payload()
+    payload["machine_realtime"][0]["machine_code"] = "P166-UNKNOWN"
+
+    _assert_conversion_error(
+        payload,
+        r"machine_realtime\.machine_code.*P166-UNKNOWN.*p166_jt_group",
+    )
+
+
 @pytest.mark.parametrize("backend_status", ["运行", "running", "RUNNING", " Running "])
 def test_running_backend_machine_status_maps_to_algorithm_running(backend_status):
     payload = _payload()
@@ -366,6 +393,7 @@ def test_unused_static_machine_does_not_require_route_in_current_snapshot():
     payload["machine_master"].append(
         {
             "machine_code": "MC-UNUSED",
+            "p166_jt_group": "P166-MC-UNUSED",
             "machine_name": "未参与机台",
             "process_code": "UNUSED-PROCESS",
             "process_name": "未参与工序",
@@ -450,12 +478,58 @@ def test_backend_remaining_quantity_just_above_tolerance_fails():
     _assert_conversion_error(payload, "ORD-001.*remaining")
 
 
-@pytest.mark.parametrize("order_name", ["", "   "])
-def test_blank_order_name_fails_in_adapter(order_name):
+def test_order_product_name_must_match_product_catalog():
     payload = _payload()
-    payload["orders"][0]["order_name"] = order_name
+    payload["orders"][0]["product_name"] = "错误产品名"
 
-    _assert_conversion_error(payload, "ORD-001.*name")
+    _assert_conversion_error(
+        payload,
+        "ORD-001.*PROD-001.*产品一.*错误产品名",
+    )
+
+
+def test_blank_product_code_fails_before_order_lookup():
+    payload = _payload()
+    payload["products"][0]["product_code"] = "   "
+
+    _assert_conversion_error(
+        payload,
+        r"products\.product_code.*blank.*index 0",
+    )
+
+
+def test_duplicate_product_code_fails_without_overwriting_first_product():
+    payload = _payload()
+    duplicate = deepcopy(payload["products"][0])
+    duplicate["product_name"] = "另一产品"
+    payload["products"].append(duplicate)
+
+    _assert_conversion_error(
+        payload,
+        r"products\.product_code duplicate.*PROD-001",
+    )
+
+
+def test_blank_product_name_fails_before_product_name_lookup():
+    payload = _payload()
+    payload["products"][0]["product_name"] = "   "
+
+    _assert_conversion_error(
+        payload,
+        r"products\.product_name.*blank.*PROD-001",
+    )
+
+
+def test_duplicate_product_name_fails_without_overwriting_first_product():
+    payload = _payload()
+    duplicate = deepcopy(payload["products"][0])
+    duplicate["product_code"] = "PROD-003"
+    payload["products"].append(duplicate)
+
+    _assert_conversion_error(
+        payload,
+        r"products\.product_name duplicate.*产品一.*PROD-001.*PROD-003",
+    )
 
 
 def test_buffer_source_name_matches_order_and_sets_order_code():
@@ -497,41 +571,28 @@ def test_same_order_can_exist_in_multiple_buffers():
     ] == ["BUF-001", "BUF-002"]
 
 
-def test_same_order_name_is_matched_within_buffer_workshop():
+def test_product_name_cannot_map_to_multiple_current_orders_across_workshops():
     payload = _payload()
-    payload["orders"].append({**deepcopy(payload["orders"][0]), "order_code": "ORD-S2", "workshop_code": "S2", "workshop_name": "二车间"})
-    s2_process_codes = _copy_process_pair_to_context(
-        payload,
-        workshop_code="S2",
-        loop_code="LOOP-2",
-        process_prefix="S2-",
+    payload["orders"].append(
+        {
+            **deepcopy(payload["orders"][0]),
+            "order_code": "ORD-S2",
+            "workshop_code": "S2",
+            "workshop_name": "二车间",
+        }
     )
-    payload["buffer_master"].append({
-        **deepcopy(payload["buffer_master"][0]),
-        "buffer_code": "BUF-S2",
-        "loop_code": "LOOP-2",
-        "served_process_codes": s2_process_codes,
-    })
-    payload["buffer_realtime"].append({
-        "main_id": "MAIN-S2",
-        "buffer_code": "BUF-S2",
-        "bound_source_name": "至上",
-        "current_quantity": 10,
-        "current_utilization_rate": 0.01,
-    })
 
-    inventory = _convert(payload).buffer_order_inventories[-1]
-    assert inventory.order_code == "ORD-S2"
+    _assert_conversion_error(payload, "产品一.*multiple current orders")
 
 
-def test_duplicate_order_name_in_same_workshop_fails_inventory_match():
+def test_duplicate_product_name_current_orders_fail_before_inventory_match():
     payload = _payload()
     payload["orders"].append({**deepcopy(payload["orders"][0]), "order_code": "ORD-003"})
 
-    _assert_conversion_error(payload, "BUF-001.*至上.*multiple")
+    _assert_conversion_error(payload, "产品一.*multiple current orders")
 
 
-def test_missing_buffer_order_name_match_fails():
+def test_missing_buffer_product_name_match_fails():
     payload = _payload()
     payload["buffer_realtime"][0]["bound_source_name"] = "不存在"
 
@@ -543,6 +604,19 @@ def test_blank_buffer_bound_source_name_fails():
     payload["buffer_realtime"][0]["bound_source_name"] = "   "
 
     _assert_conversion_error(payload, "BUF-001.*name")
+
+
+def test_buffer_product_order_workshop_must_match_buffer_process_workshop():
+    payload = _payload()
+    payload["orders"][0]["workshop_code"] = "S2"
+    payload["orders"][0]["workshop_name"] = "二车间"
+    payload["agv_relations"][0]["product_name"] = "产品二"
+    payload["agv_relations"][0]["previous_product_name"] = "产品一"
+
+    _assert_conversion_error(
+        payload,
+        r"Buffer BUF-001 product_name '产品一'.*ORD-001.*S2.*S1",
+    )
 
 
 def test_duplicate_buffer_order_inventory_fails():
@@ -761,7 +835,10 @@ def test_selected_agv_relation_is_converted_to_internal_binding():
         "machine_code": "MC-001",
         "machine_name": "机台一",
         "order_code": "ORD-001",
-        "order_name": "至上",
+        "product_code": "PROD-001",
+        "product_name": "产品一",
+        "previous_product_code": "PROD-002",
+        "previous_product_name": "产品二",
         "wafer_spec": "N",
         "binding_time": datetime(
             2026,
@@ -780,16 +857,16 @@ def test_latest_effective_agv_record_wins_regardless_of_input_order():
         {
             "machine_code": "MC-001",
             "machine_name": "机台一",
-            "order_code": "ORD-002",
-            "order_name": "华晟",
+            "product_name": "产品二",
+            "previous_product_name": "产品一",
             "wafer_spec": "R",
             "binding_time": "2026-07-15T16:20:00+08:00",
         },
         {
             "machine_code": "MC-001",
             "machine_name": "机台一",
-            "order_code": "ORD-001",
-            "order_name": "至上",
+            "product_name": "产品一",
+            "previous_product_name": "上一产品",
             "wafer_spec": "N",
             "binding_time": "2026-07-15T16:10:00+08:00",
         },
@@ -802,6 +879,35 @@ def test_latest_effective_agv_record_wins_regardless_of_input_order():
     assert snapshot.agv_relations[0].wafer_spec == "R"
 
 
+def test_latest_agv_record_wins_after_machine_code_whitespace_normalization():
+    payload = _payload()
+    payload["agv_relations"] = [
+        {
+            "machine_code": "MC-001",
+            "machine_name": "机台一",
+            "product_name": "产品一",
+            "previous_product_name": "上一产品",
+            "wafer_spec": "N",
+            "binding_time": "2026-07-15T16:10:00+08:00",
+        },
+        {
+            "machine_code": " MC-001 ",
+            "machine_name": "机台一",
+            "product_name": "产品二",
+            "previous_product_name": "产品一",
+            "wafer_spec": "R",
+            "binding_time": "2026-07-15T16:20:00+08:00",
+        },
+    ]
+
+    snapshot = _convert(payload)
+
+    assert len(snapshot.agv_relations) == 1
+    assert snapshot.agv_relations[0].machine_code == "MC-001"
+    assert snapshot.agv_relations[0].order_code == "ORD-002"
+    assert snapshot.machine_runtimes[0].current_order_code == "ORD-002"
+
+
 def test_future_agv_record_does_not_participate():
     payload = _payload()
     payload["agv_relations"].insert(
@@ -809,8 +915,8 @@ def test_future_agv_record_does_not_participate():
         {
             "machine_code": "MC-001",
             "machine_name": "机台一",
-            "order_code": "ORD-002",
-            "order_name": "华晟",
+            "product_name": "产品二",
+            "previous_product_name": "产品一",
             "wafer_spec": "R",
             "binding_time": "2026-07-15T16:40:00+08:00",
         },
@@ -834,42 +940,30 @@ def test_exact_latest_agv_duplicates_are_deduplicated():
     assert snapshot.machine_runtimes[0].current_order_code == "ORD-001"
 
 
-@pytest.mark.parametrize(
-    ("wafer_specs", "expected"),
-    [
-        (("R", "N"), "N"),
-        (("N", "R"), "N"),
-    ],
-)
-def test_latest_same_time_wafer_specs_select_lexicographically(
-    wafer_specs,
-    expected,
-):
+def test_latest_same_time_wafer_spec_conflict_fails():
     payload = _payload()
-    payload["agv_relations"][0]["wafer_spec"] = wafer_specs[0]
     tied = deepcopy(payload["agv_relations"][0])
-    tied["wafer_spec"] = wafer_specs[1]
+    tied["wafer_spec"] = "R"
     payload["agv_relations"].append(tied)
 
-    relation = _convert(payload).agv_relations[0]
-
-    assert relation.wafer_spec == expected
+    _assert_conversion_error(payload, "MC-001.*conflict.*waferspec")
 
 
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("order_code", "ORD-002"),
-        ("order_name", "华晟"),
+        ("machine_name", "另一机台名"),
+        ("product_name", "产品二"),
+        ("previous_product_name", "另一上一产品"),
     ],
 )
-def test_latest_agv_order_identity_conflict_fails(field, value):
+def test_latest_agv_business_field_conflict_fails(field, value):
     payload = _payload()
     conflicting = deepcopy(payload["agv_relations"][0])
     conflicting[field] = value
     payload["agv_relations"].append(conflicting)
 
-    _assert_conversion_error(payload, f"MC-001.*latest.*{field}.*conflict")
+    _assert_conversion_error(payload, f"MC-001.*latest.*conflict")
 
 
 def test_naive_binding_time_is_interpreted_as_utc_plus_eight():
@@ -887,8 +981,8 @@ def test_future_unknown_agv_references_are_not_validated():
         {
             "machine_code": "UNKNOWN-MACHINE",
             "machine_name": "未知机台",
-            "order_code": "UNKNOWN-ORDER",
-            "order_name": "未知订单",
+            "product_name": "未知产品",
+            "previous_product_name": None,
             "wafer_spec": "N",
             "binding_time": "2026-07-15T16:40:00+08:00",
         }
@@ -901,9 +995,8 @@ def test_future_unknown_agv_references_are_not_validated():
     ("field", "value", "match"),
     [
         ("machine_code", "UNKNOWN", "UNKNOWN.*machine"),
-        ("machine_name", "错误机台名", "MC-001.*machine_name.*错误机台名.*机台一"),
-        ("order_code", "UNKNOWN", "UNKNOWN.*order"),
-        ("order_name", "错误订单名", "ORD-001.*order_name.*错误订单名.*至上"),
+        ("machine_name", "错误机台名", "MC-001.*equipmentname.*错误机台名.*机台一"),
+        ("product_name", "UNKNOWN", "UNKNOWN.*product"),
     ],
 )
 def test_selected_agv_binding_references_and_names_must_match(
@@ -915,6 +1008,50 @@ def test_selected_agv_binding_references_and_names_must_match(
     payload["agv_relations"][0][field] = value
 
     _assert_conversion_error(payload, match)
+
+
+def test_blank_agv_linename_product_name_fails_explicitly():
+    payload = _payload()
+    payload["agv_relations"][0]["product_name"] = "   "
+
+    _assert_conversion_error(
+        payload,
+        r"AGV equipmentid 'MC-001' linename product_name.*blank",
+    )
+
+
+def test_last_product_name_never_overrides_current_product_binding():
+    payload = _payload()
+    payload["agv_relations"][0]["product_name"] = "产品一"
+    payload["agv_relations"][0]["previous_product_name"] = "产品二"
+
+    snapshot = _convert(payload)
+
+    assert snapshot.machine_runtimes[0].current_order_code == "ORD-001"
+    assert snapshot.agv_relations[0].product_name == "产品一"
+
+
+@pytest.mark.parametrize("previous_name", [None, ""])
+def test_empty_previous_product_name_does_not_affect_binding(previous_name):
+    payload = _payload()
+    payload["agv_relations"][0]["previous_product_name"] = previous_name
+
+    assert _convert(payload).machine_runtimes[0].current_order_code == "ORD-001"
+
+
+def test_agv_product_without_current_order_fails_explicitly():
+    payload = _payload()
+    payload["orders"] = [payload["orders"][1]]
+
+    _assert_conversion_error(payload, "产品一.*current order")
+
+
+def test_agv_machine_and_order_workshops_must_match():
+    payload = _payload()
+    payload["orders"][0]["workshop_code"] = "S2"
+    payload["orders"][0]["workshop_name"] = "二车间"
+
+    _assert_conversion_error(payload, "MC-001.*ORD-001.*S1.*S2")
 
 
 def test_active_events_and_config_use_algorithm_defaults():
@@ -935,7 +1072,7 @@ def test_running_machine_without_effective_agv_binding_fails():
     payload = _payload()
     payload["agv_relations"] = []
 
-    _assert_conversion_error(payload, "MC-001.*running.*AGV")
+    _assert_conversion_error(payload, "Running.*AGV.*P166-MC-001.*MC-001")
 
 
 def test_stopped_machine_without_agv_binding_has_no_current_order():
@@ -997,7 +1134,10 @@ def test_duplicate_machine_runtime_fails():
     payload = _payload()
     payload["machine_realtime"].append(deepcopy(payload["machine_realtime"][0]))
 
-    _assert_conversion_error(payload, "Duplicate machine runtime: MC-001")
+    _assert_conversion_error(
+        payload,
+        "Duplicate machine runtime.*P166-MC-001.*MC-001",
+    )
 
 
 def test_lines_without_machine_lines_convert_without_runtime_relation():
@@ -1065,7 +1205,17 @@ def test_duplicate_order_code_fails():
     payload = _payload()
     payload["orders"].append(deepcopy(payload["orders"][0]))
 
-    _assert_conversion_error(payload, "ORD-001.*duplicate")
+    _assert_conversion_error(payload, "order_code duplicate.*ORD-001")
+
+
+def test_blank_order_code_fails_before_building_current_order_index():
+    payload = _payload()
+    payload["orders"][0]["order_code"] = "   "
+
+    _assert_conversion_error(
+        payload,
+        r"orders\.order_code.*blank.*index 0",
+    )
 
 
 def test_process_route_requires_known_workshop_and_unique_key():
@@ -1084,9 +1234,46 @@ def test_process_route_sequence_must_start_at_one():
 
 def test_duplicate_master_codes_fail():
     payload = _payload()
-    payload["machine_master"].append(deepcopy(payload["machine_master"][0]))
+    duplicate = deepcopy(payload["machine_master"][0])
+    duplicate["p166_jt_group"] = "P166-MC-SECOND"
+    payload["machine_master"].append(duplicate)
 
-    _assert_conversion_error(payload, "MC-001.*duplicate")
+    _assert_conversion_error(payload, "machine_code duplicate.*MC-001")
+
+
+def test_blank_master_standard_code_fails_before_machine_mapping():
+    payload = _payload()
+    payload["machine_master"][0]["machine_code"] = "   "
+
+    _assert_conversion_error(
+        payload,
+        r"machine_master\.machine_code.*blank.*index 0",
+    )
+
+
+def test_blank_master_p166_code_fails_with_standard_machine_context():
+    payload = _payload()
+    payload["machine_master"][0]["p166_jt_group"] = "   "
+
+    _assert_conversion_error(
+        payload,
+        r"machine_master\.p166_jt_group.*blank.*MC-001",
+    )
+
+
+def test_duplicate_master_p166_code_fails_without_overwriting_mapping():
+    payload = _payload()
+    duplicate = deepcopy(payload["machine_master"][0])
+    duplicate["machine_code"] = "MC-002"
+    payload["machine_master"].append(duplicate)
+
+    _assert_conversion_error(
+        payload,
+        (
+            r"machine_master\.p166_jt_group duplicate.*P166-MC-001"
+            r".*MC-001.*MC-002"
+        ),
+    )
 
 
 def _active_cutline_event(**overrides) -> dict:
@@ -1110,7 +1297,15 @@ def _active_cutline_event(**overrides) -> dict:
 
 def test_active_cutline_event_is_deep_copied_without_mutating_request():
     payload = _payload()
-    payload["active_cutline_events"] = [_active_cutline_event()]
+    payload["active_cutline_events"] = [
+        _active_cutline_event(
+            plan_id="PLAN-001",
+            warning_id="WARNING-001",
+            status="return_recommended",
+        )
+    ]
+    payload["return_suggested_event_ids"] = ["EVENT-001"]
+    payload["mixed_cutline_event_ids"] = ["EVENT-OLDER"]
     request = CutlineAlgorithmRequest.model_validate(payload)
     request_event_before = request.active_cutline_events[0].model_dump()
 
@@ -1123,14 +1318,17 @@ def test_active_cutline_event_is_deep_copied_without_mutating_request():
     assert internal_event.negative_start_time == (
         request.active_cutline_events[0].negative_start_time
     )
-    assert internal_event.status == "active"
-    assert internal_event.plan_id is None
+    assert internal_event.status == "return_recommended"
+    assert internal_event.plan_id == "PLAN-001"
+    assert internal_event.warning_id == "WARNING-001"
     assert internal_event.source_buffer_code is None
     assert internal_event.source_wafer_size is None
     assert internal_event.source_wafer_spec is None
     assert internal_event.contribution_capacity is None
     assert internal_event.warning_type is None
     assert internal_event is not request.active_cutline_events[0]
+    assert snapshot.return_suggested_event_ids == ["EVENT-001"]
+    assert snapshot.mixed_cutline_event_ids == ["EVENT-OLDER"]
     assert snapshot.config.cutline_execution_delay_minutes == 0
 
 
@@ -1223,13 +1421,92 @@ def test_active_cutline_event_times_cannot_be_later_than_snapshot_time(field):
     )
 
 
-def test_active_cutline_event_time_awareness_mismatch_is_a_conversion_error():
+def test_naive_active_cutline_event_time_is_interpreted_as_local_time():
     payload = _payload()
     payload["active_cutline_events"] = [
         _active_cutline_event(cutline_start_time="2026-07-15T08:30:01")
     ]
 
+    snapshot = snapshot_adapter_module.SnapshotAdapter().to_algorithm_snapshot(
+        CutlineAlgorithmRequest.model_validate(payload)
+    )
+
+    actual = snapshot.active_cutline_events[0].cutline_start_time
+    assert actual == datetime(
+        2026,
+        7,
+        15,
+        8,
+        30,
+        1,
+        tzinfo=timezone(timedelta(hours=8)),
+    )
+
+
+def _append_s2_process_interval(payload: dict) -> None:
+    for index, process_code in enumerate(("S2-PROC-01", "S2-PROC-02")):
+        route = deepcopy(payload["process_routes"][index])
+        route.update(
+            {
+                "process_code": process_code,
+                "process_name": process_code,
+                "workshop_code": "S2",
+                "workshop_name": "二车间",
+                "loop_code": "S2-LOOP",
+                "loop_name": "S2循环",
+                "upstream_process_code": (
+                    None if index == 0 else "S2-PROC-01"
+                ),
+                "upstream_process_name": (
+                    None if index == 0 else "S2-PROC-01"
+                ),
+                "downstream_process_code": (
+                    "S2-PROC-02" if index == 0 else None
+                ),
+                "downstream_process_name": (
+                    "S2-PROC-02" if index == 0 else None
+                ),
+            }
+        )
+        payload["process_routes"].append(route)
+
+
+def test_active_event_workshop_must_match_machine_resolver_workshop():
+    payload = _payload()
+    _append_s2_process_interval(payload)
+    payload["active_cutline_events"] = [
+        _active_cutline_event(
+            workshop_code="S2",
+            upstream_process_code="S2-PROC-01",
+            downstream_process_code="S2-PROC-02",
+        )
+    ]
+
     _assert_conversion_error(
         payload,
-        "EVENT-001.*cutline_start_time.*snapshot_time.*timezone",
+        "EVENT-001.*machine.*MC-001.*workshop.*S1.*S2",
+    )
+
+
+def test_active_warning_buffer_workshop_must_match_event_workshop():
+    payload = _payload()
+    _append_s2_process_interval(payload)
+    warning_buffer = deepcopy(payload["buffer_master"][0])
+    warning_buffer.update(
+        {
+            "buffer_code": "BUF-S2",
+            "served_process_codes": ["S2-PROC-01", "S2-PROC-02"],
+            "served_process_names": ["S2-PROC-01", "S2-PROC-02"],
+            "loop_code": "S2-LOOP",
+            "loop_name": "S2循环",
+        }
+    )
+    payload["buffer_master"].append(warning_buffer)
+    payload["active_cutline_events"] = [
+        _active_cutline_event(warning_buffer_code="BUF-S2")
+    ]
+
+    _assert_conversion_error(
+        payload,
+        "EVENT-001.*warning_buffer_code.*BUF-S2.*workshop.*S2.*S1",
     )

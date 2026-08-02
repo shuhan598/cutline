@@ -8,7 +8,11 @@ from fastapi.testclient import TestClient
 from app.api.cutline_api import get_cutline_service
 from app.main import create_app
 from app.schemas.request_schema import CutlineAlgorithmRequest
-from app.schemas.response_schema import CutlineAlgorithmResponse
+from app.schemas.response_schema import (
+    CutlineAlgorithmResponse,
+    CutlineEvaluateResponse,
+    PersistenceStateResponse,
+)
 from tests.fixtures.v3_full_route_factory import build_stockout_auto_payload
 
 
@@ -34,7 +38,7 @@ def cutline_payload() -> dict:
         },
         "machine_realtime": [
             {
-                "machine_code": "M1",
+                "machine_code": "P166-M1",
                 "status": "运行",
                 "tangent_time": None,
                 "input_quantity": 0,
@@ -47,6 +51,7 @@ def cutline_payload() -> dict:
         "machine_master": [
             {
                 "machine_code": "M1",
+                "p166_jt_group": "P166-M1",
                 "machine_name": "机台1",
                 "process_code": "P1",
                 "process_name": "工序1",
@@ -84,7 +89,6 @@ def cutline_payload() -> dict:
         "orders": [
             {
                 "order_code": "O1",
-                "order_name": "source",
                 "order_status": "open",
                 "total_quantity": 10,
                 "piece_source": "A",
@@ -127,7 +131,7 @@ def cutline_payload() -> dict:
             {
                 "main_id": None,
                 "buffer_code": "B1",
-                "bound_source_name": "source",
+                "bound_source_name": "产品1",
                 "current_quantity": 0,
                 "current_utilization_rate": 0,
             }
@@ -150,7 +154,7 @@ def cutline_payload() -> dict:
             {
                 "equipmentid": "M1",
                 "equipmentname": "机台1",
-                "lastlinecode": "O1",
+                "linename": "产品1",
                 "lastlinename": "source",
                 "waferspec": "N",
                 "createtime": "2026-07-13 16:20:00",
@@ -250,8 +254,11 @@ def test_cutline_evaluate_delegates_to_cutline_service():
     class StubService:
         def evaluate_algorithm(self, request: CutlineAlgorithmRequest):
             calls.append(request)
-            return CutlineAlgorithmResponse(
-                calculation_time=datetime(2026, 7, 18, 12, 0)
+            return CutlineEvaluateResponse(
+                calculation_time=datetime(2026, 7, 18, 12, 0),
+                persistence_state=PersistenceStateResponse(
+                    completed_pending_plan_ids=["PLAN-DONE"]
+                ),
             )
 
     app.dependency_overrides[get_cutline_service] = StubService
@@ -261,13 +268,17 @@ def test_cutline_evaluate_delegates_to_cutline_service():
 
     assert response.status_code == 200
     assert response.json()["calculation_time"] == "2026-07-18T12:00:00"
+    assert response.json()["persistence_state"][
+        "completed_pending_plan_ids"
+    ] == ["PLAN-DONE"]
     assert len(calls) == 1
     assert isinstance(calls[0], CutlineAlgorithmRequest)
-    assert calls[0].machine_realtime[0].machine_code == "M1"
+    assert calls[0].machine_realtime[0].machine_code == "P166-M1"
     assert calls[0].agv_relations[0].machine_code == "M1"
-    assert calls[0].agv_relations[0].order_code == "O1"
+    assert calls[0].agv_relations[0].product_name == "产品1"
     assert calls[0].agv_relations[0].wafer_spec == "N"
     assert calls[0].machine_master[0].process_code == "P1"
+
 
 def test_stub_algo_run_delegates_synchronously_to_cutline_service():
     app = create_app()
@@ -276,8 +287,11 @@ def test_stub_algo_run_delegates_synchronously_to_cutline_service():
     class StubService:
         def evaluate_algorithm(self, request: CutlineAlgorithmRequest):
             calls.append(request)
-            return CutlineAlgorithmResponse(
-                calculation_time=datetime(2026, 7, 18, 12, 30)
+            return CutlineEvaluateResponse(
+                calculation_time=datetime(2026, 7, 18, 12, 30),
+                persistence_state=PersistenceStateResponse(
+                    completed_pending_plan_ids=["PLAN-HIDDEN"]
+                ),
             )
 
     app.dependency_overrides[get_cutline_service] = StubService
@@ -287,10 +301,12 @@ def test_stub_algo_run_delegates_synchronously_to_cutline_service():
 
     assert response.status_code == 200
     assert response.json()["calculation_time"] == "2026-07-18T12:30:00"
+    assert "persistence_state" not in response.json()
     assert len(calls) == 1
     assert isinstance(calls[0], CutlineAlgorithmRequest)
     assert calls[0].agv_relations[0].machine_name == "机台1"
-    assert calls[0].agv_relations[0].order_name == "source"
+    assert calls[0].agv_relations[0].product_name == "产品1"
+    assert calls[0].agv_relations[0].previous_product_name == "source"
     assert calls[0].agv_relations[0].wafer_spec == "N"
 
 

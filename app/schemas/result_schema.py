@@ -5,9 +5,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.common_schema import AlgorithmActiveCutlineEvent
+from app.schemas.pending_cutline_schema import (
+    PendingCutlinePlan,
+    PendingCutlinePlanStatus,
+)
 
 class AlgorithmIntervalNetRateResult(BaseModel):
     """新版算法按 Buffer、订单、规格和具体工序区间计算的净消耗速率。"""
@@ -25,6 +35,56 @@ class AlgorithmIntervalNetRateResult(BaseModel):
     upstream_output_rate: float
     downstream_input_rate: float
     net_consumption_rate: float
+
+
+class ConfirmedCutlineTransition(BaseModel):
+    """A physical AGV binding change confirmed from a pending plan."""
+
+    plan_id: str
+    warning_id: str
+    warning_type: Literal["stockout", "overflow"]
+    machine_code: str
+    source_order_code: str
+    target_order_code: str
+    workshop_code: str
+    process_code: str
+    source_buffer_code: str | None = None
+    target_buffer_code: str
+    target_upstream_process_code: str
+    target_downstream_process_code: str
+    source_wafer_size: str
+    source_wafer_spec: str
+    target_wafer_size: str
+    target_wafer_spec: str
+    cutline_start_time: datetime
+    is_recommended_candidate: bool
+
+
+class PendingCutlinePlanEvaluation(BaseModel):
+    """Current confirmation progress for one persisted pending plan."""
+
+    plan_id: str
+    warning_id: str
+    status: PendingCutlinePlanStatus
+    before_machine_count: int = Field(..., ge=0)
+    before_machine_codes: list[str] = Field(default_factory=list)
+    current_machine_count: int = Field(..., ge=0)
+    current_machine_codes: list[str] = Field(default_factory=list)
+    expected_machine_count: int = Field(..., ge=0)
+    expected_delta_direction: Literal["increase", "decrease"]
+    confirmed_machine_codes: list[str] = Field(default_factory=list)
+    new_confirmed_machine_codes: list[str] = Field(default_factory=list)
+
+
+class PendingCutlineDetectionBatchResult(BaseModel):
+    """Confirmed transitions and per-plan state from one snapshot."""
+
+    transitions: list[ConfirmedCutlineTransition] = Field(
+        default_factory=list
+    )
+    plan_evaluations: list[PendingCutlinePlanEvaluation] = Field(
+        default_factory=list
+    )
 
 
 class AlgorithmReturnResult(BaseModel):
@@ -602,6 +662,37 @@ class AlgorithmPipelineError(BaseModel):
     message: str
 
 
+class AlgorithmPersistenceState(BaseModel):
+    """The complete backend state to persist after an evaluation cycle."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    pending_cutline_plans: list[PendingCutlinePlan] = Field(
+        default_factory=list
+    )
+    active_cutline_events: list[AlgorithmActiveCutlineEvent] = Field(
+        default_factory=list
+    )
+    expired_pending_plan_ids: list[str] = Field(default_factory=list)
+    completed_pending_plan_ids: list[str] = Field(default_factory=list)
+    return_suggested_event_ids: list[str] = Field(default_factory=list)
+    mixed_cutline_event_ids: list[str] = Field(default_factory=list)
+    new_mixing_trace_records: list[AlgorithmMixingTraceRecord] = Field(
+        default_factory=list
+    )
+
+    @field_validator(
+        "return_suggested_event_ids", "mixed_cutline_event_ids"
+    )
+    @classmethod
+    def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        if any(not event_id.strip() for event_id in value):
+            raise ValueError("persisted event ids must not be blank")
+        if len(value) != len(set(value)):
+            raise ValueError("persisted event ids must not contain duplicates")
+        return value
+
+
 class AlgorithmEvaluateResult(BaseModel):
     """承接所有新版算法模块产物的统一总结果。"""
 
@@ -641,3 +732,6 @@ class AlgorithmEvaluateResult(BaseModel):
         default_factory=list
     )
     errors: list[AlgorithmPipelineError] = Field(default_factory=list)
+    persistence_state: AlgorithmPersistenceState = Field(
+        default_factory=AlgorithmPersistenceState
+    )

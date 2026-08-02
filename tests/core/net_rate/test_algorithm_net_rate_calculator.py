@@ -35,7 +35,6 @@ def _line(
 def _order(order_code: str = "ORD-001") -> AlgorithmOrder:
     return AlgorithmOrder(
         order_code=order_code,
-        order_name=order_code,
         order_status="RUNNING",
         product_code="PROD-001",
         product_name="产品一",
@@ -161,7 +160,8 @@ def _add_machine(
             machine_code=machine_code,
             machine_name=machine_code,
             order_code=effective_order_code,
-            order_name=effective_order_code,
+            product_code="PROD-001",
+            product_name="产品一",
             wafer_spec=agv_wafer_spec,
             binding_time=snapshot.current_time,
         )

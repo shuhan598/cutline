@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Iterable, TypeVar
@@ -10,6 +9,22 @@ from typing import Any, Iterable, TypeVar
 from pydantic import ValidationError
 
 from app.adapters.agv_binding_selector import select_latest_effective_bindings
+from app.adapters.pending_agv_binding_adapter import (
+    PendingAgvBindingAdapter,
+)
+from app.adapters.pending_cutline_plan_adapter import (
+    PendingCutlinePlanAdapter,
+)
+from app.adapters.snapshot_reference_index import (
+    CurrentOrderIndex,
+    MachineMasterIndex,
+    ProductCatalogIndex,
+    SnapshotReferenceIndexError,
+)
+from app.core.workshop.buffer_process_resolver import (
+    BufferProcessResolutionError,
+    BufferProcessResolver,
+)
 from app.core.workshop.machine_workshop_resolver import (
     MachineWorkshopResolutionError,
     MachineWorkshopResolver,
@@ -36,6 +51,7 @@ from app.schemas.request_schema import (
     AlgorithmSnapshot,
     CutlineAlgorithmRequest,
 )
+from app.utils.time_utils import normalize_local_time
 
 
 class SnapshotConversionError(ValueError):
@@ -53,6 +69,10 @@ class SnapshotAdapter:
     ) -> AlgorithmSnapshot:
         """Convert a validated backend request into a complete algorithm snapshot."""
         try:
+            config = AlgorithmConfig()
+            snapshot_time = normalize_local_time(
+                request.snapshot_meta.snapshot_time
+            )
             if request.machine_lines and not request.lines:
                 raise SnapshotConversionError(
                     "machine_lines were provided but lines are empty"
@@ -66,29 +86,41 @@ class SnapshotAdapter:
             lines = self._convert_lines(request.lines, workshop_by_code)
             line_by_code = self._index_unique(lines, "line_code", "line")
 
-            machine_masters = self._convert_machine_masters(request.machine_master)
-            machine_by_code = self._index_unique(
-                machine_masters, "machine_code", "machine"
-            )
+            machine_index = MachineMasterIndex(request.machine_master)
+            machine_masters = machine_index.machine_masters
+            machine_by_code = machine_index.by_standard_code
 
-            products = self._convert_products(request.products)
-            product_by_code = self._index_unique(
-                products, "product_code", "product"
+            product_catalog = ProductCatalogIndex(
+                self._convert_products(request.products)
             )
+            products = product_catalog.products
 
-            orders = self._convert_orders(
-                request.orders, workshop_by_code, product_by_code
+            order_index = CurrentOrderIndex(
+                self._convert_orders(
+                    request.orders,
+                    workshop_by_code,
+                ),
+                product_catalog,
             )
-            order_by_code = self._index_unique(orders, "order_code", "order")
+            orders = order_index.orders
+            order_by_code = order_index.by_code
+
+            process_routes = self._convert_process_routes(
+                request.process_routes, workshop_by_code
+            )
+            self._index_process_routes(process_routes)
+            machine_workshop_resolver = MachineWorkshopResolver(process_routes)
 
             machine_lines = self._convert_machine_lines(
                 request.machine_lines, machine_by_code, line_by_code
             )
             agv_relations = self._convert_agv_relations(
                 request.agv_relations,
-                snapshot_time=request.snapshot_meta.snapshot_time,
-                machine_by_code=machine_by_code,
-                order_by_code=order_by_code,
+                snapshot_time=snapshot_time,
+                machine_index=machine_index,
+                product_catalog=product_catalog,
+                order_index=order_index,
+                workshop_resolver=machine_workshop_resolver,
             )
             agv_by_machine = self._index_unique(
                 agv_relations,
@@ -97,17 +129,15 @@ class SnapshotAdapter:
             )
             machine_runtimes = self._convert_machine_runtimes(
                 request.machine_realtime,
-                machine_by_code,
+                machine_index,
                 agv_by_machine,
             )
             capacities = self._convert_capacities(
-                request.machine_process_times, machine_by_code, product_by_code
+                request.machine_process_times,
+                machine_by_code,
+                product_catalog.by_code,
             )
 
-            process_routes = self._convert_process_routes(
-                request.process_routes, workshop_by_code
-            )
-            route_by_key = self._index_process_routes(process_routes)
             self._validate_runtime_machine_workshops(
                 machine_runtimes=machine_runtimes,
                 machine_by_code=machine_by_code,
@@ -119,30 +149,55 @@ class SnapshotAdapter:
                 buffer_masters, "buffer_code", "buffer"
             )
             buffer_process_relations = self._build_buffer_process_relations(
-                buffer_masters, process_routes, route_by_key
+                buffer_masters,
+                process_routes,
             )
             relation_by_buffer = self._index_unique(
                 buffer_process_relations, "buffer_code", "buffer process relation"
             )
             buffer_order_inventories = self._convert_buffer_order_inventories(
                 request.buffer_realtime,
-                orders,
+                order_index,
                 buffer_by_code,
                 relation_by_buffer,
             )
 
-            active_cutline_events = self._convert_active_cutline_events(
-                request.active_cutline_events,
-                snapshot_time=request.snapshot_meta.snapshot_time,
+            pending_cutline_plans = PendingCutlinePlanAdapter().convert(
+                request.pending_cutline_plans,
+                config=config,
+                snapshot_time=snapshot_time,
                 machine_by_code=machine_by_code,
                 order_by_code=order_by_code,
+                product_by_code=product_catalog.by_code,
+                buffer_by_code=buffer_by_code,
+                relation_by_buffer=relation_by_buffer,
+                workshop_codes=set(workshop_by_code),
+                workshop_resolver=machine_workshop_resolver,
+            )
+            agv_binding_history = PendingAgvBindingAdapter().convert(
+                request.agv_relations,
+                plans=pending_cutline_plans,
+                snapshot_time=snapshot_time,
+                machine_index=machine_index,
+                product_catalog=product_catalog,
+                order_index=order_index,
+                workshop_resolver=machine_workshop_resolver,
+            )
+
+            active_cutline_events = self._convert_active_cutline_events(
+                request.active_cutline_events,
+                snapshot_time=snapshot_time,
+                machine_by_code=machine_by_code,
+                order_by_code=order_by_code,
+                product_by_code=product_catalog.by_code,
                 workshop_by_code=workshop_by_code,
                 buffer_by_code=buffer_by_code,
+                relation_by_buffer=relation_by_buffer,
                 process_routes=process_routes,
             )
 
             return AlgorithmSnapshot(
-                current_time=request.snapshot_meta.snapshot_time,
+                current_time=snapshot_time,
                 workshops=workshops,
                 lines=lines,
                 machine_lines=machine_lines,
@@ -156,11 +211,19 @@ class SnapshotAdapter:
                 buffer_process_relations=buffer_process_relations,
                 buffer_order_inventories=buffer_order_inventories,
                 agv_relations=agv_relations,
+                pending_cutline_plans=pending_cutline_plans,
+                agv_binding_history=agv_binding_history,
                 active_cutline_events=active_cutline_events,
-                config=AlgorithmConfig(),
+                return_suggested_event_ids=list(
+                    request.return_suggested_event_ids
+                ),
+                mixed_cutline_event_ids=list(request.mixed_cutline_event_ids),
+                config=config,
             )
         except SnapshotConversionError:
             raise
+        except SnapshotReferenceIndexError as exc:
+            raise SnapshotConversionError(str(exc)) from exc
         except (ValidationError, ValueError) as exc:
             raise SnapshotConversionError(
                 f"Snapshot model validation failed: {exc}"
@@ -214,19 +277,6 @@ class SnapshotAdapter:
             )
         return result
 
-    def _convert_machine_masters(
-        self, source: Iterable[Any]
-    ) -> list[AlgorithmMachineMaster]:
-        return [
-            AlgorithmMachineMaster(
-                machine_code=item.machine_code,
-                machine_name=item.machine_name,
-                process_code=item.process_code,
-                process_name=item.process_name,
-            )
-            for item in source
-        ]
-
     def _convert_machine_lines(
         self,
         source: Iterable[Any],
@@ -270,31 +320,32 @@ class SnapshotAdapter:
     def _convert_machine_runtimes(
         self,
         source: Iterable[Any],
-        machine_by_code: dict[str, AlgorithmMachineMaster],
+        machine_index: MachineMasterIndex,
         agv_by_machine: dict[str, AlgorithmAgvRelation],
     ) -> list[AlgorithmMachineRuntime]:
         result: list[AlgorithmMachineRuntime] = []
         seen_machine_codes: set[str] = set()
         for item in source:
-            if item.machine_code in seen_machine_codes:
+            machine = machine_index.resolve_realtime_code(item.machine_code)
+            standard_code = machine.machine_code
+            if standard_code in seen_machine_codes:
                 raise SnapshotConversionError(
-                    f"Duplicate machine runtime: {item.machine_code}"
+                    "Duplicate machine runtime after p166_jt_group mapping: "
+                    f"source machine_code={item.machine_code!r}, "
+                    f"standard machine_code={standard_code!r}"
                 )
-            seen_machine_codes.add(item.machine_code)
-            if item.machine_code not in machine_by_code:
-                raise SnapshotConversionError(
-                    f"{item.machine_code} machine does not exist for machine runtime"
-                )
+            seen_machine_codes.add(standard_code)
             status = self._map_machine_status(item.status)
-            binding = agv_by_machine.get(item.machine_code)
+            binding = agv_by_machine.get(standard_code)
             if status == "running" and binding is None:
                 raise SnapshotConversionError(
-                    f"{item.machine_code} running machine has no effective AGV "
-                    "binding at snapshot_time"
+                    "Running machine has no effective AGV binding at "
+                    f"snapshot_time: source machine_code={item.machine_code!r}, "
+                    f"standard machine_code={standard_code!r}"
                 )
             result.append(
                 AlgorithmMachineRuntime(
-                    machine_code=item.machine_code,
+                    machine_code=standard_code,
                     status=status,
                     current_order_code=(
                         binding.order_code if binding is not None else None
@@ -332,19 +383,9 @@ class SnapshotAdapter:
         self,
         source: Iterable[Any],
         workshop_by_code: dict[str, AlgorithmWorkshop],
-        product_by_code: dict[str, AlgorithmProduct],
     ) -> list[AlgorithmOrder]:
         result: list[AlgorithmOrder] = []
         for item in source:
-            order_name = item.order_name.strip() if item.order_name else ""
-            if not order_name:
-                raise SnapshotConversionError(
-                    f"Order {item.order_code} name is required"
-                )
-            if item.product_code not in product_by_code:
-                raise SnapshotConversionError(
-                    f"{item.product_code} product does not exist for order {item.order_code}"
-                )
             if item.workshop_code not in workshop_by_code:
                 raise SnapshotConversionError(
                     f"{item.workshop_code} workshop does not exist for order {item.order_code}"
@@ -363,7 +404,6 @@ class SnapshotAdapter:
             result.append(
                 AlgorithmOrder(
                     order_code=item.order_code,
-                    order_name=order_name,
                     order_status=item.order_status,
                     product_code=item.product_code,
                     product_name=item.product_name,
@@ -476,68 +516,25 @@ class SnapshotAdapter:
         self,
         buffers: Iterable[AlgorithmBufferMaster],
         routes: Iterable[AlgorithmProcessRoute],
-        route_by_key: dict[tuple[str, str, str], AlgorithmProcessRoute],
     ) -> list[AlgorithmBufferProcessRelation]:
-        # Keep the complete key index as part of the adapter contract and use it to
-        # derive loop/process candidates without guessing a workshop.
         all_routes = list(routes)
-        if len(route_by_key) != len(all_routes):
-            raise SnapshotConversionError("Process route index is incomplete")
-
+        resolver = BufferProcessResolver(all_routes)
         result: list[AlgorithmBufferProcessRelation] = []
         for buffer in buffers:
-            upstream_code, downstream_code = buffer.served_process_codes
-            upstream_candidates = [
-                route
-                for route in all_routes
-                if route.loop_code == buffer.loop_code
-                and route.process_code == upstream_code
-            ]
-            downstream_candidates = [
-                route
-                for route in all_routes
-                if route.loop_code == buffer.loop_code
-                and route.process_code == downstream_code
-            ]
-            if not upstream_candidates:
-                raise SnapshotConversionError(
-                    f"Buffer {buffer.buffer_code} process {upstream_code} has no route in loop {buffer.loop_code}"
-                )
-            if not downstream_candidates:
-                raise SnapshotConversionError(
-                    f"Buffer {buffer.buffer_code} process {downstream_code} has no route in loop {buffer.loop_code}"
-                )
-
-            pairs = [
-                (upstream, downstream)
-                for upstream in upstream_candidates
-                for downstream in downstream_candidates
-                if upstream.workshop_code == downstream.workshop_code
-            ]
-            if not pairs:
-                raise SnapshotConversionError(
-                    f"Buffer {buffer.buffer_code} served processes must belong to the same workshop"
-                )
-            if len(pairs) > 1:
-                raise SnapshotConversionError(
-                    f"Buffer {buffer.buffer_code} process routes match multiple workshops"
-                )
-
-            upstream, downstream = pairs[0]
-            if upstream.sequence >= downstream.sequence:
-                raise SnapshotConversionError(
-                    f"Buffer {buffer.buffer_code} upstream sequence must precede downstream sequence"
-                )
-            if downstream.sequence != upstream.sequence + 1:
-                raise SnapshotConversionError(
-                    f"Buffer {buffer.buffer_code} served processes must be adjacent"
-                )
+            try:
+                resolution = resolver.resolve(buffer)
+            except BufferProcessResolutionError as exc:
+                raise SnapshotConversionError(str(exc)) from exc
             result.append(
                 AlgorithmBufferProcessRelation(
                     buffer_code=buffer.buffer_code,
-                    workshop_code=upstream.workshop_code,
-                    upstream_process_code=upstream_code,
-                    downstream_process_code=downstream_code,
+                    workshop_code=resolution.workshop_code,
+                    upstream_process_code=(
+                        resolution.upstream_process_code
+                    ),
+                    downstream_process_code=(
+                        resolution.downstream_process_code
+                    ),
                 )
             )
         return result
@@ -545,18 +542,10 @@ class SnapshotAdapter:
     def _convert_buffer_order_inventories(
         self,
         source: Iterable[Any],
-        orders: Iterable[AlgorithmOrder],
+        order_index: CurrentOrderIndex,
         buffer_by_code: dict[str, AlgorithmBufferMaster],
         relation_by_buffer: dict[str, AlgorithmBufferProcessRelation],
     ) -> list[AlgorithmBufferOrderInventory]:
-        orders_by_workshop_and_name: dict[
-            tuple[str, str], list[AlgorithmOrder]
-        ] = defaultdict(list)
-        for order in orders:
-            orders_by_workshop_and_name[
-                (order.workshop_code, order.order_name)
-            ].append(order)
-
         result: list[AlgorithmBufferOrderInventory] = []
         seen: set[tuple[str, str, str]] = set()
         main_id_by_buffer: dict[str, str] = {}
@@ -604,22 +593,19 @@ class SnapshotAdapter:
                         )
 
             source_name = item.bound_source_name.strip()
-            if not source_name:
-                raise SnapshotConversionError(
-                    f"Buffer {item.buffer_code} source name is required"
-                )
-            matches = orders_by_workshop_and_name.get(
-                (relation.workshop_code, source_name), []
+            order = order_index.resolve_product_name(
+                source_name,
+                source=(
+                    f"Buffer {item.buffer_code} bound_source_name"
+                ),
             )
-            if not matches:
+            if order.workshop_code != relation.workshop_code:
                 raise SnapshotConversionError(
-                    f"Buffer {item.buffer_code} source name {source_name} did not match an order"
+                    f"Buffer {item.buffer_code} product_name {source_name!r} "
+                    f"resolved order {order.order_code!r} in workshop "
+                    f"{order.workshop_code!r}, but the Buffer process relation "
+                    f"belongs to workshop {relation.workshop_code!r}"
                 )
-            if len(matches) > 1:
-                raise SnapshotConversionError(
-                    f"Buffer {item.buffer_code} source name {source_name} matched multiple orders"
-                )
-            order = matches[0]
 
             existing_main_id = main_id_by_buffer.get(item.buffer_code)
             if (
@@ -657,8 +643,10 @@ class SnapshotAdapter:
         source: Iterable[Any],
         *,
         snapshot_time: datetime,
-        machine_by_code: dict[str, AlgorithmMachineMaster],
-        order_by_code: dict[str, AlgorithmOrder],
+        machine_index: MachineMasterIndex,
+        product_catalog: ProductCatalogIndex,
+        order_index: CurrentOrderIndex,
+        workshop_resolver: MachineWorkshopResolver,
     ) -> list[AlgorithmAgvRelation]:
         effective_by_machine = select_latest_effective_bindings(
             source,
@@ -667,24 +655,40 @@ class SnapshotAdapter:
 
         result: list[AlgorithmAgvRelation] = []
         for machine_code, (latest_time, latest) in effective_by_machine.items():
-            order_codes = {item.order_code for item in latest}
-            if len(order_codes) > 1:
-                raise SnapshotConversionError(
-                    f"{machine_code} latest AGV order_code conflict at "
-                    f"{latest_time.isoformat()}: {sorted(order_codes)}"
+            for raw_field, standard_field in (
+                ("equipmentname", "machine_name"),
+                ("linename", "product_name"),
+                ("waferspec", "wafer_spec"),
+            ):
+                values = {getattr(item, standard_field) for item in latest}
+                if len(values) > 1:
+                    rendered_values = ", ".join(
+                        sorted((repr(value) for value in values))
+                    )
+                    raise SnapshotConversionError(
+                        f"AGV equipmentid {machine_code!r} latest binding "
+                        f"conflict at {latest_time.isoformat()}: "
+                        f"{raw_field} values=[{rendered_values}]"
+                    )
+
+            previous_names = {
+                item.previous_product_name.strip()
+                if item.previous_product_name is not None
+                and item.previous_product_name.strip()
+                else None
+                for item in latest
+            }
+            if len(previous_names) > 1:
+                rendered_values = ", ".join(
+                    sorted(repr(value) for value in previous_names)
                 )
-            order_names = {item.order_name for item in latest}
-            if len(order_names) > 1:
                 raise SnapshotConversionError(
-                    f"{machine_code} latest AGV order_name conflict at "
-                    f"{latest_time.isoformat()}: {sorted(order_names)}"
+                    f"AGV equipmentid {machine_code!r} latest binding "
+                    f"conflict at {latest_time.isoformat()}: "
+                    f"lastlinename values=[{rendered_values}]"
                 )
 
-            machine = machine_by_code.get(machine_code)
-            if machine is None:
-                raise SnapshotConversionError(
-                    f"{machine_code} machine does not exist for selected AGV binding"
-                )
+            machine = machine_index.resolve_agv_code(machine_code)
             invalid_machine_names = sorted(
                 {
                     item.machine_name
@@ -694,32 +698,75 @@ class SnapshotAdapter:
             )
             if invalid_machine_names:
                 raise SnapshotConversionError(
-                    f"{machine_code} AGV machine_name "
+                    f"{machine.machine_code} AGV equipmentname "
                     f"{invalid_machine_names[0]!r} does not match machine "
                     f"master {machine.machine_name!r}"
                 )
 
-            order_code = next(iter(order_codes))
-            order = order_by_code.get(order_code)
-            if order is None:
+            product_name = latest[0].product_name.strip()
+            product = product_catalog.resolve_name(
+                product_name,
+                source=f"AGV equipmentid {machine_code!r} linename",
+            )
+            order = order_index.resolve_product_name(
+                product_name,
+                source=f"AGV equipmentid {machine_code!r} linename",
+            )
+            if order.product_code != product.product_code:
                 raise SnapshotConversionError(
-                    f"{order_code} order does not exist for selected AGV "
-                    f"binding on machine {machine_code}"
+                    f"AGV equipmentid {machine_code!r} linename "
+                    f"{product_name!r} resolved product_code "
+                    f"{product.product_code!r}, but current order "
+                    f"{order.order_code!r} uses {order.product_code!r}"
                 )
-            order_name = next(iter(order_names))
-            if order_name != order.order_name:
+            try:
+                machine_workshop = workshop_resolver.resolve_machine_workshop(
+                    machine
+                )
+            except MachineWorkshopResolutionError as exc:
+                raise SnapshotConversionError(str(exc)) from exc
+            if machine_workshop != order.workshop_code:
                 raise SnapshotConversionError(
-                    f"{order_code} AGV order_name {order_name!r} does not "
-                    f"match order master {order.order_name!r}"
+                    f"AGV machine {machine.machine_code!r} resolved order "
+                    f"{order.order_code!r}: machine workshop "
+                    f"{machine_workshop!r} does not match order workshop "
+                    f"{order.workshop_code!r}"
                 )
-            wafer_spec = min(item.wafer_spec for item in latest)
+            wafer_spec = latest[0].wafer_spec
+            if not wafer_spec.strip():
+                raise SnapshotConversionError(
+                    f"AGV equipmentid {machine_code!r} wafer_spec must not "
+                    "be blank"
+                )
+            previous_name = next(iter(previous_names))
+            previous_product = (
+                product_catalog.resolve_name(
+                    previous_name,
+                    source=(
+                        f"AGV equipmentid {machine_code!r} lastlinename"
+                    ),
+                )
+                if previous_name is not None
+                else None
+            )
 
             result.append(
                 AlgorithmAgvRelation(
-                    machine_code=machine_code,
+                    machine_code=machine.machine_code,
                     machine_name=machine.machine_name,
-                    order_code=order_code,
-                    order_name=order.order_name,
+                    order_code=order.order_code,
+                    product_code=product.product_code,
+                    product_name=product.product_name,
+                    previous_product_code=(
+                        previous_product.product_code
+                        if previous_product is not None
+                        else None
+                    ),
+                    previous_product_name=(
+                        previous_product.product_name
+                        if previous_product is not None
+                        else None
+                    ),
                     wafer_spec=wafer_spec,
                     binding_time=latest_time,
                 )
@@ -733,11 +780,14 @@ class SnapshotAdapter:
         snapshot_time: datetime,
         machine_by_code: dict[str, AlgorithmMachineMaster],
         order_by_code: dict[str, AlgorithmOrder],
+        product_by_code: dict[str, AlgorithmProduct],
         workshop_by_code: dict[str, AlgorithmWorkshop],
         buffer_by_code: dict[str, AlgorithmBufferMaster],
+        relation_by_buffer: dict[str, AlgorithmBufferProcessRelation],
         process_routes: Iterable[AlgorithmProcessRoute],
     ) -> list[AlgorithmActiveCutlineEvent]:
         routes = list(process_routes)
+        workshop_resolver = MachineWorkshopResolver(routes)
         result: list[AlgorithmActiveCutlineEvent] = []
         seen_event_ids: set[str] = set()
 
@@ -783,6 +833,17 @@ class SnapshotAdapter:
                         f"{label} does not exist"
                     )
 
+            optional_buffers = (
+                ("source_buffer_code", event.source_buffer_code),
+                ("warning_buffer_code", event.warning_buffer_code),
+            )
+            for field, buffer_code in optional_buffers:
+                if buffer_code is not None and buffer_code not in buffer_by_code:
+                    raise SnapshotConversionError(
+                        f"Active cutline event {event.event_id} {field} "
+                        f"{buffer_code} buffer does not exist"
+                    )
+
             for field in ("upstream_process_code", "downstream_process_code"):
                 process_code = getattr(event, field)
                 if not any(
@@ -796,13 +857,110 @@ class SnapshotAdapter:
                         f"process route does not exist"
                     )
 
-            self._validate_active_event_time(
-                event.event_id,
-                "negative_start_time",
-                event.negative_start_time,
-                snapshot_time,
+            optional_processes = (
+                ("process_code", event.process_code),
+                (
+                    "warning_upstream_process_code",
+                    event.warning_upstream_process_code,
+                ),
+                (
+                    "warning_downstream_process_code",
+                    event.warning_downstream_process_code,
+                ),
             )
-            self._validate_active_event_time(
+            for field, process_code in optional_processes:
+                if process_code is None:
+                    continue
+                if not any(
+                    route.workshop_code == event.workshop_code
+                    and route.process_code == process_code
+                    for route in routes
+                ):
+                    raise SnapshotConversionError(
+                        f"Active cutline event {event.event_id} {field} "
+                        f"{process_code} workshop {event.workshop_code} "
+                        "process route does not exist"
+                    )
+            try:
+                machine_workshop = workshop_resolver.resolve_machine_workshop(
+                    machine_by_code[event.machine_code]
+                )
+            except MachineWorkshopResolutionError as exc:
+                raise SnapshotConversionError(
+                    f"Active cutline event {event.event_id} machine "
+                    f"{event.machine_code}: {exc}"
+                ) from exc
+            if machine_workshop != event.workshop_code:
+                raise SnapshotConversionError(
+                    f"Active cutline event {event.event_id} machine "
+                    f"{event.machine_code} workshop {machine_workshop} "
+                    f"does not match event workshop {event.workshop_code}"
+                )
+            if (
+                event.process_code is not None
+                and event.process_code
+                != machine_by_code[event.machine_code].process_code
+            ):
+                raise SnapshotConversionError(
+                    f"Active cutline event {event.event_id} process_code "
+                    f"{event.process_code} does not match machine "
+                    f"{event.machine_code} process_code "
+                    f"{machine_by_code[event.machine_code].process_code}"
+                )
+
+            if event.warning_buffer_code is not None:
+                warning_relation = relation_by_buffer[event.warning_buffer_code]
+                if warning_relation.workshop_code != event.workshop_code:
+                    raise SnapshotConversionError(
+                        f"Active cutline event {event.event_id} "
+                        f"warning_buffer_code {event.warning_buffer_code} "
+                        f"workshop {warning_relation.workshop_code} does not "
+                        f"match event workshop {event.workshop_code}"
+                    )
+                if (
+                    event.warning_upstream_process_code is not None
+                    and event.warning_upstream_process_code
+                    != warning_relation.upstream_process_code
+                ):
+                    raise SnapshotConversionError(
+                        f"Active cutline event {event.event_id} "
+                        "warning_upstream_process_code conflicts with "
+                        f"warning_buffer_code {event.warning_buffer_code}"
+                    )
+                if (
+                    event.warning_downstream_process_code is not None
+                    and event.warning_downstream_process_code
+                    != warning_relation.downstream_process_code
+                ):
+                    raise SnapshotConversionError(
+                        f"Active cutline event {event.event_id} "
+                        "warning_downstream_process_code conflicts with "
+                        f"warning_buffer_code {event.warning_buffer_code}"
+                    )
+
+            source_order = order_by_code[event.source_order_code]
+            source_product = product_by_code[source_order.product_code]
+            if (
+                event.source_wafer_size is not None
+                and event.source_wafer_size != source_product.wafer_size
+            ):
+                raise SnapshotConversionError(
+                    f"Active cutline event {event.event_id} source_wafer_size "
+                    f"{event.source_wafer_size!r} conflicts with source order "
+                    f"product wafer_size {source_product.wafer_size!r}"
+                )
+
+            negative_start_time = (
+                self._normalize_active_event_time(
+                    event.event_id,
+                    "negative_start_time",
+                    event.negative_start_time,
+                    snapshot_time,
+                )
+                if event.negative_start_time is not None
+                else None
+            )
+            cutline_start_time = self._normalize_active_event_time(
                 event.event_id,
                 "cutline_start_time",
                 event.cutline_start_time,
@@ -811,45 +969,57 @@ class SnapshotAdapter:
             result.append(
                 AlgorithmActiveCutlineEvent(
                     event_id=event.event_id,
+                    plan_id=event.plan_id,
+                    warning_id=event.warning_id,
                     machine_code=event.machine_code,
                     source_order_code=event.source_order_code,
                     target_order_code=event.target_order_code,
                     workshop_code=event.workshop_code,
+                    source_buffer_code=event.source_buffer_code,
                     target_buffer_code=event.target_buffer_code,
                     upstream_process_code=event.upstream_process_code,
                     downstream_process_code=event.downstream_process_code,
+                    source_wafer_size=event.source_wafer_size,
+                    source_wafer_spec=event.source_wafer_spec,
                     target_wafer_size=event.target_wafer_size,
                     target_wafer_spec=event.target_wafer_spec,
-                    cutline_start_time=event.cutline_start_time,
-                    negative_start_time=event.negative_start_time,
-                    status="active",
+                    cutline_start_time=cutline_start_time,
+                    negative_start_time=negative_start_time,
+                    status=event.status,
+                    contribution_capacity=event.contribution_capacity,
+                    warning_type=event.warning_type,
+                    process_code=event.process_code,
+                    warning_buffer_code=event.warning_buffer_code,
+                    warning_upstream_process_code=(
+                        event.warning_upstream_process_code
+                    ),
+                    warning_downstream_process_code=(
+                        event.warning_downstream_process_code
+                    ),
+                    is_recommended_candidate=(
+                        event.is_recommended_candidate
+                    ),
                 )
             )
 
         return result
 
-    def _validate_active_event_time(
+    def _normalize_active_event_time(
         self,
         event_id: str,
         field: str,
-        event_time: datetime | None,
+        event_time: datetime,
         snapshot_time: datetime,
-    ) -> None:
-        if event_time is None:
-            return
-
-        event_is_aware = event_time.utcoffset() is not None
-        snapshot_is_aware = snapshot_time.utcoffset() is not None
-        if event_is_aware != snapshot_is_aware:
+    ) -> datetime:
+        normalized_event_time = normalize_local_time(event_time)
+        normalized_snapshot_time = normalize_local_time(snapshot_time)
+        if normalized_event_time > normalized_snapshot_time:
             raise SnapshotConversionError(
-                f"Active cutline event {event_id} {field} cannot be compared "
-                f"with snapshot_time because timezone awareness differs"
+                f"Active cutline event {event_id} {field} "
+                f"{normalized_event_time.isoformat()} is later than "
+                f"snapshot_time {normalized_snapshot_time.isoformat()}"
             )
-        if event_time > snapshot_time:
-            raise SnapshotConversionError(
-                f"Active cutline event {event_id} {field} {event_time.isoformat()} "
-                f"is later than snapshot_time {snapshot_time.isoformat()}"
-            )
+        return normalized_event_time
 
     def _index_unique(
         self, items: Iterable[ModelT], field: str, label: str

@@ -278,8 +278,45 @@ def test_empty_algorithm_evaluate_result_requires_only_calculation_time():
     result = schema.AlgorithmEvaluateResult(calculation_time=NOW)
 
     assert result.calculation_time == NOW
-    assert set(result.model_fields) == {"calculation_time", *LIST_FIELDS}
+    assert set(result.model_fields) == {
+        "calculation_time",
+        *LIST_FIELDS,
+        "persistence_state",
+    }
     assert all(getattr(result, field_name) == [] for field_name in LIST_FIELDS)
+    assert isinstance(result.persistence_state, schema.AlgorithmPersistenceState)
+
+
+def test_algorithm_persistence_state_is_strict_and_keeps_full_active_events():
+    event = active_cutline_event()
+    state = schema.AlgorithmPersistenceState(
+        active_cutline_events=[event],
+        expired_pending_plan_ids=["PLAN-EXPIRED"],
+        completed_pending_plan_ids=["PLAN-COMPLETE"],
+        return_suggested_event_ids=[event.event_id],
+        mixed_cutline_event_ids=[event.event_id],
+    )
+
+    assert state.active_cutline_events == [event]
+    assert state.return_suggested_event_ids == [event.event_id]
+    with pytest.raises(ValidationError):
+        schema.AlgorithmPersistenceState(unexpected=True)
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [
+        ("return_suggested_event_ids", ["CUT-1", "CUT-1"]),
+        ("mixed_cutline_event_ids", ["CUT-1", "CUT-1"]),
+        ("return_suggested_event_ids", ["   "]),
+        ("mixed_cutline_event_ids", [""]),
+    ],
+)
+def test_algorithm_persistence_state_rejects_duplicate_or_blank_watermarks(
+    field_name, value
+):
+    with pytest.raises(ValidationError, match=field_name):
+        schema.AlgorithmPersistenceState(**{field_name: value})
 
 
 def test_all_algorithm_evaluate_result_lists_use_independent_factories():

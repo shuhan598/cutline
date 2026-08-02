@@ -5,7 +5,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 
 class AlgorithmConfig(BaseModel):
@@ -45,7 +53,14 @@ class AlgorithmConfig(BaseModel):
         ge=0,
         strict=True,
         allow_inf_nan=False,
-        description="当前默认方案生成后立即切线，单位：分钟",
+        description="方案混料预测使用的预计执行延迟，单位：分钟",
+    )
+    cutline_confirmation_window_minutes: float = Field(
+        default=30.0,
+        gt=0,
+        strict=True,
+        allow_inf_nan=False,
+        description="待确认切线方案的 AGV 执行确认窗口，单位：分钟",
     )
     agv_delivery_minutes: float = Field(
         default=5.0,
@@ -108,7 +123,17 @@ class AlgorithmActiveCutlineEvent(AlgorithmModel):
     )
     target_wafer_size: str = Field(..., description="目标订单硅片尺寸")
     target_wafer_spec: str = Field(..., description="目标订单硅片规格")
-    cutline_start_time: datetime = Field(..., description="机台实际开始执行切线的时间")
+    cutline_start_time: datetime = Field(
+        ...,
+        description=(
+            "AGV记录首次观察到绑定变化时间，不等于精确物理切线时间"
+        ),
+    )
+    warning_id: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Source warning identifier used for cross-cycle deduplication",
+    )
     negative_start_time: datetime | None = Field(
         default=None,
         description="目标区间净消耗速率连续小于0的开始时间",
@@ -128,6 +153,37 @@ class AlgorithmActiveCutlineEvent(AlgorithmModel):
         default=None,
         description="触发来源的预警类型",
     )
+    process_code: str | None = Field(
+        default=None,
+        description="确认切线机台所属的输出侧工序编码",
+    )
+    warning_buffer_code: str | None = Field(
+        default=None,
+        description="触发切线方案的预警 Buffer 编码",
+    )
+    warning_upstream_process_code: str | None = Field(
+        default=None,
+        description="预警 Buffer 对应区间的上游工序编码",
+    )
+    warning_downstream_process_code: str | None = Field(
+        default=None,
+        description="预警 Buffer 对应区间的下游工序编码",
+    )
+    is_recommended_candidate: bool | None = Field(
+        default=None,
+        description="确认机台是否来自原方案推荐候选列表",
+    )
+
+    @field_validator("plan_id", "warning_id")
+    @classmethod
+    def validate_optional_identifier(
+        cls,
+        value: str | None,
+        info: ValidationInfo,
+    ) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError(f"{info.field_name} must not be blank")
+        return value
 
 
 class AlgorithmWorkshop(AlgorithmModel):
@@ -218,7 +274,6 @@ class AlgorithmOrder(AlgorithmModel):
     """新版算法内部使用的订单数据。"""
 
     order_code: str = Field(..., description="订单编码")
-    order_name: str = Field(..., description="订单名称")
     order_status: str = Field(..., description="订单状态")
     product_code: str = Field(..., description="订单对应的产品型号编码")
     product_name: str = Field(..., description="订单对应的产品型号名称")
@@ -316,6 +371,15 @@ class AlgorithmAgvRelation(AlgorithmModel):
     machine_code: str = Field(..., description="机台编码")
     machine_name: str = Field(..., description="机台名称")
     order_code: str = Field(..., description="当前订单编码")
-    order_name: str = Field(..., description="当前订单名称")
+    product_code: str = Field(..., description="当前订单对应的产品型号编码")
+    product_name: str = Field(..., description="当前订单对应的产品型号名称")
+    previous_product_code: str | None = Field(
+        default=None,
+        description="上一绑定订单对应的产品型号编码，未知时为空",
+    )
+    previous_product_name: str | None = Field(
+        default=None,
+        description="上一绑定订单对应的产品型号名称，未知时为空",
+    )
     wafer_spec: str = Field(..., description="当前订单硅片规格")
     binding_time: datetime = Field(..., description="AGV 定线绑定记录时间")

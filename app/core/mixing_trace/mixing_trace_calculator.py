@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from math import isfinite
 
 from app.core.mixing_trace.errors import MixingTraceCalculationError
+from app.schemas.common_schema import AlgorithmActiveCutlineEvent
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (
     AlgorithmCutlineDecisionResult,
@@ -72,6 +73,35 @@ class MixingTraceCalculator:
             return AlgorithmMixingTraceBatchResult()
         return self.calculate_for_plan(snapshot=snapshot, plan=decision.plan)
 
+    def calculate_for_event(
+        self,
+        *,
+        snapshot: AlgorithmSnapshot,
+        event: AlgorithmActiveCutlineEvent,
+    ) -> AlgorithmMixingTraceBatchResult:
+        try:
+            plan_id = self._required_context(event, "plan_id")
+            cutline_event_id = self._required_context(event, "event_id")
+            cutline_start_time = getattr(event, "cutline_start_time", None)
+            if not isinstance(cutline_start_time, datetime):
+                self._raise(
+                    "selected_machine_context_incomplete",
+                    "active event has no valid cutline_start_time",
+                )
+            record = self._calculate_machine(
+                snapshot=snapshot,
+                plan=None,
+                selected_machine=event,
+                plan_id=plan_id,
+                cutline_event_id=cutline_event_id,
+                estimated_cutline_time=cutline_start_time,
+            )
+        except MixingTraceCalculationError as error:
+            return AlgorithmMixingTraceBatchResult(
+                failures=[self._event_failure(event=event, error=error)]
+            )
+        return AlgorithmMixingTraceBatchResult(records=[record])
+
     def _is_executable_plan(self, plan: AlgorithmCutlinePlan) -> bool:
         if plan is None:
             return False
@@ -85,10 +115,14 @@ class MixingTraceCalculator:
         self,
         *,
         snapshot: AlgorithmSnapshot,
-        plan: AlgorithmCutlinePlan,
+        plan: AlgorithmCutlinePlan | None,
         selected_machine,
+        plan_id: str | None = None,
+        cutline_event_id: str | None = None,
+        estimated_cutline_time: datetime | None = None,
     ) -> AlgorithmMixingTraceRecord:
-        plan_id = self._required_context(plan, "plan_id")
+        if plan_id is None:
+            plan_id = self._required_context(plan, "plan_id")
         machine_code = self._required_context(
             selected_machine,
             "machine_code",
@@ -154,13 +188,20 @@ class MixingTraceCalculator:
             machine_code=machine_code,
             source_product_code=source_product_code,
         )
-        plan_generated_time = self._plan_generated_time(plan)
 
         config = snapshot.config
         try:
-            estimated_cutline_time = plan_generated_time + timedelta(
-                minutes=config.cutline_execution_delay_minutes
-            )
+            if estimated_cutline_time is None:
+                if plan is None:
+                    self._raise(
+                        "selected_machine_context_incomplete",
+                        "mixing context has no valid cutline base time",
+                    )
+                estimated_cutline_time = self._plan_generated_time(
+                    plan
+                ) + timedelta(
+                    minutes=config.cutline_execution_delay_minutes
+                )
             residual_pieces = (
                 config.mixing_input_max_baskets
                 * config.basket_capacity_pieces
@@ -194,7 +235,8 @@ class MixingTraceCalculator:
         target_estimated_pieces = (
             estimated_total_mixed_pieces - source_estimated_pieces
         )
-        cutline_event_id = f"CUT-{plan_id}-{machine_code}"
+        if cutline_event_id is None:
+            cutline_event_id = f"CUT-{plan_id}-{machine_code}"
         return AlgorithmMixingTraceRecord(
             mix_trace_id=f"MIX-{plan_id}-{machine_code}",
             plan_id=plan_id,
@@ -402,6 +444,30 @@ class MixingTraceCalculator:
             ),
             target_order_code=self._string_or_empty(
                 getattr(selected_machine, "target_order_code", None)
+            ),
+            reason=error.reason,
+            message=error.message,
+        )
+
+    def _event_failure(
+        self,
+        *,
+        event: AlgorithmActiveCutlineEvent,
+        error: MixingTraceCalculationError,
+    ) -> AlgorithmMixingTraceFailure:
+        return AlgorithmMixingTraceFailure(
+            plan_id=self._string_or_empty(getattr(event, "plan_id", None)),
+            cutline_event_id=self._string_or_empty(
+                getattr(event, "event_id", None)
+            ),
+            machine_code=self._string_or_empty(
+                getattr(event, "machine_code", None)
+            ),
+            source_order_code=self._string_or_empty(
+                getattr(event, "source_order_code", None)
+            ),
+            target_order_code=self._string_or_empty(
+                getattr(event, "target_order_code", None)
             ),
             reason=error.reason,
             message=error.message,

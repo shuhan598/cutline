@@ -17,7 +17,8 @@ from app.schemas.request_schema import AlgorithmSnapshot
 def agv_relation(
     machine_code: str = "M-01",
     order_code: str = "ORD-CURRENT",
-    order_name: str = "Current Order",
+    product_code: str | None = None,
+    product_name: str = "Current Product",
     wafer_spec: str = "N",
     binding_time: datetime = datetime(2026, 7, 15, 8, 0),
 ) -> AlgorithmAgvRelation:
@@ -25,7 +26,12 @@ def agv_relation(
         machine_code=machine_code,
         machine_name=machine_code,
         order_code=order_code,
-        order_name=order_name,
+        product_code=(
+            product_code
+            if product_code is not None
+            else order_code.replace("ORD-", "PROD-", 1)
+        ),
+        product_name=product_name,
         wafer_spec=wafer_spec,
         binding_time=binding_time,
     )
@@ -94,7 +100,6 @@ def order(
 ) -> AlgorithmOrder:
     return AlgorithmOrder(
         order_code=order_code,
-        order_name=order_code,
         order_status="RUNNING",
         product_code=product_code,
         product_name=product_code,

@@ -5,7 +5,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
+
+from app.schemas.pending_cutline_schema import PendingCutlinePlan
 
 
 class ResponseModel(BaseModel):
@@ -269,3 +277,76 @@ class CutlineAlgorithmResponse(ResponseModel):
                 "must match one-to-one"
             )
         return self
+
+
+class ActiveCutlineEventPersistenceResponse(ResponseModel):
+    event_id: str = Field(..., min_length=1)
+    plan_id: str | None = Field(default=None, min_length=1)
+    warning_id: str | None = Field(default=None, min_length=1)
+    machine_code: str
+    source_order_code: str
+    target_order_code: str
+    workshop_code: str
+    source_buffer_code: str | None = None
+    target_buffer_code: str
+    upstream_process_code: str
+    downstream_process_code: str
+    source_wafer_size: str | None = None
+    source_wafer_spec: str | None = None
+    target_wafer_size: str
+    target_wafer_spec: str
+    cutline_start_time: datetime
+    negative_start_time: datetime | None = None
+    status: Literal[
+        "active",
+        "return_recommended",
+        "returned",
+        "cancelled",
+    ] = "active"
+    contribution_capacity: float | None = Field(default=None, ge=0)
+    warning_type: Literal["stockout", "overflow"] | None = None
+    process_code: str | None = None
+    warning_buffer_code: str | None = None
+    warning_upstream_process_code: str | None = None
+    warning_downstream_process_code: str | None = None
+    is_recommended_candidate: bool | None = None
+
+    @field_validator("plan_id", "warning_id")
+    @classmethod
+    def validate_optional_identifier(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("optional identifier must not be blank")
+        return value
+
+
+class PersistenceStateResponse(ResponseModel):
+    pending_cutline_plans: list[PendingCutlinePlan] = Field(
+        default_factory=list
+    )
+    active_cutline_events: list[ActiveCutlineEventPersistenceResponse] = Field(
+        default_factory=list
+    )
+    expired_pending_plan_ids: list[str] = Field(default_factory=list)
+    completed_pending_plan_ids: list[str] = Field(default_factory=list)
+    return_suggested_event_ids: list[str] = Field(default_factory=list)
+    mixed_cutline_event_ids: list[str] = Field(default_factory=list)
+    new_mixing_trace_records: list[MixingTraceRecordResponse] = Field(
+        default_factory=list
+    )
+
+    @field_validator(
+        "return_suggested_event_ids", "mixed_cutline_event_ids"
+    )
+    @classmethod
+    def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        if any(not event_id.strip() for event_id in value):
+            raise ValueError("persisted event ids must not be blank")
+        if len(value) != len(set(value)):
+            raise ValueError("persisted event ids must not contain duplicates")
+        return value
+
+
+class CutlineEvaluateResponse(CutlineAlgorithmResponse):
+    persistence_state: PersistenceStateResponse = Field(
+        default_factory=PersistenceStateResponse
+    )

@@ -5,8 +5,16 @@ from app.schemas import result_schema as result
 from app.schemas.response_schema import (
     AutomaticCutlineDecisionResponse,
     CutlineAlgorithmResponse,
+    CutlineEvaluateResponse,
     ManualCutlineDecisionResponse,
     MixingTraceErrorResponse,
+)
+from tests.core.cutline_confirmation.helpers import (
+    CREATED_AT,
+    MONITORED_ORDER,
+    SOURCE_ORDER,
+    make_active_event,
+    make_stockout_plan,
 )
 from tests.schemas import test_algorithm_evaluate_result_schema as helpers
 
@@ -326,6 +334,36 @@ def test_mapper_first_negative_rate_creates_only_timer_update():
     assert response.closed_active_cutline_event_ids == []
 
 
+def test_mapper_carries_new_event_timer_without_redundant_update():
+    new_event = helpers.active_cutline_event().model_copy(
+        update={"negative_start_time": NOW},
+        deep=True,
+    )
+    source = evaluate_result(
+        new_active_cutline_events=[new_event],
+        return_results=[
+            return_result(
+                event_id=new_event.event_id,
+                previous_negative_start_time=None,
+                updated_negative_start_time=NOW,
+                net_consumption_rate=-400.0,
+                condition_net_rate_met=True,
+                condition_stability_met=False,
+                return_recommended=False,
+                updated_status="active",
+                reason="stability_window_not_met",
+            )
+        ],
+    )
+
+    response = AlgorithmResponseMapper().to_response(source)
+
+    assert response.new_active_cutline_events[0].event_id == new_event.event_id
+    assert response.new_active_cutline_events[0].negative_start_time == NOW
+    assert response.updated_active_cutline_events == []
+    assert set(response.model_dump()) == set(CutlineAlgorithmResponse.model_fields)
+
+
 def test_mapper_nonnegative_recovery_serializes_explicit_null_timer_update():
     source = evaluate_result(
         return_results=[
@@ -443,3 +481,47 @@ def test_mapper_does_not_modify_internal_source_and_preserves_list_order():
         "310110302",
     ]
     assert source.model_dump() == before
+
+
+def test_evaluate_mapper_adds_full_persistence_state_without_changing_base_fields():
+    plan = make_stockout_plan()
+    active = make_active_event(
+        plan_id=plan.plan_id,
+        machine_code="M1",
+        source_order_code=SOURCE_ORDER,
+        target_order_code=MONITORED_ORDER,
+        cutline_start_time=CREATED_AT,
+    ).model_copy(update={"warning_id": plan.warning_id})
+    source = evaluate_result(
+        stockout_warnings=[stockout_warning()],
+        persistence_state=result.AlgorithmPersistenceState(
+            pending_cutline_plans=[plan],
+            active_cutline_events=[active],
+            completed_pending_plan_ids=[plan.plan_id],
+            return_suggested_event_ids=[active.event_id],
+            mixed_cutline_event_ids=["CUT-MIXED-OLDER"],
+            new_mixing_trace_records=[helpers.mixing_record()],
+        ),
+    )
+    mapper = AlgorithmResponseMapper()
+
+    base = mapper.to_response(source)
+    enhanced = mapper.to_evaluate_response(source)
+
+    assert isinstance(base, CutlineAlgorithmResponse)
+    assert not isinstance(base, CutlineEvaluateResponse)
+    assert isinstance(enhanced, CutlineEvaluateResponse)
+    assert enhanced.model_dump(exclude={"persistence_state"}) == base.model_dump()
+    state = enhanced.persistence_state
+    assert state.pending_cutline_plans == [plan]
+    assert state.completed_pending_plan_ids == [plan.plan_id]
+    assert state.return_suggested_event_ids == [active.event_id]
+    assert state.mixed_cutline_event_ids == ["CUT-MIXED-OLDER"]
+    assert len(state.new_mixing_trace_records) == 1
+    persisted = state.active_cutline_events[0]
+    assert persisted.event_id == active.event_id
+    assert persisted.plan_id == plan.plan_id
+    assert persisted.warning_id == plan.warning_id
+    assert persisted.status == active.status
+    assert persisted.source_buffer_code == active.source_buffer_code
+    assert persisted.is_recommended_candidate is True

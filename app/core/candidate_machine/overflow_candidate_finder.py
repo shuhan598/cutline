@@ -115,7 +115,7 @@ class OverflowCandidateFinder:
                     process_code=machine.process_code,
                     process_name=machine.process_name,
                     current_order_code=candidate_agv.order_code,
-                    current_order_name=candidate_agv.order_name,
+                    current_order_name=candidate_agv.product_name,
                     current_product_code=current_product.product_code,
                     current_wafer_size=current_product.wafer_size,
                     current_wafer_spec=candidate_agv.wafer_spec,

@@ -8,10 +8,14 @@ from app.adapters.snapshot_adapter import SnapshotConversionError
 from app.core.candidate_machine.errors import CandidateMachineCalculationError
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.request_schema import CutlineAlgorithmRequest
-from app.schemas.response_schema import CutlineAlgorithmResponse
+from app.schemas.response_schema import (
+    CutlineAlgorithmResponse,
+    CutlineEvaluateResponse,
+)
 from app.schemas import result_schema as result
 from app.service.cutline_pipeline import CutlinePipeline
 from app.service.cutline_service import CutlineService
+from app.utils.time_utils import normalize_local_time
 from tests.adapters import test_snapshot_adapter as adapter_helpers
 
 
@@ -106,7 +110,7 @@ class ResultPipeline:
 
 def _machine_runtime(code, input_quantity, output_quantity):
     return {
-        "machine_code": code,
+        "machine_code": f"P166-{code}",
         "status": "running",
         "tangent_time": None,
         "input_quantity": float(input_quantity),
@@ -117,12 +121,12 @@ def _machine_runtime(code, input_quantity, output_quantity):
     }
 
 
-def _agv_relation(machine_code, order_code, order_name, wafer_spec="N"):
+def _agv_relation(machine_code, product_name, wafer_spec="N"):
     return {
         "machine_code": machine_code,
         "machine_name": machine_code,
-        "order_code": order_code,
-        "order_name": order_name,
+        "product_name": product_name,
+        "previous_product_name": None,
         "wafer_spec": wafer_spec,
         "binding_time": REAL_NOW,
     }
@@ -131,6 +135,7 @@ def _agv_relation(machine_code, order_code, order_name, wafer_spec="N"):
 def _machine_master(code, process_code, process_name=None):
     return {
         "machine_code": code,
+        "p166_jt_group": f"P166-{code}",
         "machine_name": code,
         "process_code": process_code,
         "process_name": process_name or process_code,
@@ -147,10 +152,9 @@ def _machine_line(code):
     }
 
 
-def _order(code, name, product_code, *, total=200000, produced=0):
+def _order(code, product_code, *, total=200000, produced=0):
     return {
         "order_code": code,
-        "order_name": name,
         "order_status": "RUNNING",
         "total_quantity": total,
         "piece_source": "A",
@@ -260,8 +264,8 @@ def _real_flow_payload():
         ],
         "machine_lines": [_machine_line(code) for code in machine_codes],
         "orders": [
-            _order("ORD-SOURCE", "Source", "PROD-SOURCE"),
-            _order("ORD-TARGET", "Target", "PROD-TARGET"),
+            _order("ORD-SOURCE", "PROD-SOURCE"),
+            _order("ORD-TARGET", "PROD-TARGET"),
         ],
         "products": [_product("PROD-SOURCE"), _product("PROD-TARGET")],
         "process_routes": [
@@ -272,14 +276,14 @@ def _real_flow_payload():
             {
                 "main_id": "source-inventory",
                 "buffer_code": "BUF-SOURCE",
-                "bound_source_name": "Source",
+                "bound_source_name": "PROD-SOURCE",
                 "current_quantity": 100000,
                 "current_utilization_rate": 0.5,
             },
             {
                 "main_id": "target-inventory",
                 "buffer_code": "BUF-TARGET",
-                "bound_source_name": "Target",
+                "bound_source_name": "PROD-TARGET",
                 "current_quantity": 100,
                 "current_utilization_rate": 0.1,
             },
@@ -289,10 +293,10 @@ def _real_flow_payload():
             _buffer_master("BUF-TARGET"),
         ],
         "agv_relations": [
-            _agv_relation("M-CAND", "ORD-SOURCE", "Source"),
-            _agv_relation("M-SRC-DOWN", "ORD-SOURCE", "Source"),
-            _agv_relation("M-TGT-UP", "ORD-TARGET", "Target"),
-            _agv_relation("M-TGT-DOWN", "ORD-TARGET", "Target"),
+            _agv_relation("M-CAND", "PROD-SOURCE"),
+            _agv_relation("M-SRC-DOWN", "PROD-SOURCE"),
+            _agv_relation("M-TGT-UP", "PROD-TARGET"),
+            _agv_relation("M-TGT-DOWN", "PROD-TARGET"),
         ],
         "active_cutline_events": [],
     }
@@ -324,7 +328,6 @@ def _silk_payload():
         "orders": [
             _order(
                 "ORD-SILK",
-                "Silk",
                 "PROD-SILK",
                 total=100000,
                 produced=80000,
@@ -337,7 +340,7 @@ def _silk_payload():
         "buffer_realtime": [],
         "buffer_master": [],
         "agv_relations": [
-            _agv_relation("M-SILK", "ORD-SILK", "Silk")
+            _agv_relation("M-SILK", "PROD-SILK")
         ],
         "active_cutline_events": [],
     }
@@ -353,7 +356,7 @@ def test_evaluate_algorithm_calls_adapter_pipeline_and_mapper_in_order():
     request = empty_request()
     snapshot = object()
     result_value = result.AlgorithmEvaluateResult(calculation_time=NOW)
-    response = CutlineAlgorithmResponse(calculation_time=NOW)
+    response = CutlineEvaluateResponse(calculation_time=NOW)
     calls = []
 
     class Adapter:
@@ -367,7 +370,7 @@ def test_evaluate_algorithm_calls_adapter_pipeline_and_mapper_in_order():
             return result_value
 
     class Mapper:
-        def to_response(self, received):
+        def to_evaluate_response(self, received):
             calls.append(("mapper", received))
             return response
 
@@ -393,8 +396,9 @@ def test_real_empty_request_runs_the_real_adapter_pipeline_mapper_chain():
 
     response = CutlineService().evaluate_algorithm(request)
 
-    assert isinstance(response, CutlineAlgorithmResponse)
-    assert response.calculation_time == NOW
+    assert isinstance(response, CutlineEvaluateResponse)
+    assert response.persistence_state.pending_cutline_plans == []
+    assert response.calculation_time == normalize_local_time(NOW)
     assert request.model_dump() == original
     assert "config" not in request.__class__.model_fields
 
@@ -478,7 +482,7 @@ def test_pipeline_and_mapper_exceptions_propagate_unchanged(expected):
             return value
 
     class FailingMapper:
-        def to_response(self, received):
+        def to_evaluate_response(self, received):
             raise expected
 
     mapper = None if isinstance(expected, RuntimeError) else FailingMapper()
@@ -492,26 +496,16 @@ def test_pipeline_and_mapper_exceptions_propagate_unchanged(expected):
     assert captured.value is expected
 
 
-def test_automatic_plan_response_preserves_mixing_and_matching_new_event_ids():
+def test_automatic_plan_response_has_no_future_mixing_record():
     response = _evaluate_real_payload(_real_flow_payload())
 
     assert isinstance(response, CutlineAlgorithmResponse)
     assert len(response.cutline_decisions) == 1
-    assert len(response.mixing_trace_records) == 1
-    assert len(response.new_active_cutline_events) == 1
-    plan = response.cutline_decisions[0].plan
-    assert plan is not None
-    assert plan.plan_id == response.mixing_trace_records[0].plan_id
-    assert response.new_active_cutline_events[0].event_id == (
-        f"CUT-{plan.plan_id}-M-CAND"
-    )
-    assert "plan_id" not in response.new_active_cutline_events[0].model_dump()
-    assert response.mixing_trace_records[0].cutline_event_id == (
-        response.new_active_cutline_events[0].event_id
-    )
+    assert response.mixing_trace_records == []
+    assert response.new_active_cutline_events == []
 
 
-def test_mixing_trace_runs_when_line_collections_are_omitted():
+def test_automatic_plan_without_line_collections_still_waits_for_active_event():
     payload = _real_flow_payload()
     payload.pop("lines")
     payload.pop("machine_lines")
@@ -519,8 +513,7 @@ def test_mixing_trace_runs_when_line_collections_are_omitted():
     response = _evaluate_real_payload(payload)
 
     assert len(response.cutline_decisions) == 1
-    assert len(response.mixing_trace_records) == 1
-    assert response.mixing_trace_records[0].machine_code == "M-CAND"
+    assert response.mixing_trace_records == []
 
 
 def test_manual_intervention_response_has_no_mixing_or_new_events():
@@ -617,20 +610,26 @@ def test_silk_result_is_returned_without_any_buffer_warning():
     assert response.silk_screen_results[0].machine_codes == ["M-SILK"]
 
 
-def test_mixing_failure_is_mapped_once_to_errors():
+def test_unconfirmed_plan_does_not_emit_mixing_failure():
     payload = _real_flow_payload()
     payload["machine_process_times"] = []
 
     response = _evaluate_real_payload(payload)
 
     assert response.cutline_decisions[0].plan is not None
-    assert len(response.new_active_cutline_events) == 1
+    assert response.new_active_cutline_events == []
     assert response.mixing_trace_records == []
     assert "mixing_trace_failures" not in response.__class__.model_fields
-    assert len(response.errors) == 1
-    assert response.errors[0].stage == "mixing_trace"
-    assert response.errors[0].reason == "process_duration_not_found"
-    assert response.errors[0].machine_code == "M-CAND"
+    mixing_errors = [
+        error for error in response.errors if error.stage == "mixing_trace"
+    ]
+    assert mixing_errors == []
+    assert response.errors == []
+    assert len(response.persistence_state.pending_cutline_plans) == 1
+    assert (
+        response.persistence_state.pending_cutline_plans[0].plan_id
+        == response.cutline_decisions[0].plan.plan_id
+    )
 
 
 def test_partial_pipeline_error_is_returned_alongside_other_results(monkeypatch):

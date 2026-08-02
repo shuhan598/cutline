@@ -29,13 +29,20 @@ def test_factory_returns_independent_deep_copies():
     first = build_base_request_payload()
     second = build_base_request_payload()
 
-    first["orders"][0]["order_name"] = "已修改"
+    first["orders"][0]["product_name"] = "已修改"
     first["process_routes"].reverse()
 
-    assert second["orders"][0]["order_name"] == "至上"
+    assert second["orders"][0]["product_name"] == "182N至上产品"
     assert [item["process_code"] for item in second["process_routes"]] == list(
         PROCESS_CODES
     )
+
+
+def test_base_factory_explicitly_starts_without_pending_or_active_events():
+    payload = build_base_request_payload()
+
+    assert payload["pending_cutline_plans"] == []
+    assert payload["active_cutline_events"] == []
 
 
 def test_shared_factory_retains_complete_legacy_line_data():
@@ -135,10 +142,15 @@ def test_all_scenarios_use_s2_lines_ea_machines_and_backend_statuses(
         assert line["workshop_code"] == "S2"
 
     machine_codes = {item["machine_code"] for item in payload["machine_master"]}
+    realtime_codes = {
+        item["p166_jt_group"] for item in payload["machine_master"]
+    }
     assert machine_codes
     assert all(MACHINE_CODE_PATTERN.fullmatch(code) for code in machine_codes)
+    assert len(realtime_codes) == len(machine_codes)
+    assert realtime_codes.isdisjoint(machine_codes)
     assert all(
-        item["machine_code"] in machine_codes
+        item["machine_code"] in realtime_codes
         and item["status"] in {"运行", "异常"}
         and "order_code" not in item
         for item in payload["machine_realtime"]
@@ -150,23 +162,20 @@ def test_all_scenarios_use_s2_lines_ea_machines_and_backend_statuses(
     )
 
 
-def test_all_scenarios_use_unique_nonblank_order_names_and_exact_inventory_binding(
+def test_all_scenarios_use_unique_nonblank_product_names_and_exact_inventory_binding(
     scenario_payload,
 ):
     _, payload = scenario_payload
-    names_by_workshop: dict[str, set[str]] = {}
+    product_names: set[str] = set()
 
     for order in payload["orders"]:
-        assert order["order_name"].strip()
-        workshop_names = names_by_workshop.setdefault(
-            order["workshop_code"], set()
-        )
-        assert order["order_name"] not in workshop_names
-        workshop_names.add(order["order_name"])
+        assert "order_name" not in order
+        assert order["product_name"].strip()
+        assert order["product_name"] not in product_names
+        product_names.add(order["product_name"])
 
-    valid_s2_names = names_by_workshop["S2"]
     assert all(
-        item["bound_source_name"] in valid_s2_names
+        item["bound_source_name"] in product_names
         for item in payload["buffer_realtime"]
     )
 
@@ -191,15 +200,21 @@ def test_all_scenarios_keep_wafer_size_and_spec_domains_separate(
 def test_all_scenario_references_resolve_to_master_data(scenario_payload):
     _, payload = scenario_payload
     machines = {item["machine_code"] for item in payload["machine_master"]}
+    standard_by_realtime = {
+        item["p166_jt_group"]: item["machine_code"]
+        for item in payload["machine_master"]
+    }
     products = {item["product_code"] for item in payload["products"]}
-    orders = {item["order_code"] for item in payload["orders"]}
+    product_names = {item["product_name"] for item in payload["products"]}
+    current_product_names = {
+        item["product_name"] for item in payload["orders"]
+    }
     lines = {item["line_code"] for item in payload["lines"]}
     buffers = {item["buffer_code"] for item in payload["buffer_master"]}
-    order_names = {
-        item["order_code"]: item["order_name"] for item in payload["orders"]
-    }
-
-    assert all(item["machine_code"] in machines for item in payload["machine_realtime"])
+    assert all(
+        item["machine_code"] in standard_by_realtime
+        for item in payload["machine_realtime"]
+    )
     assert all(
         item["machine_code"] in machines and item["line_code"] in lines
         for item in payload["machine_lines"]
@@ -215,16 +230,19 @@ def test_all_scenario_references_resolve_to_master_data(scenario_payload):
         == {
             "equipmentid",
             "equipmentname",
-            "lastlinecode",
+            "linename",
             "lastlinename",
             "waferspec",
             "createtime",
         }
         and item["equipmentid"] in machines
-        and item["lastlinecode"] in orders
-        and item["lastlinename"] == order_names[item["lastlinecode"]]
+        and item["linename"] in product_names
+        and item["linename"] in current_product_names
         and item["waferspec"] in {"N", "R", "P"}
         for item in payload["agv_relations"]
+    )
+    assert any(
+        item["lastlinename"] is None for item in payload["agv_relations"]
     )
 
     bound_machines = {
@@ -232,7 +250,7 @@ def test_all_scenario_references_resolve_to_master_data(scenario_payload):
     }
     assert all(
         runtime["status"] != "运行"
-        or runtime["machine_code"] in bound_machines
+        or standard_by_realtime[runtime["machine_code"]] in bound_machines
         for runtime in payload["machine_realtime"]
     )
 
@@ -264,7 +282,8 @@ def test_agv_binding_factory_allows_explicit_backend_field_overrides():
         payload,
         machine_code="EA001",
         order_code="ORD-S2-003",
-        order_name="显式订单名",
+        product_name="显式产品名",
+        previous_product_name="上一产品名",
         wafer_spec="R",
         binding_time="2026-07-17 07:59:00",
     )
@@ -277,8 +296,8 @@ def test_agv_binding_factory_allows_explicit_backend_field_overrides():
     assert relation == {
         "equipmentid": "EA001",
         "equipmentname": "EA001发料机",
-        "lastlinecode": "ORD-S2-003",
-        "lastlinename": "显式订单名",
+        "linename": "显式产品名",
+        "lastlinename": "上一产品名",
         "waferspec": "R",
         "createtime": "2026-07-17 07:59:00",
     }

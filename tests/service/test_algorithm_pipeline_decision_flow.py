@@ -11,6 +11,7 @@ from app.core.cutline_plan.machine_selection_evaluator import (
     MachineSelectionEvaluator,
 )
 from app.core.cutline_plan.plan_builder import CutlinePlanBuilder
+from app.schemas.common_schema import AlgorithmBufferMaster
 from app.schemas.result_schema import (
     AlgorithmMixingTraceBatchResult,
     AlgorithmOverflowSelectionResult,
@@ -49,7 +50,7 @@ def _isolate_remaining_algorithm_stages(monkeypatch):
     )
     monkeypatch.setattr(
         MixingTraceCalculator,
-        "calculate_for_decision",
+        "calculate_for_event",
         lambda self, **kwargs: AlgorithmMixingTraceBatchResult(),
     )
 
@@ -83,17 +84,39 @@ def _decision_snapshot(
         agv_relation(
             machine_code="M-01",
             order_code="ORD-SOURCE",
-            order_name="ORD-SOURCE",
+            product_name="PROD-SOURCE",
             wafer_spec="N",
         )
     ]
+    buffer_codes = {
+        warning_buffer,
+        "BUF-SOURCE",
+        "BUF-TARGET",
+        "BUF-OVERFLOW",
+    }
     value.buffer_process_relations = [
         buffer_relation(
-            warning_buffer,
+            buffer_code,
             "S1",
             "P01",
             warning_downstream_process,
         )
+        for buffer_code in sorted(buffer_codes)
+    ]
+    value.buffer_masters = [
+        AlgorithmBufferMaster(
+            buffer_code=buffer_code,
+            buffer_name=buffer_code,
+            buffer_type="LINE",
+            buffer_type_title="Line buffer",
+            max_capacity=1000,
+            safety_low=0,
+            served_process_codes=["P01", warning_downstream_process],
+            served_process_names=["Upstream", "Downstream"],
+            loop_code="LOOP-1",
+            loop_name="Loop 1",
+        )
+        for buffer_code in sorted(buffer_codes)
     ]
     return value
 

@@ -11,7 +11,7 @@
   },
   "machine_realtime": [
     {
-      "machine_code": "EA001",
+      "machine_code": "P166-EA001",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -21,7 +21,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA002",
+      "machine_code": "P166-EA002",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -31,7 +31,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA003",
+      "machine_code": "P166-EA003",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -41,7 +41,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA004",
+      "machine_code": "P166-EA004",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 300.0,
@@ -51,7 +51,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA005",
+      "machine_code": "P166-EA005",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -61,7 +61,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA006",
+      "machine_code": "P166-EA006",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -71,7 +71,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA007",
+      "machine_code": "P166-EA007",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -81,7 +81,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA008",
+      "machine_code": "P166-EA008",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -91,7 +91,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA009",
+      "machine_code": "P166-EA009",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -101,7 +101,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA010",
+      "machine_code": "P166-EA010",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -111,7 +111,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA011",
+      "machine_code": "P166-EA011",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -121,7 +121,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA012",
+      "machine_code": "P166-EA012",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -131,7 +131,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA013",
+      "machine_code": "P166-EA013",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -141,7 +141,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA014",
+      "machine_code": "P166-EA014",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -151,7 +151,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA015",
+      "machine_code": "P166-EA015",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -161,7 +161,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA016",
+      "machine_code": "P166-EA016",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -171,7 +171,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA017",
+      "machine_code": "P166-EA017",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -181,7 +181,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA018",
+      "machine_code": "P166-EA018",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -191,7 +191,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA019",
+      "machine_code": "P166-EA019",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -201,7 +201,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA020",
+      "machine_code": "P166-EA020",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -211,7 +211,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA021",
+      "machine_code": "P166-EA021",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -221,7 +221,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA022",
+      "machine_code": "P166-EA022",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
@@ -231,7 +231,7 @@
       "out_time": null
     },
     {
-      "machine_code": "EA023",
+      "machine_code": "P166-EA023",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -241,7 +241,7 @@
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
-      "machine_code": "EA024",
+      "machine_code": "P166-EA024",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
@@ -254,144 +254,168 @@
   "machine_master": [
     {
       "machine_code": "EA001",
+      "p166_jt_group": "P166-EA001",
       "machine_name": "EA001发料机",
       "process_code": "发料机",
       "process_name": "发料机"
     },
     {
       "machine_code": "EA002",
+      "p166_jt_group": "P166-EA002",
       "machine_name": "EA002发料机",
       "process_code": "发料机",
       "process_name": "发料机"
     },
     {
       "machine_code": "EA003",
+      "p166_jt_group": "P166-EA003",
       "machine_name": "EA003制绒机",
       "process_code": "制绒",
       "process_name": "制绒"
     },
     {
       "machine_code": "EA004",
+      "p166_jt_group": "P166-EA004",
       "machine_name": "EA004制绒机",
       "process_code": "制绒",
       "process_name": "制绒"
     },
     {
       "machine_code": "EA005",
+      "p166_jt_group": "P166-EA005",
       "machine_name": "EA005碱抛机",
       "process_code": "碱抛",
       "process_name": "碱抛"
     },
     {
       "machine_code": "EA006",
+      "p166_jt_group": "P166-EA006",
       "machine_name": "EA006碱抛机",
       "process_code": "碱抛",
       "process_name": "碱抛"
     },
     {
       "machine_code": "EA007",
+      "p166_jt_group": "P166-EA007",
       "machine_name": "EA007背膜机",
       "process_code": "背膜",
       "process_name": "背膜"
     },
     {
       "machine_code": "EA008",
+      "p166_jt_group": "P166-EA008",
       "machine_name": "EA008背膜机",
       "process_code": "背膜",
       "process_name": "背膜"
     },
     {
       "machine_code": "EA009",
+      "p166_jt_group": "P166-EA009",
       "machine_name": "EA009硼扩机",
       "process_code": "硼扩",
       "process_name": "硼扩"
     },
     {
       "machine_code": "EA010",
+      "p166_jt_group": "P166-EA010",
       "machine_name": "EA010硼扩机",
       "process_code": "硼扩",
       "process_name": "硼扩"
     },
     {
       "machine_code": "EA011",
+      "p166_jt_group": "P166-EA011",
       "machine_name": "EA011POLY机",
       "process_code": "POLY",
       "process_name": "POLY"
     },
     {
       "machine_code": "EA012",
+      "p166_jt_group": "P166-EA012",
       "machine_name": "EA012POLY机",
       "process_code": "POLY",
       "process_name": "POLY"
     },
     {
       "machine_code": "EA013",
+      "p166_jt_group": "P166-EA013",
       "machine_name": "EA013RCA机",
       "process_code": "RCA",
       "process_name": "RCA"
     },
     {
       "machine_code": "EA014",
+      "p166_jt_group": "P166-EA014",
       "machine_name": "EA014RCA机",
       "process_code": "RCA",
       "process_name": "RCA"
     },
     {
       "machine_code": "EA015",
+      "p166_jt_group": "P166-EA015",
       "machine_name": "EA015退火机",
       "process_code": "退火",
       "process_name": "退火"
     },
     {
       "machine_code": "EA016",
+      "p166_jt_group": "P166-EA016",
       "machine_name": "EA016退火机",
       "process_code": "退火",
       "process_name": "退火"
     },
     {
       "machine_code": "EA017",
+      "p166_jt_group": "P166-EA017",
       "machine_name": "EA017氧化机",
       "process_code": "氧化",
       "process_name": "氧化"
     },
     {
       "machine_code": "EA018",
+      "p166_jt_group": "P166-EA018",
       "machine_name": "EA018氧化机",
       "process_code": "氧化",
       "process_name": "氧化"
     },
     {
       "machine_code": "EA019",
+      "p166_jt_group": "P166-EA019",
       "machine_name": "EA019正膜机",
       "process_code": "正膜",
       "process_name": "正膜"
     },
     {
       "machine_code": "EA020",
+      "p166_jt_group": "P166-EA020",
       "machine_name": "EA020正膜机",
       "process_code": "正膜",
       "process_name": "正膜"
     },
     {
       "machine_code": "EA021",
+      "p166_jt_group": "P166-EA021",
       "machine_name": "EA021丝网机",
       "process_code": "丝网",
       "process_name": "丝网"
     },
     {
       "machine_code": "EA022",
+      "p166_jt_group": "P166-EA022",
       "machine_name": "EA022丝网机",
       "process_code": "丝网",
       "process_name": "丝网"
     },
     {
       "machine_code": "EA023",
+      "p166_jt_group": "P166-EA023",
       "machine_name": "EA023制绒机",
       "process_code": "制绒",
       "process_name": "制绒"
     },
     {
       "machine_code": "EA024",
+      "p166_jt_group": "P166-EA024",
       "machine_name": "EA024制绒机",
       "process_code": "制绒",
       "process_name": "制绒"
@@ -1178,7 +1202,6 @@
   "orders": [
     {
       "order_code": "ORD-S2-001",
-      "order_name": "至上",
       "order_status": "生产中",
       "total_quantity": 100000.0,
       "piece_source": "A",
@@ -1192,7 +1215,6 @@
     },
     {
       "order_code": "ORD-S2-002",
-      "order_name": "至上支援单",
       "order_status": "生产中",
       "total_quantity": 100000.0,
       "piece_source": "A",
@@ -1206,7 +1228,6 @@
     },
     {
       "order_code": "ORD-S2-003",
-      "order_name": "华晟",
       "order_status": "生产中",
       "total_quantity": 100000.0,
       "piece_source": "A",
@@ -1220,7 +1241,6 @@
     },
     {
       "order_code": "ORD-S2-004",
-      "order_name": "晶澳",
       "order_status": "生产中",
       "total_quantity": 100000.0,
       "piece_source": "A",
@@ -1427,77 +1447,77 @@
     {
       "main_id": "MAIN-310110301",
       "buffer_code": "310110301",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110302",
       "buffer_code": "310110302",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 100.0,
       "current_utilization_rate": 0.001
     },
     {
       "main_id": "MAIN-310110303",
       "buffer_code": "310110303",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110304",
       "buffer_code": "310110304",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110305",
       "buffer_code": "310110305",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110306",
       "buffer_code": "310110306",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110307",
       "buffer_code": "310110307",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110308",
       "buffer_code": "310110308",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110309",
       "buffer_code": "310110309",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110310",
       "buffer_code": "310110310",
-      "bound_source_name": "至上",
+      "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
     },
     {
       "main_id": "MAIN-310110302",
       "buffer_code": "310110302",
-      "bound_source_name": "至上支援单",
+      "bound_source_name": "182N支援产品",
       "current_quantity": 2000.0,
       "current_utilization_rate": 0.02
     }
@@ -1688,138 +1708,241 @@
     {
       "equipmentid": "EA001",
       "equipmentname": "EA001发料机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA007",
       "equipmentname": "EA007背膜机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA009",
       "equipmentname": "EA009硼扩机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA011",
       "equipmentname": "EA011POLY机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA013",
       "equipmentname": "EA013RCA机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA015",
       "equipmentname": "EA015退火机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA017",
       "equipmentname": "EA017氧化机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA019",
       "equipmentname": "EA019正膜机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA021",
       "equipmentname": "EA021丝网机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA023",
       "equipmentname": "EA023制绒机",
-      "lastlinecode": "ORD-S2-003",
-      "lastlinename": "华晟",
+      "linename": "210R华晟产品",
+      "lastlinename": null,
       "waferspec": "R",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA024",
       "equipmentname": "EA024制绒机",
-      "lastlinecode": "ORD-S2-004",
-      "lastlinename": "晶澳",
+      "linename": "210P晶澳产品",
+      "lastlinename": null,
       "waferspec": "P",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA004",
       "equipmentname": "EA004制绒机",
-      "lastlinecode": "ORD-S2-002",
-      "lastlinename": "至上支援单",
+      "linename": "182N支援产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA006",
       "equipmentname": "EA006碱抛机",
-      "lastlinecode": "ORD-S2-002",
-      "lastlinename": "至上支援单",
+      "linename": "182N支援产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA003",
       "equipmentname": "EA003制绒机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
     },
     {
       "equipmentid": "EA005",
       "equipmentname": "EA005碱抛机",
-      "lastlinecode": "ORD-S2-001",
-      "lastlinename": "至上",
+      "linename": "182N至上产品",
+      "lastlinename": null,
       "waferspec": "N",
       "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA004",
+      "equipmentname": "EA004制绒机",
+      "linename": "182N至上产品",
+      "lastlinename": "182N支援产品",
+      "waferspec": "N",
+      "createtime": "2026-07-17 08:03:00"
     }
   ],
-  "active_cutline_events": [
+  "pending_cutline_plans": [
     {
-      "event_id": "CUT-stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001-EA004",
-      "machine_code": "EA004",
-      "source_order_code": "ORD-S2-002",
-      "target_order_code": "ORD-S2-001",
+      "plan_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+      "warning_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+      "warning_type": "stockout",
+      "warning_time": "2026-07-17T08:00:00+08:00",
+      "created_at": "2026-07-17T08:00:00+08:00",
+      "expire_at": "2026-07-17T08:30:00+08:00",
+      "status": "PENDING",
       "workshop_code": "S2",
-      "target_buffer_code": "310110302",
+      "buffer_code": "310110302",
       "upstream_process_code": "制绒",
       "downstream_process_code": "碱抛",
-      "target_wafer_size": "182",
-      "target_wafer_spec": "N",
-      "cutline_start_time": "2026-07-17T08:00:00+08:00",
-      "negative_start_time": null
+      "monitored_order_code": "ORD-S2-001",
+      "before_machine_count": 1,
+      "before_machine_codes": [
+        "EA003"
+      ],
+      "expected_machine_count": 2,
+      "expected_delta_direction": "increase",
+      "candidate_machines": [
+        {
+          "machine_code": "EA004",
+          "baseline_order_code": "ORD-S2-002",
+          "baseline_product_code": "PROD-S2-N-SUPPORT",
+          "baseline_product_name": "182N支援产品",
+          "baseline_wafer_size": "182",
+          "baseline_wafer_spec": "N",
+          "baseline_source_grade": "A",
+          "expected_target_order_code": "ORD-S2-001",
+          "expected_target_product_code": "PROD-S2-N-TARGET",
+          "expected_target_product_name": "182N至上产品",
+          "expected_target_wafer_size": "182",
+          "expected_target_wafer_spec": "N",
+          "expected_target_source_grade": "A",
+          "process_code": "制绒",
+          "workshop_code": "S2",
+          "source_buffer_code": "310110302",
+          "target_buffer_code": "310110302",
+          "target_upstream_process_code": "制绒",
+          "target_downstream_process_code": "碱抛"
+        }
+      ],
+      "baseline_machine_bindings": [
+        {
+          "machine_code": "EA003",
+          "order_code": "ORD-S2-001",
+          "product_code": "PROD-S2-N-TARGET",
+          "product_name": "182N至上产品",
+          "wafer_size": "182",
+          "wafer_spec": "N",
+          "source_grade": "A",
+          "process_code": "制绒",
+          "workshop_code": "S2",
+          "observed_at": "2026-07-17T07:55:00+08:00",
+          "machine_status": "running"
+        },
+        {
+          "machine_code": "EA004",
+          "order_code": "ORD-S2-002",
+          "product_code": "PROD-S2-N-SUPPORT",
+          "product_name": "182N支援产品",
+          "wafer_size": "182",
+          "wafer_spec": "N",
+          "source_grade": "A",
+          "process_code": "制绒",
+          "workshop_code": "S2",
+          "observed_at": "2026-07-17T07:55:00+08:00",
+          "machine_status": "running"
+        },
+        {
+          "machine_code": "EA023",
+          "order_code": "ORD-S2-003",
+          "product_code": "PROD-S2-R",
+          "product_name": "210R华晟产品",
+          "wafer_size": "210",
+          "wafer_spec": "R",
+          "source_grade": "A-",
+          "process_code": "制绒",
+          "workshop_code": "S2",
+          "observed_at": "2026-07-17T07:55:00+08:00",
+          "machine_status": "running"
+        },
+        {
+          "machine_code": "EA024",
+          "order_code": "ORD-S2-004",
+          "product_code": "PROD-S2-P",
+          "product_name": "210P晶澳产品",
+          "wafer_size": "210",
+          "wafer_spec": "P",
+          "source_grade": "A",
+          "process_code": "制绒",
+          "workshop_code": "S2",
+          "observed_at": "2026-07-17T07:55:00+08:00",
+          "machine_status": "running"
+        }
+      ],
+      "confirmed_machine_codes": [],
+      "candidate_machine_codes": [
+        "EA004"
+      ],
+      "process_code": "制绒",
+      "source_order_code": "ORD-S2-002",
+      "target_order_code": "ORD-S2-001",
+      "source_product_code": "PROD-S2-N-SUPPORT",
+      "target_product_code": "PROD-S2-N-TARGET"
     }
-  ]
+  ],
+  "active_cutline_events": [],
+  "return_suggested_event_ids": [],
+  "mixed_cutline_event_ids": []
 }

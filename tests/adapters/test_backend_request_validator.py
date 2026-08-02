@@ -37,6 +37,45 @@ def test_closed_sample_is_complete():
     assert result.issues == []
 
 
+def test_same_product_historical_order_does_not_make_current_order_ambiguous():
+    payload = sample_payload()
+    historical_order = deepcopy(payload["orders"][0])
+    historical_order.update(
+        {
+            "order_code": "O-HISTORICAL",
+            "order_status": "WAITING",
+        }
+    )
+    payload["orders"].append(historical_order)
+
+    result = validate_payload(payload)
+
+    assert result.valid is True
+    assert result.issues == []
+
+
+def test_same_product_multiple_active_orders_are_reported_as_ambiguous():
+    payload = sample_payload()
+    second_active_order = deepcopy(payload["orders"][0])
+    second_active_order.update(
+        {
+            "order_code": "O-ACTIVE-2",
+            "order_status": "RUNNING",
+        }
+    )
+    payload["orders"].append(second_active_order)
+
+    result = validate_payload(payload)
+
+    assert result.valid is False
+    assert any(
+        issue.code == "duplicate_key"
+        and issue.dataset == "orders"
+        and issue.field == "product_name"
+        for issue in result.issues
+    )
+
+
 @pytest.mark.parametrize(
     "dataset",
     [
@@ -187,9 +226,15 @@ def test_real_api_sample_loads_but_reports_incomplete_inputs():
     assert issue_counts(result) == {
         "empty_dataset": 6,
         "null_field": 2,
-        "missing_reference": 440,
+        "missing_reference": 441,
         "missing_agv_binding": 138,
     }
+    assert any(
+        issue.dataset == "buffer_realtime"
+        and issue.field == "bound_source_name"
+        and issue.code == "missing_reference"
+        for issue in result.issues
+    )
 
 
 def test_backend_request_symbols_are_available_from_package_exports():
