@@ -168,6 +168,160 @@ def test_process_route_sequence_is_unique_within_workshop_and_loop():
     )
 
 
+def test_process_route_must_contain_silk_screen_process():
+    payload = sample_payload()
+    silk_route = next(
+        route for route in payload["process_routes"]
+        if route["process_name"] == "丝网"
+    )
+    silk_route["process_name"] = "后续工序"
+
+    result = validate_payload(payload)
+
+    assert any(
+        issue.code == "missing_silk_screen_process"
+        and issue.dataset == "process_routes"
+        and issue.field == "process_name"
+        and "S2" in str(issue.record_key)
+        for issue in result.issues
+    )
+
+
+def test_process_route_cannot_contain_duplicate_silk_screen_processes():
+    payload = sample_payload()
+    payload["process_routes"][-2]["process_name"] = "丝网"
+
+    result = validate_payload(payload)
+
+    assert any(
+        issue.code == "duplicate_silk_screen_process"
+        and issue.dataset == "process_routes"
+        and issue.field == "process_name"
+        and "丝网" in issue.message
+        for issue in result.issues
+    )
+
+
+def test_silk_screen_process_must_have_maximum_sequence():
+    payload = sample_payload()
+    payload["process_routes"][-2]["process_name"] = "丝网"
+    payload["process_routes"][-1]["process_name"] = "后续工序"
+
+    result = validate_payload(payload)
+
+    assert any(
+        issue.code == "silk_screen_not_last"
+        and issue.dataset == "process_routes"
+        and issue.field == "sequence"
+        and "丝网" in issue.message
+        for issue in result.issues
+    )
+
+
+def test_non_consecutive_unique_route_sequences_are_allowed():
+    payload = sample_payload()
+    for index, route in enumerate(payload["process_routes"], start=1):
+        route["sequence"] = index * 10
+
+    result = validate_payload(payload)
+
+    assert result.valid is True
+    assert result.issues == []
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("upstream_process_code", "碱抛"),
+        ("upstream_process_name", "碱抛"),
+        ("downstream_process_code", "发料机"),
+        ("downstream_process_name", "发料机"),
+    ],
+)
+def test_route_neighbor_fields_must_match_sorted_adjacency(
+    field: str,
+    invalid_value: str,
+):
+    payload = sample_payload()
+    payload["process_routes"][1][field] = invalid_value
+
+    result = validate_payload(payload)
+
+    assert any(
+        issue.code == "broken_process_route"
+        and issue.dataset == "process_routes"
+        and issue.field == field
+        and "sequence:2" in str(issue.record_key)
+        for issue in result.issues
+    )
+
+
+def test_first_process_upstream_fields_must_be_empty():
+    payload = sample_payload()
+    first = payload["process_routes"][0]
+    first["upstream_process_code"] = payload["process_routes"][1][
+        "process_code"
+    ]
+    first["upstream_process_name"] = payload["process_routes"][1][
+        "process_name"
+    ]
+
+    result = validate_payload(payload)
+
+    assert {
+        issue.field
+        for issue in result.issues
+        if issue.code == "broken_process_route"
+    } >= {"upstream_process_code", "upstream_process_name"}
+
+
+def test_last_silk_screen_downstream_fields_must_be_empty():
+    payload = sample_payload()
+    last = payload["process_routes"][-1]
+    last["downstream_process_code"] = payload["process_routes"][-2][
+        "process_code"
+    ]
+    last["downstream_process_name"] = payload["process_routes"][-2][
+        "process_name"
+    ]
+
+    result = validate_payload(payload)
+
+    assert {
+        issue.field
+        for issue in result.issues
+        if issue.code == "invalid_last_process_downstream"
+    } == {"downstream_process_code", "downstream_process_name"}
+
+
+def test_route_validation_keeps_workshop_and_loop_groups_isolated():
+    payload = sample_payload()
+    second_group = deepcopy(payload["process_routes"])
+    for route in second_group:
+        route["workshop_code"] = "S3"
+        route["workshop_name"] = "S3车间"
+        route["loop_code"] = "S3-LOOP01"
+        route["loop_name"] = "S3主工艺循环"
+        route["process_code"] = f"S3-{route['process_code']}"
+        if route["upstream_process_code"] is not None:
+            route["upstream_process_code"] = (
+                f"S3-{route['upstream_process_code']}"
+            )
+        if route["downstream_process_code"] is not None:
+            route["downstream_process_code"] = (
+                f"S3-{route['downstream_process_code']}"
+            )
+    payload["workshops"].append(
+        {"workshop_code": "S3", "workshop_name": "S3车间"}
+    )
+    payload["process_routes"].extend(second_group)
+
+    result = validate_payload(payload)
+
+    assert result.valid is True
+    assert result.issues == []
+
+
 def test_non_edge_route_null_and_unknown_neighbors_are_reported():
     payload = sample_payload()
     middle = deepcopy(payload["process_routes"][0])

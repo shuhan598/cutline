@@ -23,7 +23,6 @@ def payload() -> dict:
                 "tangent_time": None,
                 "input_quantity": 10,
                 "output_quantity": 9,
-                "completed_quantity": 100,
             }
         ],
         "machine_master": [
@@ -254,7 +253,8 @@ def test_agv_process_fields_are_filtered_and_never_validated():
         "createtime",
     }
     assert not any(
-        issue.field in {"process_code", "process_name"}
+        issue.dataset == "agv_relations"
+        and issue.field in {"process_code", "process_name"}
         for issue in result.issues
     )
 

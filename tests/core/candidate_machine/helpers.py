@@ -88,7 +88,6 @@ def runtime(
         tangent_time=None,
         input_quantity_30m=input_quantity_30m,
         output_quantity_30m=output_quantity_30m,
-        period_quantity_30m=999999,
         out_time=None,
     )
 

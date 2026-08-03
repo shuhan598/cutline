@@ -40,7 +40,7 @@
 
 - [ ] **Step 1: Create the small valid request example**
 
-Create `examples/backend_request_sample.json` with this exact closed dataset. Do not include transitional `period_quantity` or `out_time`; the formal example represents the target Python contract.
+Create `examples/backend_request_sample.json` with this exact closed dataset. Do not include transitional `out_time`; the formal example represents the target Python contract.
 
 ```json
 {
@@ -61,8 +61,7 @@ Create `examples/backend_request_sample.json` with this exact closed dataset. Do
       "order_code": "O-01",
       "tangent_time": null,
       "input_quantity": 12,
-      "output_quantity": 10.5,
-      "completed_quantity": 100
+      "output_quantity": 10.5
     }
   ],
   "machine_master": [
@@ -369,7 +368,6 @@ def test_route_edge_fields_require_presence_and_accept_null():
     [
         ("machine_realtime", "input_quantity", -1),
         ("machine_realtime", "output_quantity", -0.1),
-        ("machine_realtime", "completed_quantity", -1),
         ("machine_process_times", "proc_seconds", 0),
         ("machine_process_times", "actual_capacity", 0),
         ("orders", "total_quantity", -1),
@@ -452,7 +450,6 @@ class BackendMachineRealtime(_BackendRequestModel):
     tangent_time: datetime | None
     input_quantity: float = Field(ge=0)
     output_quantity: float = Field(ge=0)
-    completed_quantity: float = Field(ge=0)
 
 
 class BackendMachineMaster(_BackendRequestModel):
@@ -635,7 +632,6 @@ def sample_payload() -> dict:
 
 def test_load_dict_returns_model_without_mutating_nested_payload():
     payload = sample_payload()
-    payload["machine_realtime"][0]["period_quantity"] = 10
     payload["machine_realtime"][0]["out_time"] = "2026-07-14T08:30:00+08:00"
     original = deepcopy(payload)
 
@@ -643,7 +639,6 @@ def test_load_dict_returns_model_without_mutating_nested_payload():
 
     assert isinstance(request, BackendAlgorithmRequest)
     assert payload == original
-    assert "period_quantity" not in request.machine_realtime[0].model_dump()
     assert "out_time" not in request.machine_realtime[0].model_dump()
 
 
@@ -653,15 +648,13 @@ def test_cleanup_applies_to_every_machine_realtime_record():
     second["machine_code"] = "M-02"
     payload["machine_realtime"].append(second)
     for record in payload["machine_realtime"]:
-        record["period_quantity"] = 0
         record["out_time"] = "2026-07-14T08:30:00+08:00"
 
     request = BackendRequestLoader().load_dict(payload)
 
     assert len(request.machine_realtime) == 2
     assert all(
-        "period_quantity" not in record.model_dump()
-        and "out_time" not in record.model_dump()
+        "out_time" not in record.model_dump()
         for record in request.machine_realtime
     )
 
@@ -815,7 +808,6 @@ class BackendRequestLoader:
             if isinstance(machine_realtime, list):
                 for record in machine_realtime:
                     if isinstance(record, dict):
-                        record.pop("period_quantity", None)
                         record.pop("out_time", None)
 
         return BackendAlgorithmRequest.model_validate(cleaned)
@@ -836,7 +828,7 @@ Expected: all tests in both files pass; Pydantic errors remain unwrapped.
 Run:
 
 ```powershell
-rg -n "period_quantity|out_time" app/schemas/backend_request_schema.py app/adapters/backend_request_loader.py
+rg -n "out_time" app/schemas/backend_request_schema.py app/adapters/backend_request_loader.py
 ```
 
 Expected: no match in the Schema file; exactly the two `record.pop` cleanup calls in the Loader file.
@@ -1761,19 +1753,22 @@ Expected: relationship skips for `None`/`""`, route grouping by both keys, and t
 Append this test to `tests/schemas/test_backend_request_schema.py`:
 
 ```python
-@pytest.mark.parametrize("field", ["period_quantity", "out_time"])
-def test_transitional_machine_fields_are_not_in_the_formal_schema(field: str):
+def test_transitional_out_time_is_not_in_the_formal_schema():
     payload = sample_payload()
-    payload["machine_realtime"][0][field] = 0
+    payload["machine_realtime"][0]["out_time"] = 0
 
     with pytest.raises(ValidationError) as error:
         BackendAlgorithmRequest.model_validate(payload)
 
-    assert error.value.errors()[0]["loc"] == ("machine_realtime", 0, field)
+    assert error.value.errors()[0]["loc"] == (
+        "machine_realtime",
+        0,
+        "out_time",
+    )
     assert error.value.errors()[0]["type"] == "extra_forbidden"
 ```
 
-This complements the Loader tests: direct formal validation rejects both fields, while the Loader temporarily removes them from a deep copy.
+This complements the Loader tests: direct formal validation rejects the field, while the Loader temporarily removes it from a deep copy.
 
 - [ ] **Step 2: Add a compact mirror of the current incomplete request and export tests**
 
@@ -1786,7 +1781,6 @@ def test_compact_current_request_shape_loads_but_is_incomplete():
         {
             "status": "运行",
             "order_code": "",
-            "period_quantity": 0,
             "out_time": "2026-07-14T08:30:00+08:00",
         }
     )
@@ -2036,7 +2030,7 @@ Report exactly these facts after the commands pass:
 1. The added/modified files from Step 5.
 2. All fourteen external request model names.
 3. The seven retained `BackendMachineRealtime` fields.
-4. `period_quantity`/`out_time` as deep-copy-only transitional cleanup with a removal condition once the backend stops sending them.
+4. `out_time` as deep-copy-only transitional cleanup with a removal condition once the backend stops sending it.
 5. Every required-but-nullable field and which nulls are semantically valid versus completeness failures.
 6. All completeness relationships and the `(workshop_code, loop_code)` route grouping rule.
 7. Real request result: 439 machine records, `valid=false`, and the verified issue counts.

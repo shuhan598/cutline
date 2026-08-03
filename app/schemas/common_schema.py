@@ -242,7 +242,6 @@ class AlgorithmMachineRuntime(AlgorithmModel):
         allow_inf_nan=False,
         description="当前30分钟统计周期内的出料数量",
     )
-    period_quantity_30m: float = Field(...,ge=0,description="当前30分钟统计周期内机台的累计产量",)
     out_time: datetime | None = Field(..., description="机台时间，无出料时允许为空",)
 
 

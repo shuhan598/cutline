@@ -27,8 +27,6 @@ def _payload() -> dict:
                 "tangent_time": "2026-07-15T07:30:00Z",
                 "input_quantity": 11,
                 "output_quantity": 12,
-                "completed_quantity": 999,
-                "period_quantity": 13,
                 "out_time": "2026-07-15T08:20:00Z",
             }
         ],
@@ -413,14 +411,14 @@ def test_machine_runtime_quantities_are_raw_30_minute_values():
 
     assert runtime.input_quantity_30m == 11
     assert runtime.output_quantity_30m == 12
-    assert runtime.period_quantity_30m == 13
 
 
-def test_machine_runtime_does_not_include_request_completed_quantity():
+def test_machine_runtime_only_contains_sourced_quantity_fields():
     runtime = _convert().machine_runtimes[0]
 
-    assert "completed_quantity" not in runtime.model_dump()
-    assert 999 not in runtime.model_dump().values()
+    fields = type(runtime).model_fields
+    assert {"input_quantity_30m", "output_quantity_30m"} <= fields.keys()
+    assert "period_quantity_30m" not in fields
 
 
 def test_machine_runtime_preserves_out_time():
@@ -791,9 +789,26 @@ def test_buffer_consecutive_process_sequences_convert_relation():
     assert relation.downstream_process_code == "PROC-02"
 
 
-def test_buffer_processes_must_be_adjacent():
+def test_buffer_non_consecutive_process_sequences_convert_relation():
     payload = _payload()
-    payload["process_routes"][1]["sequence"] = 3
+    payload["process_routes"][0]["sequence"] = 10
+    payload["process_routes"][1]["sequence"] = 20
+
+    relation = _convert(payload).buffer_process_relations[0]
+
+    assert relation.upstream_process_code == "PROC-01"
+    assert relation.downstream_process_code == "PROC-02"
+
+
+def test_buffer_processes_must_be_adjacent_in_sorted_route():
+    payload = _payload()
+    payload["process_routes"][0]["sequence"] = 10
+    payload["process_routes"][1]["sequence"] = 30
+    _append_process_route(
+        payload,
+        process_code="PROC-MID",
+        sequence=20,
+    )
 
     _assert_conversion_error(payload, "BUF-001.*adjacent")
 

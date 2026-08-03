@@ -67,8 +67,6 @@ class MachineRealtimeRequest(RequestModel):
         allow_inf_nan=False,
         description="当前统计周期内（30分钟）的出料数量",
     )
-    completed_quantity: float = Field(..., ge=0, description="当前统计周期内（30分钟）的已完成数量")
-    period_quantity: float = Field(..., ge=0, description="当前统计周期内（30分钟）的产量，主要看丝网")
     out_time: datetime | None = Field(..., description="运行态出料时间，无出料时间时为 null")
 
 

@@ -115,8 +115,6 @@ def _machine_runtime(code, input_quantity, output_quantity):
         "tangent_time": None,
         "input_quantity": float(input_quantity),
         "output_quantity": float(output_quantity),
-        "completed_quantity": 0,
-        "period_quantity": 0,
         "out_time": None,
     }
 

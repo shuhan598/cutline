@@ -139,7 +139,6 @@ def snapshot_payload():
                 "tangent_time": None,
                 "input_quantity_30m": 120,
                 "output_quantity_30m": 100,
-                "period_quantity_30m": 400,
                 "out_time": None,
             }
         ],

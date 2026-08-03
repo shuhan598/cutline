@@ -233,8 +233,6 @@ def _machine_realtime() -> list[dict[str, Any]]:
             "tangent_time": None,
             "input_quantity": 100.0 if status == "运行" else 0.0,
             "output_quantity": 100.0 if status == "运行" else 0.0,
-            "completed_quantity": 100.0 if status == "运行" else 0.0,
-            "period_quantity": 100.0 if status == "运行" else 0.0,
             "out_time": "2026-07-17T07:55:00+08:00" if status == "运行" else None,
         }
         for machine_code, _, _, status, _ in _machine_definitions()
@@ -455,8 +453,6 @@ def _set_runtime(
             "status": status,
             "input_quantity": float(input_quantity),
             "output_quantity": float(output_quantity),
-            "completed_quantity": float(output_quantity),
-            "period_quantity": float(output_quantity),
             "out_time": (
                 "2026-07-17T07:55:00+08:00" if status == "运行" else None
             ),

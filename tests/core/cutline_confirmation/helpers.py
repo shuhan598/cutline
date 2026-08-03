@@ -444,7 +444,6 @@ def make_snapshot(
                 tangent_time=None,
                 input_quantity_30m=10.0,
                 output_quantity_30m=10.0,
-                period_quantity_30m=10.0,
                 out_time=current_time,
             )
             for machine_code, order_code in runtime_orders.items()

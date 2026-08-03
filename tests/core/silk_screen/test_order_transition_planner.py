@@ -29,7 +29,6 @@ def _runtime(
     status: str = "running",
     output_quantity_30m: float = 5000,
     input_quantity_30m: float = 999999,
-    period_quantity_30m: float = 888888,
 ) -> AlgorithmMachineRuntime:
     return AlgorithmMachineRuntime(
         machine_code=machine_code,
@@ -38,7 +37,6 @@ def _runtime(
         tangent_time=None,
         input_quantity_30m=input_quantity_30m,
         output_quantity_30m=output_quantity_30m,
-        period_quantity_30m=period_quantity_30m,
         out_time=None,
     )
 
@@ -227,7 +225,6 @@ def test_same_workshop_and_order_aggregate_realtime_outputs_only():
                 "M01",
                 output_quantity_30m=5000,
                 input_quantity_30m=1,
-                period_quantity_30m=1,
             ),
         ],
         masters=[_master("M02"), _master("M01")],

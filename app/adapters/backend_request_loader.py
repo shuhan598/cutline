@@ -95,7 +95,7 @@ class BackendRequestLoader:
             for index, record in enumerate(records)
         ]
 
-    def normalize_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def normalize_payload(self, payload: Any) -> Any:
         """Deep-copy a request and map only its AGV input collection."""
         normalized = deepcopy(payload)
         if isinstance(normalized, dict) and "agv_relations" in normalized:
@@ -140,7 +140,6 @@ class BackendRequestLoader:
         if isinstance(machine_realtime, list):
             for record in machine_realtime:
                 if isinstance(record, dict):
-                    record.pop("period_quantity", None)
                     record.pop("out_time", None)
         if isinstance(cleaned, dict) and "agv_relations" in cleaned:
             cleaned["agv_relations"] = self._project_raw_agv_relations(
@@ -150,7 +149,7 @@ class BackendRequestLoader:
 
     def load_cutline_dict(
         self,
-        payload: dict[str, Any],
+        payload: Any,
     ) -> CutlineAlgorithmRequest:
         return CutlineAlgorithmRequest.model_validate(
             self.normalize_payload(payload)

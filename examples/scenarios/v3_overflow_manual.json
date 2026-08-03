@@ -16,8 +16,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -26,8 +24,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -36,8 +32,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -46,8 +40,6 @@
       "tangent_time": null,
       "input_quantity": 300.0,
       "output_quantity": 300.0,
-      "completed_quantity": 300.0,
-      "period_quantity": 300.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -56,8 +48,6 @@
       "tangent_time": null,
       "input_quantity": 200.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -66,8 +56,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -76,8 +64,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -86,8 +72,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -96,8 +80,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -106,8 +88,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -116,8 +96,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -126,8 +104,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -136,8 +112,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -146,8 +120,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -156,8 +128,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -166,8 +136,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -176,8 +144,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -186,8 +152,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -196,8 +160,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -206,8 +168,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -216,8 +176,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -226,8 +184,6 @@
       "tangent_time": null,
       "input_quantity": 0.0,
       "output_quantity": 0.0,
-      "completed_quantity": 0.0,
-      "period_quantity": 0.0,
       "out_time": null
     },
     {
@@ -236,8 +192,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     },
     {
@@ -246,8 +200,6 @@
       "tangent_time": null,
       "input_quantity": 100.0,
       "output_quantity": 100.0,
-      "completed_quantity": 100.0,
-      "period_quantity": 100.0,
       "out_time": "2026-07-17T07:55:00+08:00"
     }
   ],

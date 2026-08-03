@@ -125,8 +125,6 @@ CutlineEvaluateResponse
   "tangent_time": null,
   "input_quantity": 300.0,
   "output_quantity": 300.0,
-  "completed_quantity": 300.0,
-  "period_quantity": 300.0,
   "out_time": "2026-07-16T08:25:00+08:00"
 }
 ```
@@ -140,7 +138,7 @@ CutlineEvaluateResponse
 - 其它状态，包括“停机”“异常”“待机”等，统一映射为 `stopped`，算法不会调用这些机台。
 - `machine_realtime` 不再提供 `order_code`；当前订单由快照时刻的有效 AGV 绑定提供。
 - `input_quantity` 和 `output_quantity` 是当前 30 分钟数量，算法会乘以 2 折算小时速率。
-- `period_quantity` 当前主要用于保留丝网相关统计值。
+- 当前算法只使用 `input_quantity` 和 `output_quantity` 作为机台实时数量；后端与甲方必须确认真实接口的统计窗口确为最近 30 分钟。
 - `tangent_time`、`out_time` 没有值时传 `null`。
 
 ## 5. 机台主数据 `machine_master`

@@ -92,7 +92,6 @@ def test_runtime_quantities_reject_boolean_before_coercion(field_name):
         "tangent_time": None,
         "input_quantity_30m": 1,
         "output_quantity_30m": 1,
-        "period_quantity_30m": 1,
         "out_time": None,
     }
     payload[field_name] = True

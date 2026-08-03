@@ -17,7 +17,7 @@ UTF-8 JSON 文件 / Python dict
 BackendRequestLoader
   - 文件与 JSON 读取
   - deepcopy
-  - 仅删除 machine_realtime.period_quantity / out_time
+  - 仅删除 machine_realtime.out_time
         |
         v
 BackendAlgorithmRequest.model_validate
@@ -107,9 +107,8 @@ Pydantic 保持默认的类型解析行为，不额外启用 strict mode。整�
 - `tangent_time: datetime | None`
 - `input_quantity: float`，`>= 0`
 - `output_quantity: float`，`>= 0`
-- `completed_quantity: float`，`>= 0`
 
-Schema 严格只保留以上七个字段。`tangent_time` 是业务上真正可空的字段，不因 `null` 产生完整性 issue。
+Schema 严格只保留以上六个字段。`tangent_time` 是业务上真正可空的字段，不因 `null` 产生完整性 issue。
 
 #### `BackendMachineMaster`
 
@@ -278,7 +277,7 @@ Schema 严格只保留以上七个字段。`tangent_time` 是业务上真正可�
 
 1. 使用 `deepcopy(payload)` 创建工作副本。
 2. 不修改调用方传入的顶层或任何嵌套对象。
-3. 如果副本的 `machine_realtime` 是列表，则遍历其中的字典记录，并按过渡兼容策略删除 `period_quantity`、`out_time`。
+3. 如果副本的 `machine_realtime` 是列表，则遍历其中的字典记录，并按过渡兼容策略删除 `out_time`。
 4. 不删除其他位置的同名字段，也不删除任何其他未知字段。
 5. 不把 `null`、空字符串或空数组转换成其他值。
 6. 调用 `BackendAlgorithmRequest.model_validate(cleaned_payload)`。
@@ -296,17 +295,17 @@ Schema 严格只保留以上七个字段。`tangent_time` 是业务上真正可�
 6. 合法 JSON 的 Schema 问题仍传播 Pydantic `ValidationError`。
 7. 合法 JSON 的根节点若不是对象，不归类为文件或语法错误；不执行字典清洗，直接由 `BackendAlgorithmRequest.model_validate` 产生结构 `ValidationError`。
 
-### 4.3 `period_quantity` / `out_time` 过渡兼容策略
+### 4.3 `out_time` 过渡兼容策略
 
-这两个字段的处理是有退出条件的临时兼容层，不是 Python 新正式输入合同的一部分：
+该字段的处理是有退出条件的临时兼容层，不是 Python 新正式输入合同的一部分：
 
-1. 当前 orchestrator 的真实请求仍会在每条 `machine_realtime` 中外发 `period_quantity` 和 `out_time`。
-2. `2026-07-14-algo-request-document-field-mapping.md` 描述的是“当前外发 DTO/请求体”，因此把它们记录为当前实现明确保留的运行态补充字段。
-3. 本设计描述的是新的 Python 正式输入合同。该合同明确不定义这两个字段，`BackendMachineRealtime` 只包含七个正式字段。
-4. 为让迁移期间的当前真实请求能够进入新合同，Loader 仅在 `machine_realtime` 记录的深拷贝上删除这两个已确认字段。
-5. 它们不进入 `BackendAlgorithmRequest`，不进入完整性校验的业务关系，也不参与任何算法计算。
+1. 当前 orchestrator 的真实请求仍会在每条 `machine_realtime` 中外发 `out_time`。
+2. `2026-07-14-algo-request-document-field-mapping.md` 描述的是“当前外发 DTO/请求体”，因此把它记录为当前实现明确保留的运行态补充字段。
+3. 本设计描述的是新的 Python 后端校验合同。该合同不定义 `out_time`，`BackendMachineRealtime` 只包含六个正式字段。
+4. 为让迁移期间的当前真实请求能够进入新合同，Loader 仅在 `machine_realtime` 记录的深拷贝上删除该字段。
+5. 它不进入 `BackendAlgorithmRequest`，不进入完整性校验的业务关系，也不参与任何算法计算。
 6. 其他未知字段不享受该兼容处理，仍由 `extra="forbid"` 拒绝。
-7. 后端停止外发这两个字段后，应删除 Loader 中对应的兼容清理逻辑及专用兼容测试；Schema 和算法无需变化。
+7. 后端停止外发该字段后，应删除 Loader 中对应的兼容清理逻辑及专用兼容测试；Schema 和算法无需变化。
 
 因此，字段映射文档中的“保留”与本设计中的“删除”并不矛盾：前者记录迁移前的当前后端外发事实，后者定义迁移后的 Python 目标合同和临时接入方式。
 
@@ -430,7 +429,7 @@ issue 去重只消除同一字段、同一根因的重复报告，不掩盖独�
 
 Loader 应能成功解析当前真实请求：
 
-- 439 条 `machine_realtime` 中的 `period_quantity`、`out_time` 仅在深拷贝中被删除。
+- 439 条 `machine_realtime` 中的 `out_time` 仅在深拷贝中被删除。
 - 原始请求保持不变。
 - 当前实际 `null` 均落在明确声明的可空字段内。
 - 所有顶层数据集都存在，因此不会发生 Schema 缺字段错误。

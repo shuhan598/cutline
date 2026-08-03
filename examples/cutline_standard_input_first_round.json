@@ -1,0 +1,1785 @@
+{
+  "snapshot_meta": {
+    "run_id": "RUN-V3-STOCKOUT-AUTO",
+    "trigger_type": "手动触发",
+    "workshop_id": "S2",
+    "snapshot_time": "2026-07-17T08:00:00+08:00",
+    "params_version": 3,
+    "catalog_version": "V3-FAKE-CATALOG-001",
+    "catalog_loaded_at": "2026-07-17T07:55:00+08:00",
+    "degraded_flags": []
+  },
+  "machine_realtime": [
+    {
+      "machine_code": "P166-EA001",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA002",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA003",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA004",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 300.0,
+      "output_quantity": 300.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA005",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 300.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA006",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA007",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA008",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA009",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA010",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA011",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA012",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA013",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA014",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA015",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA016",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA017",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA018",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA019",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA020",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA021",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA022",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-EA023",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA024",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    }
+  ],
+  "machine_master": [
+    {
+      "machine_code": "EA001",
+      "p166_jt_group": "P166-EA001",
+      "machine_name": "EA001发料机",
+      "process_code": "发料机",
+      "process_name": "发料机"
+    },
+    {
+      "machine_code": "EA002",
+      "p166_jt_group": "P166-EA002",
+      "machine_name": "EA002发料机",
+      "process_code": "发料机",
+      "process_name": "发料机"
+    },
+    {
+      "machine_code": "EA003",
+      "p166_jt_group": "P166-EA003",
+      "machine_name": "EA003制绒机",
+      "process_code": "制绒",
+      "process_name": "制绒"
+    },
+    {
+      "machine_code": "EA004",
+      "p166_jt_group": "P166-EA004",
+      "machine_name": "EA004制绒机",
+      "process_code": "制绒",
+      "process_name": "制绒"
+    },
+    {
+      "machine_code": "EA005",
+      "p166_jt_group": "P166-EA005",
+      "machine_name": "EA005碱抛机",
+      "process_code": "碱抛",
+      "process_name": "碱抛"
+    },
+    {
+      "machine_code": "EA006",
+      "p166_jt_group": "P166-EA006",
+      "machine_name": "EA006碱抛机",
+      "process_code": "碱抛",
+      "process_name": "碱抛"
+    },
+    {
+      "machine_code": "EA007",
+      "p166_jt_group": "P166-EA007",
+      "machine_name": "EA007背膜机",
+      "process_code": "背膜",
+      "process_name": "背膜"
+    },
+    {
+      "machine_code": "EA008",
+      "p166_jt_group": "P166-EA008",
+      "machine_name": "EA008背膜机",
+      "process_code": "背膜",
+      "process_name": "背膜"
+    },
+    {
+      "machine_code": "EA009",
+      "p166_jt_group": "P166-EA009",
+      "machine_name": "EA009硼扩机",
+      "process_code": "硼扩",
+      "process_name": "硼扩"
+    },
+    {
+      "machine_code": "EA010",
+      "p166_jt_group": "P166-EA010",
+      "machine_name": "EA010硼扩机",
+      "process_code": "硼扩",
+      "process_name": "硼扩"
+    },
+    {
+      "machine_code": "EA011",
+      "p166_jt_group": "P166-EA011",
+      "machine_name": "EA011多晶硅沉积机",
+      "process_code": "POLY",
+      "process_name": "多晶硅沉积"
+    },
+    {
+      "machine_code": "EA012",
+      "p166_jt_group": "P166-EA012",
+      "machine_name": "EA012多晶硅沉积机",
+      "process_code": "POLY",
+      "process_name": "多晶硅沉积"
+    },
+    {
+      "machine_code": "EA013",
+      "p166_jt_group": "P166-EA013",
+      "machine_name": "EA013RCA清洗机",
+      "process_code": "RCA",
+      "process_name": "RCA清洗"
+    },
+    {
+      "machine_code": "EA014",
+      "p166_jt_group": "P166-EA014",
+      "machine_name": "EA014RCA清洗机",
+      "process_code": "RCA",
+      "process_name": "RCA清洗"
+    },
+    {
+      "machine_code": "EA015",
+      "p166_jt_group": "P166-EA015",
+      "machine_name": "EA015退火机",
+      "process_code": "退火",
+      "process_name": "退火"
+    },
+    {
+      "machine_code": "EA016",
+      "p166_jt_group": "P166-EA016",
+      "machine_name": "EA016退火机",
+      "process_code": "退火",
+      "process_name": "退火"
+    },
+    {
+      "machine_code": "EA017",
+      "p166_jt_group": "P166-EA017",
+      "machine_name": "EA017氧化机",
+      "process_code": "氧化",
+      "process_name": "氧化"
+    },
+    {
+      "machine_code": "EA018",
+      "p166_jt_group": "P166-EA018",
+      "machine_name": "EA018氧化机",
+      "process_code": "氧化",
+      "process_name": "氧化"
+    },
+    {
+      "machine_code": "EA019",
+      "p166_jt_group": "P166-EA019",
+      "machine_name": "EA019正膜机",
+      "process_code": "正膜",
+      "process_name": "正膜"
+    },
+    {
+      "machine_code": "EA020",
+      "p166_jt_group": "P166-EA020",
+      "machine_name": "EA020正膜机",
+      "process_code": "正膜",
+      "process_name": "正膜"
+    },
+    {
+      "machine_code": "EA021",
+      "p166_jt_group": "P166-EA021",
+      "machine_name": "EA021丝网机",
+      "process_code": "丝网",
+      "process_name": "丝网"
+    },
+    {
+      "machine_code": "EA022",
+      "p166_jt_group": "P166-EA022",
+      "machine_name": "EA022丝网机",
+      "process_code": "丝网",
+      "process_name": "丝网"
+    },
+    {
+      "machine_code": "EA023",
+      "p166_jt_group": "P166-EA023",
+      "machine_name": "EA023制绒机",
+      "process_code": "制绒",
+      "process_name": "制绒"
+    },
+    {
+      "machine_code": "EA024",
+      "p166_jt_group": "P166-EA024",
+      "machine_name": "EA024制绒机",
+      "process_code": "制绒",
+      "process_name": "制绒"
+    }
+  ],
+  "machine_process_times": [
+    {
+      "machine_code": "EA001",
+      "machine_name": "EA001发料机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA001",
+      "machine_name": "EA001发料机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA001",
+      "machine_name": "EA001发料机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA001",
+      "machine_name": "EA001发料机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA002",
+      "machine_name": "EA002发料机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA002",
+      "machine_name": "EA002发料机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA002",
+      "machine_name": "EA002发料机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA002",
+      "machine_name": "EA002发料机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA003",
+      "machine_name": "EA003制绒机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA003",
+      "machine_name": "EA003制绒机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA003",
+      "machine_name": "EA003制绒机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA003",
+      "machine_name": "EA003制绒机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA004",
+      "machine_name": "EA004制绒机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA004",
+      "machine_name": "EA004制绒机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA004",
+      "machine_name": "EA004制绒机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA004",
+      "machine_name": "EA004制绒机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA005",
+      "machine_name": "EA005碱抛机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA005",
+      "machine_name": "EA005碱抛机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA005",
+      "machine_name": "EA005碱抛机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA005",
+      "machine_name": "EA005碱抛机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA006",
+      "machine_name": "EA006碱抛机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA006",
+      "machine_name": "EA006碱抛机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA006",
+      "machine_name": "EA006碱抛机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA006",
+      "machine_name": "EA006碱抛机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA007",
+      "machine_name": "EA007背膜机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA007",
+      "machine_name": "EA007背膜机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA007",
+      "machine_name": "EA007背膜机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA007",
+      "machine_name": "EA007背膜机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA008",
+      "machine_name": "EA008背膜机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA008",
+      "machine_name": "EA008背膜机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA008",
+      "machine_name": "EA008背膜机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA008",
+      "machine_name": "EA008背膜机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA009",
+      "machine_name": "EA009硼扩机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA009",
+      "machine_name": "EA009硼扩机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA009",
+      "machine_name": "EA009硼扩机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA009",
+      "machine_name": "EA009硼扩机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA010",
+      "machine_name": "EA010硼扩机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA010",
+      "machine_name": "EA010硼扩机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA010",
+      "machine_name": "EA010硼扩机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA010",
+      "machine_name": "EA010硼扩机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA011",
+      "machine_name": "EA011多晶硅沉积机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA011",
+      "machine_name": "EA011多晶硅沉积机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA011",
+      "machine_name": "EA011多晶硅沉积机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA011",
+      "machine_name": "EA011多晶硅沉积机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA012",
+      "machine_name": "EA012多晶硅沉积机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA012",
+      "machine_name": "EA012多晶硅沉积机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA012",
+      "machine_name": "EA012多晶硅沉积机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA012",
+      "machine_name": "EA012多晶硅沉积机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA013",
+      "machine_name": "EA013RCA清洗机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA013",
+      "machine_name": "EA013RCA清洗机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA013",
+      "machine_name": "EA013RCA清洗机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA013",
+      "machine_name": "EA013RCA清洗机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA014",
+      "machine_name": "EA014RCA清洗机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA014",
+      "machine_name": "EA014RCA清洗机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA014",
+      "machine_name": "EA014RCA清洗机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA014",
+      "machine_name": "EA014RCA清洗机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA015",
+      "machine_name": "EA015退火机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA015",
+      "machine_name": "EA015退火机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA015",
+      "machine_name": "EA015退火机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA015",
+      "machine_name": "EA015退火机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA016",
+      "machine_name": "EA016退火机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA016",
+      "machine_name": "EA016退火机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA016",
+      "machine_name": "EA016退火机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA016",
+      "machine_name": "EA016退火机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA017",
+      "machine_name": "EA017氧化机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA017",
+      "machine_name": "EA017氧化机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA017",
+      "machine_name": "EA017氧化机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA017",
+      "machine_name": "EA017氧化机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA018",
+      "machine_name": "EA018氧化机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA018",
+      "machine_name": "EA018氧化机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA018",
+      "machine_name": "EA018氧化机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA018",
+      "machine_name": "EA018氧化机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA019",
+      "machine_name": "EA019正膜机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA019",
+      "machine_name": "EA019正膜机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA019",
+      "machine_name": "EA019正膜机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA019",
+      "machine_name": "EA019正膜机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA020",
+      "machine_name": "EA020正膜机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA020",
+      "machine_name": "EA020正膜机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA020",
+      "machine_name": "EA020正膜机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA020",
+      "machine_name": "EA020正膜机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA021",
+      "machine_name": "EA021丝网机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA021",
+      "machine_name": "EA021丝网机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA021",
+      "machine_name": "EA021丝网机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA021",
+      "machine_name": "EA021丝网机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA022",
+      "machine_name": "EA022丝网机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA022",
+      "machine_name": "EA022丝网机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA022",
+      "machine_name": "EA022丝网机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA022",
+      "machine_name": "EA022丝网机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA023",
+      "machine_name": "EA023制绒机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA023",
+      "machine_name": "EA023制绒机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA023",
+      "machine_name": "EA023制绒机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA023",
+      "machine_name": "EA023制绒机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA024",
+      "machine_name": "EA024制绒机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA024",
+      "machine_name": "EA024制绒机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA024",
+      "machine_name": "EA024制绒机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA024",
+      "machine_name": "EA024制绒机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    }
+  ],
+  "workshops": [
+    {
+      "workshop_code": "S2",
+      "workshop_name": "S2车间"
+    }
+  ],
+  "lines": [],
+  "machine_lines": [],
+  "orders": [
+    {
+      "order_code": "ORD-S2-001",
+      "order_status": "生产中",
+      "total_quantity": 100000.0,
+      "piece_source": "A",
+      "estimated_yield": "98.5%",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "produced_quantity": 0.0,
+      "remaining_quantity": 100000.0
+    },
+    {
+      "order_code": "ORD-S2-002",
+      "order_status": "生产中",
+      "total_quantity": 100000.0,
+      "piece_source": "A",
+      "estimated_yield": "98.5%",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "produced_quantity": 0.0,
+      "remaining_quantity": 100000.0
+    },
+    {
+      "order_code": "ORD-S2-003",
+      "order_status": "生产中",
+      "total_quantity": 100000.0,
+      "piece_source": "A",
+      "estimated_yield": "98.5%",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "produced_quantity": 0.0,
+      "remaining_quantity": 100000.0
+    },
+    {
+      "order_code": "ORD-S2-004",
+      "order_status": "生产中",
+      "total_quantity": 100000.0,
+      "piece_source": "A",
+      "estimated_yield": "98.5%",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "produced_quantity": 0.0,
+      "remaining_quantity": 100000.0
+    }
+  ],
+  "products": [
+    {
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "wafer_size": "182",
+      "source_grade": "A",
+      "material_code": "MAT-S2-N-TARGET",
+      "material_name": "182N硅片"
+    },
+    {
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "wafer_size": "182",
+      "source_grade": "A",
+      "material_code": "MAT-S2-N-SUPPORT",
+      "material_name": "182N支援硅片"
+    },
+    {
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "wafer_size": "210",
+      "source_grade": "A-",
+      "material_code": "MAT-S2-R",
+      "material_name": "210R硅片"
+    },
+    {
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "wafer_size": "210",
+      "source_grade": "A",
+      "material_code": "MAT-S2-P",
+      "material_name": "210P硅片"
+    }
+  ],
+  "process_routes": [
+    {
+      "process_code": "发料机",
+      "process_name": "发料机",
+      "sequence": 1,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": null,
+      "upstream_process_name": null,
+      "downstream_process_code": "制绒",
+      "downstream_process_name": "制绒"
+    },
+    {
+      "process_code": "制绒",
+      "process_name": "制绒",
+      "sequence": 2,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "发料机",
+      "upstream_process_name": "发料机",
+      "downstream_process_code": "碱抛",
+      "downstream_process_name": "碱抛"
+    },
+    {
+      "process_code": "碱抛",
+      "process_name": "碱抛",
+      "sequence": 3,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "制绒",
+      "upstream_process_name": "制绒",
+      "downstream_process_code": "背膜",
+      "downstream_process_name": "背膜"
+    },
+    {
+      "process_code": "背膜",
+      "process_name": "背膜",
+      "sequence": 4,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "碱抛",
+      "upstream_process_name": "碱抛",
+      "downstream_process_code": "硼扩",
+      "downstream_process_name": "硼扩"
+    },
+    {
+      "process_code": "硼扩",
+      "process_name": "硼扩",
+      "sequence": 5,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "背膜",
+      "upstream_process_name": "背膜",
+      "downstream_process_code": "POLY",
+      "downstream_process_name": "多晶硅沉积"
+    },
+    {
+      "process_code": "POLY",
+      "process_name": "多晶硅沉积",
+      "sequence": 6,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "硼扩",
+      "upstream_process_name": "硼扩",
+      "downstream_process_code": "RCA",
+      "downstream_process_name": "RCA清洗"
+    },
+    {
+      "process_code": "RCA",
+      "process_name": "RCA清洗",
+      "sequence": 7,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "POLY",
+      "upstream_process_name": "多晶硅沉积",
+      "downstream_process_code": "退火",
+      "downstream_process_name": "退火"
+    },
+    {
+      "process_code": "退火",
+      "process_name": "退火",
+      "sequence": 8,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "RCA",
+      "upstream_process_name": "RCA清洗",
+      "downstream_process_code": "氧化",
+      "downstream_process_name": "氧化"
+    },
+    {
+      "process_code": "氧化",
+      "process_name": "氧化",
+      "sequence": 9,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "退火",
+      "upstream_process_name": "退火",
+      "downstream_process_code": "正膜",
+      "downstream_process_name": "正膜"
+    },
+    {
+      "process_code": "正膜",
+      "process_name": "正膜",
+      "sequence": 10,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "氧化",
+      "upstream_process_name": "氧化",
+      "downstream_process_code": "丝网",
+      "downstream_process_name": "丝网"
+    },
+    {
+      "process_code": "丝网",
+      "process_name": "丝网",
+      "sequence": 11,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "正膜",
+      "upstream_process_name": "正膜",
+      "downstream_process_code": null,
+      "downstream_process_name": null
+    }
+  ],
+  "buffer_realtime": [
+    {
+      "main_id": "MAIN-310110301",
+      "buffer_code": "310110301",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110302",
+      "buffer_code": "310110302",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 100.0,
+      "current_utilization_rate": 0.001
+    },
+    {
+      "main_id": "MAIN-310110303",
+      "buffer_code": "310110303",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110304",
+      "buffer_code": "310110304",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110305",
+      "buffer_code": "310110305",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110306",
+      "buffer_code": "310110306",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110307",
+      "buffer_code": "310110307",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110308",
+      "buffer_code": "310110308",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110309",
+      "buffer_code": "310110309",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110310",
+      "buffer_code": "310110310",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110302",
+      "buffer_code": "310110302",
+      "bound_source_name": "182N支援产品",
+      "current_quantity": 2000.0,
+      "current_utilization_rate": 0.02
+    }
+  ],
+  "buffer_master": [
+    {
+      "buffer_code": "310110301",
+      "buffer_name": "发料机-制绒缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "发料机",
+        "制绒"
+      ],
+      "served_process_names": [
+        "发料机",
+        "制绒"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110302",
+      "buffer_name": "制绒-碱抛缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "制绒",
+        "碱抛"
+      ],
+      "served_process_names": [
+        "制绒",
+        "碱抛"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110303",
+      "buffer_name": "碱抛-背膜缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "碱抛",
+        "背膜"
+      ],
+      "served_process_names": [
+        "碱抛",
+        "背膜"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110304",
+      "buffer_name": "背膜-硼扩缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "背膜",
+        "硼扩"
+      ],
+      "served_process_names": [
+        "背膜",
+        "硼扩"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110305",
+      "buffer_name": "硼扩-多晶硅沉积缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "硼扩",
+        "POLY"
+      ],
+      "served_process_names": [
+        "硼扩",
+        "多晶硅沉积"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110306",
+      "buffer_name": "多晶硅沉积-RCA清洗缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "POLY",
+        "RCA"
+      ],
+      "served_process_names": [
+        "多晶硅沉积",
+        "RCA清洗"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110307",
+      "buffer_name": "RCA清洗-退火缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "RCA",
+        "退火"
+      ],
+      "served_process_names": [
+        "RCA清洗",
+        "退火"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110308",
+      "buffer_name": "退火-氧化缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "退火",
+        "氧化"
+      ],
+      "served_process_names": [
+        "退火",
+        "氧化"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110309",
+      "buffer_name": "氧化-正膜缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "氧化",
+        "正膜"
+      ],
+      "served_process_names": [
+        "氧化",
+        "正膜"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110310",
+      "buffer_name": "正膜-丝网缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "正膜",
+        "丝网"
+      ],
+      "served_process_names": [
+        "正膜",
+        "丝网"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    }
+  ],
+  "agv_relations": [
+    {
+      "equipmentid": "EA001",
+      "equipmentname": "EA001发料机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA007",
+      "equipmentname": "EA007背膜机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA009",
+      "equipmentname": "EA009硼扩机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA011",
+      "equipmentname": "EA011多晶硅沉积机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA013",
+      "equipmentname": "EA013RCA清洗机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA015",
+      "equipmentname": "EA015退火机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA017",
+      "equipmentname": "EA017氧化机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA019",
+      "equipmentname": "EA019正膜机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA021",
+      "equipmentname": "EA021丝网机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA023",
+      "equipmentname": "EA023制绒机",
+      "linename": "210R华晟产品",
+      "lastlinename": null,
+      "waferspec": "R",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA024",
+      "equipmentname": "EA024制绒机",
+      "linename": "210P晶澳产品",
+      "lastlinename": null,
+      "waferspec": "P",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA003",
+      "equipmentname": "EA003制绒机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA004",
+      "equipmentname": "EA004制绒机",
+      "linename": "182N支援产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA005",
+      "equipmentname": "EA005碱抛机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA006",
+      "equipmentname": "EA006碱抛机",
+      "linename": "182N支援产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    }
+  ],
+  "pending_cutline_plans": [],
+  "active_cutline_events": [],
+  "return_suggested_event_ids": [],
+  "mixed_cutline_event_ids": []
+}

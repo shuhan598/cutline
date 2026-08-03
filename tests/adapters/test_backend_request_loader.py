@@ -27,7 +27,6 @@ def sample_payload() -> dict:
 
 def test_load_dict_returns_model_without_mutating_nested_payload():
     payload = sample_payload()
-    payload["machine_realtime"][0]["period_quantity"] = 10
     payload["machine_realtime"][0]["out_time"] = "2026-07-14T08:30:00+08:00"
     original = deepcopy(payload)
 
@@ -35,7 +34,6 @@ def test_load_dict_returns_model_without_mutating_nested_payload():
 
     assert isinstance(request, BackendAlgorithmRequest)
     assert payload == original
-    assert "period_quantity" not in request.machine_realtime[0].model_fields_set
     assert "out_time" not in request.machine_realtime[0].model_fields_set
 
 
@@ -56,8 +54,8 @@ def test_omitted_line_collections_flow_from_loader_into_snapshot_adapter():
 
 def test_transitional_cleanup_only_applies_to_machine_realtime_records():
     payload = sample_payload()
-    payload["machine_realtime"][0]["period_quantity"] = 10
-    payload["machine_master"][0]["period_quantity"] = 10
+    payload["machine_realtime"][0]["out_time"] = None
+    payload["machine_master"][0]["out_time"] = None
 
     with pytest.raises(ValidationError) as error:
         BackendRequestLoader().load_dict(payload)
@@ -65,8 +63,24 @@ def test_transitional_cleanup_only_applies_to_machine_realtime_records():
     assert error.value.errors()[0]["loc"] == (
         "machine_master",
         0,
-        "period_quantity",
+        "out_time",
     )
+
+
+@pytest.mark.parametrize("field", ("completed_quantity", "period_quantity"))
+def test_removed_machine_realtime_fields_are_rejected(field: str):
+    payload = sample_payload()
+    payload["machine_realtime"][0][field] = 10
+
+    with pytest.raises(ValidationError) as error:
+        BackendRequestLoader().load_dict(payload)
+
+    assert error.value.errors()[0]["loc"] == (
+        "machine_realtime",
+        0,
+        field,
+    )
+    assert error.value.errors()[0]["type"] == "extra_forbidden"
 
 
 def test_other_unknown_machine_realtime_fields_are_still_rejected():

@@ -24,7 +24,10 @@ from app.schemas.backend_request_schema import (
     BackendOrder,
     BackendProduct,
 )
-from app.schemas.request_schema import AgvRelationRequest
+from app.schemas.request_schema import (
+    AgvRelationRequest,
+    CutlineAlgorithmRequest,
+)
 from app.schemas.pending_cutline_schema import (
     PendingCutlinePlan,
     PendingCutlinePlanStatus,
@@ -100,13 +103,15 @@ _RECORD_KEY_FIELDS = {
     "pending_cutline_plans": "plan_id",
 }
 
+CompletenessRequest = BackendAlgorithmRequest | CutlineAlgorithmRequest
+
 
 class BackendRequestCompletenessValidator:
     """Report backend request completeness issues without mutating inputs."""
 
     def validate(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
     ) -> BackendRequestValidationResult:
         issues: list[BackendValidationIssue] = []
         normalized_agv_relations = [
@@ -263,7 +268,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_empty_datasets(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         for dataset in _REQUIRED_DATASETS:
@@ -280,7 +285,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_required_nullable_fields(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         for dataset, field in _REQUIRED_NULLABLE_FIELDS:
@@ -298,7 +303,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_empty_codes(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         for dataset in request.__class__.model_fields:
@@ -351,7 +356,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_unique_reference_fields(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         specifications = (
@@ -408,7 +413,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_order_products(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         products_by_code: dict[str, list[BackendProduct]] = defaultdict(list)
@@ -439,7 +444,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_buffer_bindings(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         orders_by_product_name: dict[
@@ -549,7 +554,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_references(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         for source_dataset, source_field, target_dataset, target_field in _RELATIONSHIPS:
@@ -582,7 +587,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_agv_bindings(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         selected_relations: dict[
             str,
             tuple[datetime, list[AgvRelationRequest]],
@@ -852,7 +857,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_routes(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         grouped: dict[tuple[str, str], list[tuple[int, Any]]] = defaultdict(list)
@@ -864,8 +869,10 @@ class BackendRequestCompletenessValidator:
             for _, route in indexed_routes:
                 by_sequence[route.sequence].append(route)
 
+            has_duplicate_sequence = False
             for sequence, duplicates in by_sequence.items():
                 if len(duplicates) > 1:
+                    has_duplicate_sequence = True
                     issues.append(
                         self._issue(
                             code="duplicate_sequence",
@@ -883,6 +890,25 @@ class BackendRequestCompletenessValidator:
 
             min_sequence = min(by_sequence)
             max_sequence = max(by_sequence)
+            ordered_routes = sorted(
+                indexed_routes,
+                key=lambda item: item[1].sequence,
+            )
+            self._validate_silk_screen_route(
+                workshop_code=workshop_code,
+                loop_code=loop_code,
+                indexed_routes=ordered_routes,
+                max_sequence=max_sequence,
+                issues=issues,
+            )
+            if not has_duplicate_sequence:
+                self._validate_route_adjacency(
+                    workshop_code=workshop_code,
+                    loop_code=loop_code,
+                    indexed_routes=ordered_routes,
+                    issues=issues,
+                )
+
             route_codes = {
                 route.process_code
                 for _, route in indexed_routes
@@ -927,6 +953,151 @@ class BackendRequestCompletenessValidator:
                             )
                         )
 
+    def _validate_silk_screen_route(
+        self,
+        *,
+        workshop_code: str,
+        loop_code: str,
+        indexed_routes: list[tuple[int, Any]],
+        max_sequence: int,
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        route_key = f"{workshop_code}|{loop_code}"
+        silk_routes = [
+            (index, route)
+            for index, route in indexed_routes
+            if route.process_name == "丝网"
+        ]
+        if not silk_routes:
+            issues.append(
+                self._issue(
+                    code="missing_silk_screen_process",
+                    dataset="process_routes",
+                    field="process_name",
+                    record_key=route_key,
+                    message=(
+                        f"process route ({workshop_code}, {loop_code}) must "
+                        'contain exactly one process_name="丝网"'
+                    ),
+                )
+            )
+            return
+        if len(silk_routes) > 1:
+            locations = [
+                self._route_record_key(workshop_code, loop_code, route)
+                for _, route in silk_routes
+            ]
+            issues.append(
+                self._issue(
+                    code="duplicate_silk_screen_process",
+                    dataset="process_routes",
+                    field="process_name",
+                    record_key="|".join(locations),
+                    message=(
+                        f"process route ({workshop_code}, {loop_code}) has "
+                        f"multiple process_name=\"丝网\": {locations}"
+                    ),
+                )
+            )
+            return
+
+        _, silk_route = silk_routes[0]
+        if silk_route.sequence != max_sequence:
+            issues.append(
+                self._issue(
+                    code="silk_screen_not_last",
+                    dataset="process_routes",
+                    field="sequence",
+                    record_key=self._route_record_key(
+                        workshop_code,
+                        loop_code,
+                        silk_route,
+                    ),
+                    message=(
+                        f'process_name="丝网" must be the maximum sequence '
+                        f"in route ({workshop_code}, {loop_code}); got "
+                        f"sequence={silk_route.sequence}, max={max_sequence}"
+                    ),
+                )
+            )
+
+    def _validate_route_adjacency(
+        self,
+        *,
+        workshop_code: str,
+        loop_code: str,
+        indexed_routes: list[tuple[int, Any]],
+        issues: list[BackendValidationIssue],
+    ) -> None:
+        for position, (_, route) in enumerate(indexed_routes):
+            previous = (
+                indexed_routes[position - 1][1] if position > 0 else None
+            )
+            following = (
+                indexed_routes[position + 1][1]
+                if position + 1 < len(indexed_routes)
+                else None
+            )
+            expected_fields = (
+                (
+                    "upstream_process_code",
+                    previous.process_code if previous is not None else None,
+                ),
+                (
+                    "upstream_process_name",
+                    previous.process_name if previous is not None else None,
+                ),
+                (
+                    "downstream_process_code",
+                    following.process_code if following is not None else None,
+                ),
+                (
+                    "downstream_process_name",
+                    following.process_name if following is not None else None,
+                ),
+            )
+            for field, expected in expected_fields:
+                actual = getattr(route, field)
+                if actual == expected:
+                    continue
+                is_last_downstream = (
+                    following is None and field.startswith("downstream_")
+                )
+                issues.append(
+                    self._issue(
+                        code=(
+                            "invalid_last_process_downstream"
+                            if is_last_downstream
+                            else "broken_process_route"
+                        ),
+                        dataset="process_routes",
+                        field=field,
+                        record_key=self._route_record_key(
+                            workshop_code,
+                            loop_code,
+                            route,
+                        ),
+                        message=(
+                            f"process route ({workshop_code}, {loop_code}) "
+                            f"process_code={route.process_code!r}, "
+                            f"process_name={route.process_name!r}, "
+                            f"sequence={route.sequence} requires {field}="
+                            f"{expected!r}, got {actual!r}"
+                        ),
+                    )
+                )
+
+    @staticmethod
+    def _route_record_key(
+        workshop_code: str,
+        loop_code: str,
+        route: Any,
+    ) -> str:
+        return (
+            f"{workshop_code}|{loop_code}|process:{route.process_code}|"
+            f"name:{route.process_name}|sequence:{route.sequence}"
+        )
+
     def _require_route_fields(
         self,
         route: Any,
@@ -952,7 +1123,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_served_processes(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         route_codes = {
@@ -985,7 +1156,7 @@ class BackendRequestCompletenessValidator:
 
     def _validate_capacity(
         self,
-        request: BackendAlgorithmRequest,
+        request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
         for index, buffer in enumerate(request.buffer_master):

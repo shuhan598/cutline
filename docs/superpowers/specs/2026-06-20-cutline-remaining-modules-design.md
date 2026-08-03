@@ -180,7 +180,7 @@ upstream_processes = { 所有 service_process_codes 中非末位的工序 }
        silk_screen_clear_minutes = config.silk_screen_clear_minutes，
        切线准备时刻 = 预警时刻（立即准备清台）。
 情况2 订单触发（不依赖 Buffer 水位）：对丝网在产机台，
-       剩余量   = order.total_quantity − completed_quantity        # order 按机台 order_code 关联
+       剩余量   = order.total_quantity − produced_quantity         # order 按机台 order_code 关联
        完工时刻 = current_time + 剩余量 / 机台当前产能(片/h) × 60(min)
        准备时刻 = 完工时刻 − silk_screen_clear_minutes
        IF current_time ≥ 准备时刻 → 产出预警 warning_type="silk_screen_order"

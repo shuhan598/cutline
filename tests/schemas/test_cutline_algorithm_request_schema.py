@@ -6,7 +6,10 @@ from pydantic import ValidationError
 
 from app.schemas.backend_request_schema import BackendAlgorithmRequest
 from app.schemas.pending_cutline_schema import PendingCutlinePlan
-from app.schemas.request_schema import CutlineAlgorithmRequest
+from app.schemas.request_schema import (
+    CutlineAlgorithmRequest,
+    MachineRealtimeRequest,
+)
 from app.schemas.response_schema import ActiveCutlineEventPersistenceResponse
 from app.schemas.result_schema import AlgorithmPersistenceState
 from tests.core.cutline_confirmation.helpers import (
@@ -82,7 +85,6 @@ def backend_payload_from_request(payload):
     backend_payload = deepcopy(payload)
     backend_payload.pop("active_cutline_events", None)
     for runtime in backend_payload["machine_realtime"]:
-        runtime.pop("period_quantity")
         runtime.pop("out_time")
     backend_payload["agv_relations"] = [
         {
@@ -111,8 +113,8 @@ def payload():
         },
         "machine_realtime": [{
             "machine_code": "P166-M1", "status": "运行", "tangent_time": None,
-            "input_quantity": 0, "output_quantity": 1, "completed_quantity": 0,
-            "period_quantity": 2, "out_time": "2026-07-13T08:00Z",
+            "input_quantity": 0, "output_quantity": 1,
+            "out_time": "2026-07-13T08:00Z",
         }],
         "machine_master": [{"machine_code": "M1", "p166_jt_group": "P166-M1", "machine_name": "机台1", "process_code": "P1", "process_name": "工序1"}],
         "machine_process_times": [{"machine_code": "M1", "machine_name": "机台1", "product_code": "PR1", "product_name": "产品1", "proc_seconds": 1, "actual_capacity": 1}],
@@ -130,12 +132,20 @@ def payload():
 
 def test_minimal_complete_request_parses_required_values(payload):
     request = CutlineAlgorithmRequest.model_validate(payload)
-    assert request.machine_realtime[0].period_quantity == 2
+    assert request.machine_realtime[0].input_quantity == 0
+    assert request.machine_realtime[0].output_quantity == 1
     assert isinstance(request.machine_realtime[0].out_time, datetime)
     assert request.workshops[0].workshop_name is None
     assert request.buffer_realtime[0].main_id is None
     assert request.active_cutline_events == []
     assert request.pending_cutline_plans == []
+
+
+def test_machine_realtime_request_only_exposes_sourced_quantity_fields():
+    fields = MachineRealtimeRequest.model_fields
+
+    assert {"input_quantity", "output_quantity"} <= fields.keys()
+    assert {"completed_quantity", "period_quantity"}.isdisjoint(fields)
 
 
 def test_request_state_collection_defaults_are_independent(payload):
@@ -453,7 +463,7 @@ def test_optional_line_collections_default_to_independent_empty_lists(payload):
 
 
 def test_nested_required_field_is_required(payload):
-    del payload["machine_realtime"][0]["period_quantity"]
+    del payload["machine_realtime"][0]["input_quantity"]
     with pytest.raises(ValidationError):
         CutlineAlgorithmRequest.model_validate(payload)
 
@@ -485,7 +495,6 @@ def test_nullable_required_fields_accept_null(payload, dataset, field):
     ("dataset", "field", "value"),
     (("machine_realtime", "input_quantity", -1), ("machine_realtime", "output_quantity", -1),
      ("machine_realtime", "input_quantity", True), ("machine_realtime", "output_quantity", True),
-     ("machine_realtime", "completed_quantity", -1), ("machine_realtime", "period_quantity", -1),
      ("machine_process_times", "actual_capacity", 0),
      ("orders", "total_quantity", -1), ("orders", "produced_quantity", -1),
      ("orders", "remaining_quantity", -1), ("buffer_realtime", "current_quantity", -1),
@@ -516,6 +525,17 @@ def test_explicit_empty_top_level_arrays_are_allowed(payload):
 def test_machine_realtime_does_not_expose_order_code(payload):
     request = CutlineAlgorithmRequest.model_validate(payload)
     assert "order_code" not in request.machine_realtime[0].__class__.model_fields
+
+
+@pytest.mark.parametrize("field", ("completed_quantity", "period_quantity"))
+def test_machine_realtime_rejects_removed_quantity_fields(payload, field):
+    payload["machine_realtime"][0][field] = 1
+
+    with pytest.raises(ValidationError) as error:
+        CutlineAlgorithmRequest.model_validate(payload)
+
+    assert error.value.errors()[0]["loc"] == ("machine_realtime", 0, field)
+    assert error.value.errors()[0]["type"] == "extra_forbidden"
 
 
 def test_order_request_rejects_removed_order_name(payload):

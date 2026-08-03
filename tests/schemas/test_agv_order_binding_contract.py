@@ -52,14 +52,12 @@ def backend_runtime_payload() -> dict:
         "tangent_time": None,
         "input_quantity": 10.0,
         "output_quantity": 9.0,
-        "completed_quantity": 100.0,
     }
 
 
 def standard_runtime_payload() -> dict:
     return {
         **backend_runtime_payload(),
-        "period_quantity": 8.0,
         "out_time": None,
     }
 

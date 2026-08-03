@@ -90,7 +90,13 @@ class BufferProcessResolver:
                 f"Buffer {buffer.buffer_code} upstream sequence must precede "
                 "downstream sequence"
             )
-        if downstream.sequence != upstream.sequence + 1:
+        has_intermediate_process = any(
+            route.loop_code == buffer.loop_code
+            and route.workshop_code == upstream.workshop_code
+            and upstream.sequence < route.sequence < downstream.sequence
+            for route in self._routes
+        )
+        if has_intermediate_process:
             raise BufferProcessResolutionError(
                 f"Buffer {buffer.buffer_code} served processes must be adjacent"
             )

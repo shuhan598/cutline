@@ -23,7 +23,6 @@ ALGORITHM_MODEL_FIELDS = {
         "tangent_time",
         "input_quantity_30m",
         "output_quantity_30m",
-        "period_quantity_30m",
         "out_time",
     ),
     "AlgorithmMachineMaster": (
@@ -118,7 +117,6 @@ def _runtime_payload(**updates):
         "tangent_time": datetime(2026, 7, 15, 8, 30),
         "input_quantity_30m": 120.0,
         "output_quantity_30m": 100.0,
-        "period_quantity_30m": 400.0,
         "out_time": None,
     }
     payload.update(updates)
@@ -201,7 +199,6 @@ def test_algorithm_model_field_types_and_nullable_contracts_are_explicit():
         ("AlgorithmMachineRuntime", "out_time"): datetime | None,
         ("AlgorithmMachineRuntime", "input_quantity_30m"): float,
         ("AlgorithmMachineRuntime", "output_quantity_30m"): float,
-        ("AlgorithmMachineRuntime", "period_quantity_30m"): float,
         ("AlgorithmMachineProductCapacity", "proc_seconds"): float,
         ("AlgorithmMachineProductCapacity", "actual_capacity"): float,
         ("AlgorithmOrder", "total_quantity"): float,
@@ -297,7 +294,7 @@ def test_machine_runtime_does_not_expose_current_wafer_spec():
 
 @pytest.mark.parametrize(
     "field",
-    ("input_quantity_30m", "output_quantity_30m", "period_quantity_30m"),
+    ("input_quantity_30m", "output_quantity_30m"),
 )
 def test_machine_runtime_rejects_negative_quantities(field):
     with pytest.raises(ValidationError):
@@ -314,6 +311,15 @@ def test_machine_runtime_rejects_removed_period_quantity():
 def test_machine_runtime_rejects_request_only_completed_quantity():
     with pytest.raises(ValidationError) as error:
         schema.AlgorithmMachineRuntime(**_runtime_payload(completed_quantity=1))
+
+    assert error.value.errors()[0]["type"] == "extra_forbidden"
+
+
+def test_machine_runtime_rejects_removed_period_quantity_30m():
+    with pytest.raises(ValidationError) as error:
+        schema.AlgorithmMachineRuntime(
+            **_runtime_payload(period_quantity_30m=1)
+        )
 
     assert error.value.errors()[0]["type"] == "extra_forbidden"
 

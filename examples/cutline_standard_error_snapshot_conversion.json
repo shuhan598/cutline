@@ -1,0 +1,7 @@
+{
+  "detail": {
+    "code": "SNAPSHOT_CONVERSION_FAILED",
+    "message": "machine_lines were provided but lines are empty",
+    "issues": []
+  }
+}

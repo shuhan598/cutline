@@ -89,7 +89,6 @@ def _runtime(
     status: str = "running",
     input_quantity: float = 0,
     output_quantity: float = 0,
-    period_quantity: float = 999999,
 ) -> AlgorithmMachineRuntime:
     return AlgorithmMachineRuntime(
         machine_code=machine_code,
@@ -98,7 +97,6 @@ def _runtime(
         tangent_time=None,
         input_quantity_30m=input_quantity,
         output_quantity_30m=output_quantity,
-        period_quantity_30m=period_quantity,
         out_time=None,
     )
 
@@ -115,7 +113,6 @@ def _add_machine(
     agv_wafer_spec: str = "N",
     input_quantity: float = 0,
     output_quantity: float = 0,
-    period_quantity: float = 999999,
     route_workshop_code: str = "S1",
 ) -> None:
     snapshot.machine_masters.append(
@@ -139,7 +136,6 @@ def _add_machine(
             status,
             input_quantity,
             output_quantity,
-            period_quantity,
         )
     )
     if not any(
@@ -469,12 +465,14 @@ def test_non_running_status_machine_does_not_enter_rate(status):
     assert _calculate(snapshot)[0].upstream_output_rate == 200
 
 
-def test_period_quantity_does_not_enter_rate():
+def test_runtime_quantity_fields_are_limited_to_rate_inputs():
     snapshot = _snapshot()
-    for runtime in snapshot.machine_runtimes:
-        runtime.period_quantity_30m = 999999999
 
     result = _calculate(snapshot)[0]
+    assert {
+        "input_quantity_30m",
+        "output_quantity_30m",
+    } <= type(snapshot.machine_runtimes[0]).model_fields.keys()
     assert result.upstream_output_rate == 200
     assert result.downstream_input_rate == 320
 

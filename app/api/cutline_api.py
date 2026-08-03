@@ -13,7 +13,9 @@ from app.adapters.backend_request_loader import (
 from app.adapters.backend_request_validator import (
     BackendRequestCompletenessValidator,
     BackendRequestValidationResult,
+    BackendValidationIssue,
 )
+from app.adapters.snapshot_adapter import SnapshotConversionError
 from app.schemas.request_schema import CutlineAlgorithmRequest
 from app.schemas.response_schema import (
     CutlineAlgorithmResponse,
@@ -57,6 +59,83 @@ def _load_cutline_request(payload: dict[str, Any]) -> CutlineAlgorithmRequest:
         _raise_request_validation_error(exc)
 
 
+def _raise_backend_data_invalid(
+    issues: list[BackendValidationIssue],
+    *,
+    cause: Exception | None = None,
+) -> NoReturn:
+    http_error = HTTPException(
+        status_code=422,
+        detail={
+            "code": "BACKEND_DATA_INVALID",
+            "message": "后端数据不完整或数据关联关系错误",
+            "issues": [
+                issue.model_dump(mode="json") for issue in issues
+            ],
+        },
+    )
+    if cause is not None:
+        raise http_error from cause
+    raise http_error
+
+
+def _pydantic_validation_issues(
+    exc: ValidationError,
+) -> list[BackendValidationIssue]:
+    issues: list[BackendValidationIssue] = []
+    for error in exc.errors(include_url=False):
+        location = list(error.get("loc", ()))
+        dataset = str(location[0]) if location else "request"
+        has_record_index = len(location) > 1 and isinstance(location[1], int)
+        field_parts = location[2:] if has_record_index else location[1:]
+        issues.append(
+            BackendValidationIssue(
+                code=str(error.get("type", "validation_error")),
+                dataset=dataset,
+                field=(
+                    ".".join(str(item) for item in field_parts)
+                    if field_parts
+                    else None
+                ),
+                record_key=(
+                    f"index:{location[1]}" if has_record_index else None
+                ),
+                message=str(error.get("msg", "request validation failed")),
+            )
+        )
+    return issues
+
+
+def _load_validated_cutline_request(
+    payload: Any,
+) -> CutlineAlgorithmRequest:
+    try:
+        request = _backend_loader.load_cutline_dict(payload)
+    except ValidationError as exc:
+        _raise_backend_data_invalid(
+            _pydantic_validation_issues(exc),
+            cause=exc,
+        )
+    except BackendRequestLoadError as exc:
+        _raise_backend_data_invalid(
+            [
+                BackendValidationIssue(
+                    code="load_error",
+                    dataset="agv_relations",
+                    field=None,
+                    record_key=None,
+                    message=str(exc),
+                )
+            ],
+            cause=exc,
+        )
+
+    validation = _backend_validator.validate(request)
+    if not validation.valid:
+        _raise_backend_data_invalid(validation.issues)
+    return request
+
+
 @router.post("/backend/validate", response_model=BackendRequestValidationResult)
 def validate_backend_request(
     payload: dict[str, Any] = Body(...),
@@ -77,8 +156,19 @@ def run_stub_algorithm_request(
 
 @router.post("/cutline/evaluate", response_model=CutlineEvaluateResponse)
 def evaluate_cutline_request(
-    payload: dict[str, Any] = Body(...),
+    payload: Any = Body(None),
     service: CutlineService = Depends(get_cutline_service),
 ) -> CutlineEvaluateResponse:
-    return service.evaluate_algorithm(_load_cutline_request(payload))
+    request = _load_validated_cutline_request(payload)
+    try:
+        return service.evaluate_algorithm(request)
+    except SnapshotConversionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "SNAPSHOT_CONVERSION_FAILED",
+                "message": str(exc),
+                "issues": [],
+            },
+        ) from exc
 

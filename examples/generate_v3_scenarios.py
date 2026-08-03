@@ -219,12 +219,10 @@ def _backend_ingestion_payload() -> dict:
     first_runtime = payload["machine_realtime"][0]
     first_runtime["input_quantity"] = 12.0
     first_runtime["output_quantity"] = 10.5
-    first_runtime["completed_quantity"] = 100.0
     first_capacity = payload["machine_process_times"][0]
     first_capacity["proc_seconds"] = 90.0
     first_capacity["actual_capacity"] = 120.5
     for runtime in payload["machine_realtime"]:
-        runtime.pop("period_quantity")
         runtime.pop("out_time")
     return _without_line_compatibility(payload)
 

@@ -62,6 +62,13 @@ def test_complete_request_parses_datetimes_and_numeric_types():
     assert request.machine_process_times[0].proc_seconds == 90.0
 
 
+def test_backend_machine_realtime_only_exposes_sourced_quantity_fields():
+    fields = BackendMachineRealtime.model_fields
+
+    assert {"input_quantity", "output_quantity"} <= fields.keys()
+    assert {"completed_quantity", "period_quantity"}.isdisjoint(fields)
+
+
 def test_all_public_models_forbid_unknown_fields():
     assert all(
         model.model_config.get("extra") == "forbid" for model in PUBLIC_MODELS
@@ -258,7 +265,6 @@ def test_route_edge_fields_require_presence_and_accept_null():
     [
         ("machine_realtime", "input_quantity", -1),
         ("machine_realtime", "output_quantity", -0.1),
-        ("machine_realtime", "completed_quantity", -1),
         ("machine_process_times", "proc_seconds", 0),
         ("machine_process_times", "actual_capacity", 0),
         ("orders", "total_quantity", -1),
@@ -297,8 +303,11 @@ def test_proc_seconds_stays_in_seconds():
     assert request.machine_process_times[0].proc_seconds == 90.0
 
 
-@pytest.mark.parametrize("field", ["period_quantity", "out_time"])
-def test_transitional_machine_fields_are_not_in_the_formal_schema(field: str):
+@pytest.mark.parametrize(
+    "field",
+    ["completed_quantity", "period_quantity", "out_time"],
+)
+def test_removed_or_transitional_machine_fields_are_not_in_schema(field: str):
     payload = sample_payload()
     payload["machine_realtime"][0][field] = 0
 

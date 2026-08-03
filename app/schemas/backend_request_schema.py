@@ -35,7 +35,6 @@ class BackendMachineRealtime(_BackendRequestModel):
     tangent_time: datetime | None
     input_quantity: float = Field(ge=0)
     output_quantity: float = Field(ge=0)
-    completed_quantity: float = Field(ge=0)
 
 
 class BackendMachineMaster(_BackendRequestModel):

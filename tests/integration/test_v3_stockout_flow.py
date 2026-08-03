@@ -79,8 +79,6 @@ def test_v3_stockout_insufficient_candidate_reports_remaining_risk_only():
     candidate = runtime(payload, "EA004")
     candidate["input_quantity"] = 100.0
     candidate["output_quantity"] = 100.0
-    candidate["completed_quantity"] = 100.0
-    candidate["period_quantity"] = 100.0
 
     response = evaluate(payload)
 

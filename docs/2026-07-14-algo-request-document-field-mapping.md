@@ -60,16 +60,15 @@
 | 切线时间 | `tangent_time` |
 | 上料数量 | `input_quantity` |
 | 出料数量 | `output_quantity` |
-| 已完成数量 | `completed_quantity` |
 
 补充说明：
 
-- 当前实现额外保留 `period_quantity`，用于表达当前时段产量。
 - 当前实现额外保留 `out_time`，用于表达运行态出料时间。
 - `machine_realtime.machine_code` 使用 P166 集团编号，通过
   `machine_master.p166_jt_group` 映射为内部标准 `machine_code`；当前订单不由实时状态
   直接提供，而由最新有效 AGV 产品型号绑定解析。
-- 这两个字段属于设计明确保留的运行态补充，不是对文档字段的删除或替换。
+- `input_quantity` 和 `output_quantity` 是算法实际使用的最近 30 分钟数量，并按乘以 2 的方式折算小时速率；真实数据源统计窗口仍须由后端和甲方确认。
+- `out_time` 属于设计明确保留的运行态补充。
 
 ## `machine_master`
 

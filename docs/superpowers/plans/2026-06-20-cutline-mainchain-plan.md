@@ -1381,7 +1381,7 @@ class SilkScreenOrderResult(BaseModel):
     { "equipment_code": "sw01", "process_code": "SW", "status": "running", "product_code": "HG182T", "order_code": "O1", "input_rate_per_hour": 6000, "output_rate_per_hour": 6000 }
   ],
   "orders": [
-    { "order_code": "O1", "product_code": "HG182T", "total_quantity": 9000, "completed_quantity": 8000 }
+    { "order_code": "O1", "product_code": "HG182T", "total_quantity": 9000, "produced_quantity": 8000 }
   ]
 }
 ```
@@ -1474,7 +1474,7 @@ class SilkScreenHandler:
             capacity = safe_float(machine.output_rate_per_hour)
             if capacity <= 0:
                 continue
-            remaining = safe_float(order.total_quantity) - safe_float(order.completed_quantity)
+            remaining = safe_float(order.total_quantity) - safe_float(order.produced_quantity)
             if remaining <= 0:
                 continue
             completion_time = current + timedelta(minutes=remaining / capacity * 60)

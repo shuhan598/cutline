@@ -8,7 +8,7 @@
 The service exposes three endpoints:
 
 - `GET /health` returns a simple readiness response.
-- `POST /backend/validate` accepts the current backend JSON shape, applies the existing transitional cleanup for `machine_realtime.period_quantity` and `machine_realtime.out_time`, validates it as `BackendAlgorithmRequest`, then returns `BackendRequestValidationResult`.
+- `POST /backend/validate` accepts the current backend JSON shape, applies the existing transitional cleanup for `machine_realtime.out_time`, validates it as `BackendAlgorithmRequest`, then returns `BackendRequestValidationResult`.
 - `POST /cutline/evaluate` accepts `CutlineAlgorithmRequest`, calls `CutlineService.evaluate_algorithm`, and returns `CutlineAlgorithmResponse`.
 
 ## Boundaries

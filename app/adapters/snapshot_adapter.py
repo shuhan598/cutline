@@ -353,7 +353,6 @@ class SnapshotAdapter:
                     tangent_time=item.tangent_time,
                     input_quantity_30m=item.input_quantity,
                     output_quantity_30m=item.output_quantity,
-                    period_quantity_30m=item.period_quantity,
                     out_time=item.out_time,
                 )
             )

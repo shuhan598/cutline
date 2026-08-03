@@ -15,192 +15,168 @@
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 12.0,
-      "output_quantity": 10.5,
-      "completed_quantity": 100.0
+      "output_quantity": 10.5
     },
     {
       "machine_code": "P166-EA002",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA003",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA004",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA005",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA006",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA007",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA008",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA009",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA010",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA011",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA012",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA013",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA014",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA015",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA016",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA017",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA018",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA019",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA020",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA021",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA022",
       "status": "异常",
       "tangent_time": null,
       "input_quantity": 0.0,
-      "output_quantity": 0.0,
-      "completed_quantity": 0.0
+      "output_quantity": 0.0
     },
     {
       "machine_code": "P166-EA023",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     },
     {
       "machine_code": "P166-EA024",
       "status": "运行",
       "tangent_time": null,
       "input_quantity": 100.0,
-      "output_quantity": 100.0,
-      "completed_quantity": 100.0
+      "output_quantity": 100.0
     }
   ],
   "machine_master": [
