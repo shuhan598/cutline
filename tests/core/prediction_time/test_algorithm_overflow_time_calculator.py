@@ -3,6 +3,12 @@ from datetime import datetime
 import pytest
 
 import app.core.prediction_time.overflow_time.overflow_time_calculator as overflow_module
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferAggregationBatch,
+    MainBufferGroup,
+    PhysicalBufferKey,
+)
 from app.schemas.common_schema import (
     AlgorithmBufferMaster,
     AlgorithmBufferProcessRelation,
@@ -107,6 +113,75 @@ def _calculate(
         snapshot,
         list(rates),
     )
+
+
+def _batch_group(*, capacity: float | None = 300) -> MainBufferGroup:
+    physical_key = PhysicalBufferKey("S1", ("ZR", "PK"))
+    group_key = GroupKey(physical_key, "MAIN-01", "ORD-001")
+    capacity_available = capacity is not None
+    group = MainBufferGroup(
+        group_key=group_key,
+        main_id="MAIN-01",
+        workshop_code="S1",
+        ordered_service_process_codes=("ZR", "PK"),
+        physical_buffer_key=physical_key,
+        order_code="ORD-001",
+        product_code="PROD-001",
+        buffer_codes=("BUF-01", "BUF-02"),
+        total_inventory=100,
+        total_capacity=capacity,
+        remaining_capacity=(None if capacity is None else capacity - 100),
+        representative_buffer_code="BUF-01",
+        stockout_eligible=True,
+        overflow_eligible=capacity_available,
+        stockout_warning_eligible=True,
+        overflow_warning_eligible=capacity_available,
+        auto_receive_eligible=capacity_available,
+        auto_donate_eligible=True,
+    )
+    return group
+
+
+def _snapshot_with_batch(group: MainBufferGroup) -> AlgorithmSnapshot:
+    snapshot = _snapshot()
+    snapshot.main_buffer_batch = MainBufferAggregationBatch(
+        groups=(group,),
+        groups_by_group_key={group.group_key: group},
+        group_keys_by_main_id={group.main_id: (group.group_key,)},
+        group_key_by_buffer_code={
+            code: group.group_key for code in group.buffer_codes
+        },
+        group_key_by_representative_buffer_code={
+            group.representative_buffer_code: group.group_key
+        },
+        group_keys_by_physical_buffer_key={
+            group.physical_buffer_key: (group.group_key,)
+        },
+    )
+    return snapshot
+
+
+def test_shared_batch_is_authoritative_for_inventory_and_capacity():
+    group = _batch_group(capacity=300)
+    rate = _rate(current_quantity=999, net_consumption_rate=-100).model_copy(
+        update={"group_key": group.group_key}
+    )
+
+    result = _calculate(_snapshot_with_batch(group), rate)[0]
+
+    assert result.total_inventory == 100
+    assert result.max_capacity == 300
+    assert result.remaining_capacity == 200
+    assert result.overflow_minutes == 120
+
+
+def test_capacity_unavailable_batch_group_has_no_overflow_result():
+    group = _batch_group(capacity=None)
+    rate = _rate(net_consumption_rate=-100).model_copy(
+        update={"group_key": group.group_key}
+    )
+
+    assert _calculate(_snapshot_with_batch(group), rate) == []
 
 
 def _assert_calculation_error(

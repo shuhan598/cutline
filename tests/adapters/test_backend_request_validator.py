@@ -109,7 +109,6 @@ def test_required_empty_dataset_is_reported(dataset: str):
     ("dataset", "field"),
     [
         ("workshops", "workshop_name"),
-        ("buffer_realtime", "main_id"),
     ],
 )
 def test_required_nullable_business_fields_report_null(dataset: str, field: str):
@@ -133,7 +132,6 @@ def test_required_nullable_business_fields_report_null(dataset: str, field: str)
         ("orders", "workshop_code", "workshops"),
         ("machine_process_times", "machine_code", "machine_master"),
         ("machine_process_times", "product_code", "products"),
-        ("buffer_realtime", "buffer_code", "buffer_master"),
     ],
 )
 def test_missing_references_are_reported(
@@ -164,6 +162,30 @@ def test_process_route_sequence_is_unique_within_workshop_and_loop():
         issue.code == "duplicate_sequence"
         and issue.dataset == "process_routes"
         and issue.field == "sequence"
+        for issue in result.issues
+    )
+
+
+def test_buffer_main_id_null_is_deferred_to_main_buffer_aggregator():
+    payload = sample_payload()
+    payload["buffer_realtime"][0]["main_id"] = None
+
+    result = validate_payload(payload)
+
+    assert not any(
+        issue.dataset == "buffer_realtime" and issue.field == "main_id"
+        for issue in result.issues
+    )
+
+
+def test_buffer_static_reference_is_deferred_to_main_buffer_aggregator():
+    payload = sample_payload()
+    payload["buffer_realtime"][0]["buffer_code"] = "UNKNOWN-BUFFER"
+
+    result = validate_payload(payload)
+
+    assert not any(
+        issue.dataset == "buffer_realtime" and issue.field == "buffer_code"
         for issue in result.issues
     )
 
@@ -379,14 +401,12 @@ def test_real_api_sample_loads_but_reports_incomplete_inputs():
     assert result.valid is False
     assert issue_counts(result) == {
         "empty_dataset": 6,
-        "null_field": 2,
-        "missing_reference": 441,
+        "null_field": 1,
+        "missing_reference": 439,
         "missing_agv_binding": 138,
     }
-    assert any(
+    assert not any(
         issue.dataset == "buffer_realtime"
-        and issue.field == "bound_source_name"
-        and issue.code == "missing_reference"
         for issue in result.issues
     )
 

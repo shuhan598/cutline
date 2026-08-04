@@ -22,6 +22,7 @@ SNAPSHOT_FIELDS = (
     "buffer_masters",
     "buffer_process_relations",
     "buffer_order_inventories",
+    "main_buffer_batch",
     "agv_relations",
     "pending_cutline_plans",
     "agv_binding_history",
@@ -31,7 +32,11 @@ SNAPSHOT_FIELDS = (
     "config",
 )
 
-CORE_LIST_FIELDS = SNAPSHOT_FIELDS[1:14]
+CORE_LIST_FIELDS = tuple(
+    field
+    for field in SNAPSHOT_FIELDS[1:15]
+    if field != "main_buffer_batch"
+)
 REQUIRED_CORE_LIST_FIELDS = tuple(
     field
     for field in CORE_LIST_FIELDS
@@ -57,6 +62,7 @@ SNAPSHOT_DESCRIPTIONS = {
     "buffer_masters": "物理小Buffer基础数据列表，包括容量、安全库存、服务工序和所属循环",
     "buffer_process_relations": "物理Buffer与所属车间、上下游工序区间之间的关系列表",
     "buffer_order_inventories": "当前快照时刻，各订单在各物理Buffer中的实时库存明细列表",
+    "main_buffer_batch": "本轮算法共享且只构建一次的内部 main Buffer 聚合批次",
     "agv_relations": "算法使用的AGV调度关系列表",
     "pending_cutline_plans": "后端持久化并回传的待确认切线方案列表",
     "agv_binding_history": "待确认切线窗口内的AGV绑定历史列表",

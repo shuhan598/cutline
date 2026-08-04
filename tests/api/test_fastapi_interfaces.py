@@ -17,7 +17,10 @@ from app.schemas.response_schema import (
     CutlineEvaluateResponse,
     PersistenceStateResponse,
 )
-from tests.fixtures.v3_full_route_factory import build_stockout_auto_payload
+from tests.fixtures.v3_full_route_factory import (
+    SUPPORT_BUFFER_CODE,
+    build_stockout_auto_payload,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -625,6 +628,97 @@ def test_cutline_evaluate_maps_snapshot_conversion_error_to_422():
         "message": "machine_lines were provided but lines are empty",
         "issues": [],
     }
+
+
+def test_cutline_evaluate_isolates_duplicate_realtime_buffer_as_200_error():
+    payload = build_stockout_auto_payload()
+    duplicate = deepcopy(payload["buffer_realtime"][0])
+    payload["buffer_realtime"].append(duplicate)
+
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["stockout_warnings"]
+    assert all(
+        warning["buffer_code"] != duplicate["buffer_code"]
+        for warning in body["stockout_warnings"]
+    )
+    matching_errors = [
+        error
+        for error in body["errors"]
+        if error["reason"] == "duplicate_buffer_id"
+        and error["warning_key"] == duplicate["main_id"]
+    ]
+    assert len(matching_errors) == 1
+    assert matching_errors[0]["stage"] == "main_buffer_aggregation"
+    assert matching_errors[0]["warning_key"] == duplicate["main_id"]
+
+
+def test_cutline_evaluate_isolates_unresolved_static_buffer_as_200_error():
+    payload = build_stockout_auto_payload()
+    affected = payload["buffer_realtime"][0]
+    affected["buffer_code"] = "UNKNOWN-BUFFER"
+
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 200
+    errors = response.json()["errors"]
+    assert any(
+        error["stage"] == "main_buffer_aggregation"
+        and error["reason"] == "static_buffer_mapping_unresolved"
+        and error["warning_key"] == affected["main_id"]
+        for error in errors
+    )
+
+
+def test_cutline_evaluate_isolates_ambiguous_static_buffer_as_200_error():
+    payload = build_stockout_auto_payload()
+    duplicate_master = deepcopy(
+        next(
+            item
+            for item in payload["buffer_master"]
+            if item["buffer_code"] == SUPPORT_BUFFER_CODE
+        )
+    )
+    payload["buffer_master"].append(duplicate_master)
+    affected = next(
+        item
+        for item in payload["buffer_realtime"]
+        if item["buffer_code"] == SUPPORT_BUFFER_CODE
+    )
+
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["stockout_warnings"]
+    assert body["cutline_decisions"]
+    assert any(
+        error["stage"] == "main_buffer_aggregation"
+        and error["reason"] == "static_buffer_mapping_unresolved"
+        and error["warning_key"] == affected["main_id"]
+        for error in body["errors"]
+    )
+
+
+def test_cutline_evaluate_returns_200_when_all_main_groups_are_invalid():
+    payload = build_stockout_auto_payload()
+    for index, realtime in enumerate(payload["buffer_realtime"]):
+        realtime["buffer_code"] = f"UNKNOWN-{index}"
+
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["stockout_warnings"] == []
+    assert body["overflow_warnings"] == []
+    assert body["cutline_decisions"] == []
+    assert body["errors"]
+    assert all(
+        error["stage"] == "main_buffer_aggregation"
+        for error in body["errors"]
+    )
 
 
 def test_cutline_evaluate_keeps_unknown_runtime_error_as_500():

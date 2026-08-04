@@ -241,12 +241,14 @@ def test_selected_machine_requires_exactly_one_capacity_kind(
         AlgorithmSelectedMachineEvaluation(**data)
 
 
-def test_stockout_selection_rejects_inconsistent_resolved_state():
+def test_stockout_selection_allows_resolved_state_with_remaining_gap():
     data = _stockout_selection(resolved=True).model_dump()
     data["remaining_capacity_gap"] = 1
 
-    with pytest.raises(ValidationError, match="remaining capacity gap"):
-        AlgorithmStockoutSelectionResult(**data)
+    selection = AlgorithmStockoutSelectionResult(**data)
+
+    assert selection.risk_resolved is True
+    assert selection.remaining_capacity_gap == 1
 
 
 def test_resolved_selection_rejects_failure_reason():

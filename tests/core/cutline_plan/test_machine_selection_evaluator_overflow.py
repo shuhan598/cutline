@@ -1,6 +1,15 @@
 import importlib
+from dataclasses import replace
 
 import pytest
+
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferAggregationBatch,
+    MainBufferGroup,
+    PhysicalBufferKey,
+)
+from app.core.cutline_plan.plan_builder import CutlinePlanBuilder
 
 from tests.core.cutline_plan.helpers import (
     algorithm_snapshot,
@@ -37,6 +46,169 @@ def _select(
         candidate_result=candidates,
         interval_results=intervals or default_overflow_intervals(),
         overflow_results=overflows or default_overflow_states(),
+    )
+
+
+def _batch_group(
+    order_code: str,
+    buffer_code: str,
+    *,
+    physical_key: PhysicalBufferKey,
+    main_id: str | None = None,
+    total_inventory: float = 1000,
+    total_capacity: float = 100000,
+) -> MainBufferGroup:
+    main_id = main_id or f"MAIN-{buffer_code}"
+    key = GroupKey(physical_key, main_id, order_code)
+    return MainBufferGroup(
+        group_key=key,
+        main_id=main_id,
+        workshop_code=physical_key.workshop_code,
+        ordered_service_process_codes=(
+            physical_key.ordered_service_process_codes
+        ),
+        physical_buffer_key=physical_key,
+        order_code=order_code,
+        product_code=f"PROD-{order_code.removeprefix('ORD-')}",
+        buffer_codes=(buffer_code,),
+        total_inventory=total_inventory,
+        total_capacity=total_capacity,
+        remaining_capacity=total_capacity - total_inventory,
+        representative_buffer_code=buffer_code,
+        stockout_eligible=True,
+        overflow_eligible=True,
+        stockout_warning_eligible=True,
+        overflow_warning_eligible=True,
+        auto_receive_eligible=True,
+        auto_donate_eligible=True,
+    )
+
+
+def _batch_context(
+    *,
+    source_rate: float = 10000,
+    source_inventory: float = 1000,
+    source_capacity: float = 1100,
+    targets: tuple[tuple[str, str, float, float, float], ...] = (
+        ("ORD-TARGET", "BUF-TARGET", -15000, 1000, 100000),
+    ),
+):
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    source = _batch_group(
+        "ORD-SOURCE",
+        "BUF-OVERFLOW",
+        physical_key=physical_key,
+        main_id="MAIN-BUF-OVERFLOW",
+        total_inventory=source_inventory,
+        total_capacity=source_capacity,
+    )
+    target_groups = {
+        order_code: _batch_group(
+            order_code,
+            buffer_code,
+            physical_key=physical_key,
+            total_inventory=inventory,
+            total_capacity=capacity,
+        )
+        for order_code, buffer_code, _, inventory, capacity in targets
+    }
+    groups = (source, *target_groups.values())
+    batch = MainBufferAggregationBatch(
+        groups=groups,
+        groups_by_group_key={group.group_key: group for group in groups},
+        group_keys_by_main_id={
+            group.main_id: (group.group_key,) for group in groups
+        },
+        group_key_by_buffer_code={
+            code: group.group_key
+            for group in groups
+            for code in group.buffer_codes
+        },
+        group_key_by_representative_buffer_code={
+            group.representative_buffer_code: group.group_key
+            for group in groups
+        },
+        group_keys_by_physical_buffer_key={
+            physical_key: tuple(group.group_key for group in groups)
+        },
+    )
+    snapshot_value = algorithm_snapshot()
+    snapshot_value.main_buffer_batch = batch
+    warning = overflow_warning(
+        buffer_growth_rate=source_rate,
+        total_inventory=source_inventory,
+        max_capacity=source_capacity,
+    ).model_copy(
+        update={
+            "group_key": source.group_key,
+            "order_growth_details": [],
+        }
+    )
+    intervals = [
+        interval(
+            buffer_code=source.representative_buffer_code,
+            order_code=source.order_code,
+            downstream_process_code="P02",
+            current_quantity=source.total_inventory,
+            net_consumption_rate=-source_rate,
+        ).model_copy(
+            update={
+                "main_id": source.main_id,
+                "inventory_change_rate": source_rate,
+                "group_key": source.group_key,
+            }
+        )
+    ]
+    for order_code, buffer_code, rate, inventory, _ in targets:
+        group = target_groups[order_code]
+        intervals.append(
+            interval(
+                buffer_code=buffer_code,
+                order_code=order_code,
+                downstream_process_code="P02",
+                current_quantity=inventory,
+                net_consumption_rate=-rate,
+            ).model_copy(
+                update={
+                    "main_id": group.main_id,
+                    "inventory_change_rate": rate,
+                    "group_key": group.group_key,
+                }
+            )
+        )
+    return snapshot_value, warning, intervals, source, target_groups
+
+
+def _batch_candidates(source, target_groups, *candidates):
+    keyed_candidates = []
+    for candidate in candidates:
+        keyed_options = []
+        for option in candidate.target_options:
+            target_group = target_groups[option.target_order_code]
+            keyed_options.append(
+                option.model_copy(
+                    update={
+                        "target_group_key": target_group.group_key,
+                        "target_product_code": target_group.product_code,
+                        "target_buffer_code": (
+                            target_group.representative_buffer_code
+                        ),
+                        "target_workshop_code": target_group.workshop_code,
+                        "target_upstream_process_code": "P01",
+                        "target_downstream_process_code": "P02",
+                    }
+                )
+            )
+        keyed_candidates.append(
+            candidate.model_copy(
+                update={
+                    "source_group_key": source.group_key,
+                    "target_options": keyed_options,
+                }
+            )
+        )
+    return overflow_candidates(*keyed_candidates).model_copy(
+        update={"source_group_key": source.group_key}
     )
 
 
@@ -474,3 +646,440 @@ def test_overflow_selection_does_not_mutate_inputs():
     assert candidates.model_dump() == before[1]
     assert [item.model_dump() for item in intervals] == before[2]
     assert [item.model_dump() for item in overflows] == before[3]
+
+
+def test_batch_selection_accumulates_two_partial_improvements():
+    snapshot_value, warning, intervals, source, targets = _batch_context()
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate(
+            "M-01",
+            3000,
+            overflow_target(downstream_process_code="P02"),
+        ),
+        overflow_candidate(
+            "M-02",
+            7000,
+            overflow_target(downstream_process_code="P02"),
+        ),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert [item.machine_code for item in result.selected_machines] == [
+        "M-01",
+        "M-02",
+    ]
+    assert result.total_reduced_capacity == 10000
+    assert result.remaining_growth_rate == 0
+    assert result.risk_resolved is True
+
+
+def test_batch_rejection_does_not_pollute_source_or_other_target_state():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        targets=(
+            ("ORD-BAD", "BUF-BAD", -100, 900, 1000),
+            ("ORD-TARGET", "BUF-TARGET", -15000, 1000, 100000),
+        )
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate(
+            "M-01",
+            1000,
+            overflow_target(
+                "ORD-BAD",
+                buffer_code="BUF-BAD",
+                downstream_process_code="P02",
+            ),
+        ),
+        overflow_candidate(
+            "M-02",
+            10000,
+            overflow_target(downstream_process_code="P02"),
+        ),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert [item.machine_code for item in result.selected_machines] == ["M-02"]
+    assert result.selected_machines[0].source_net_rate_before == -10000
+    assert result.remaining_growth_rate == 0
+    assert result.rejected_machines[0].reason == "target_buffer_overflow_risk"
+
+
+def test_batch_targets_keep_independent_virtual_rates():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=8000,
+        targets=(
+            ("ORD-TARGET", "BUF-TARGET", -5000, 1000, 100000),
+            ("ORD-SECOND", "BUF-SECOND", -5000, 1000, 100000),
+        ),
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate(
+            "M-01",
+            4000,
+            overflow_target(downstream_process_code="P02"),
+        ),
+        overflow_candidate(
+            "M-02",
+            4000,
+            overflow_target(
+                "ORD-SECOND",
+                buffer_code="BUF-SECOND",
+                downstream_process_code="P02",
+            ),
+        ),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert [item.target_order_code for item in result.selected_machines] == [
+        "ORD-TARGET",
+        "ORD-SECOND",
+    ]
+    assert result.selected_machines[0].target_net_rate_before == 5000
+    assert result.selected_machines[1].target_net_rate_before == 5000
+
+
+def test_batch_machine_code_is_unique_across_target_groups():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        targets=(
+            ("ORD-TARGET", "BUF-TARGET", -10000, 1000, 100000),
+            ("ORD-SECOND", "BUF-SECOND", -10000, 1000, 100000),
+        )
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 3000),
+        overflow_candidate(
+            "M-01",
+            3000,
+            overflow_target(
+                "ORD-SECOND",
+                buffer_code="BUF-SECOND",
+                downstream_process_code="P02",
+            ),
+        ),
+        overflow_candidate("M-02", 7000),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert [item.machine_code for item in result.selected_machines] == [
+        "M-01",
+        "M-02",
+    ]
+    assert any(
+        item.reason == "duplicate_machine_selection"
+        for item in result.rejected_machines
+    )
+
+
+def test_batch_source_stockout_protection_rejects_without_committing():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=1000,
+        source_inventory=100,
+        source_capacity=110,
+        targets=(("ORD-TARGET", "BUF-TARGET", -5000, 1000, 100000),),
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 2000),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert result.selected_machines == []
+    assert result.remaining_growth_rate == 1000
+    assert result.rejected_machines[0].reason == "source_order_stockout_risk"
+
+
+def test_batch_target_overflow_protection_rejects_without_committing():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=1000,
+        source_inventory=1000,
+        source_capacity=1010,
+        targets=(("ORD-TARGET", "BUF-TARGET", -100, 900, 1000),),
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 1000),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert result.selected_machines == []
+    assert result.remaining_growth_rate == 1000
+    assert result.rejected_machines[0].reason == "target_buffer_overflow_risk"
+
+
+def test_batch_virtual_state_is_new_for_each_warning_evaluation():
+    snapshot_value, warning, intervals, source, targets = _batch_context()
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 10000),
+    )
+
+    first = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+    second = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert [item.machine_code for item in first.selected_machines] == ["M-01"]
+    assert [item.machine_code for item in second.selected_machines] == ["M-01"]
+
+
+def test_batch_source_depletion_at_exact_lead_boundary_is_allowed():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=1000,
+        source_inventory=500,
+        source_capacity=510,
+        targets=(("ORD-TARGET", "BUF-TARGET", -3000, 1000, 100000),),
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 2000),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert [item.machine_code for item in result.selected_machines] == ["M-01"]
+    assert result.selected_machines[0].source_depletion_minutes_after == 30
+
+
+def test_batch_target_overflow_at_exact_lead_boundary_is_allowed():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=1000,
+        source_inventory=1000,
+        source_capacity=1010,
+        targets=(("ORD-TARGET", "BUF-TARGET", -100, 450, 1000),),
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 1200),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert [item.machine_code for item in result.selected_machines] == ["M-01"]
+    assert result.selected_machines[0].target_overflow_minutes_after == 30
+
+
+def test_batch_candidates_exhausted_builds_manual_decision():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=10000,
+        source_inventory=1000,
+        source_capacity=1100,
+        targets=(("ORD-TARGET", "BUF-TARGET", -10000, 1000, 100000),),
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 1000),
+    )
+    selection = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    decision = CutlinePlanBuilder().build_overflow_decision(
+        snapshot_value,
+        warning,
+        selection,
+    )
+
+    assert selection.risk_resolved is False
+    assert selection.failure_reason == "insufficient_reduced_capacity"
+    assert decision.plan is None
+    assert decision.manual_intervention is not None
+
+
+def test_batch_evaluator_rejects_ineligible_source_group():
+    snapshot_value, warning, intervals, source, targets = _batch_context()
+    unavailable_source = replace(source, auto_donate_eligible=False)
+    batch = snapshot_value.main_buffer_batch
+    snapshot_value.main_buffer_batch = replace(
+        batch,
+        groups=(unavailable_source, *batch.groups[1:]),
+        groups_by_group_key={
+            **batch.groups_by_group_key,
+            source.group_key: unavailable_source,
+        },
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 10000),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert result.selected_machines == []
+    assert result.risk_resolved is False
+    assert result.rejected_machines[0].reason == "source_group_not_found"
+
+
+def test_batch_evaluator_requires_finite_source_rate():
+    snapshot_value, warning, intervals, source, targets = _batch_context()
+    intervals[0] = intervals[0].model_copy(
+        update={"inventory_change_rate": float("nan")}
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 10000),
+    )
+    _, module = _evaluator()
+
+    with pytest.raises(
+        module.MachineSelectionEvaluationError,
+        match="source group rate.*finite",
+    ):
+        _select(
+            candidates,
+            snapshot_value=snapshot_value,
+            warning=warning,
+            intervals=intervals,
+            overflows=[],
+        )
+
+
+def test_batch_warning_buffer_fallback_cannot_be_redirected_by_candidate_key():
+    snapshot_value, warning, intervals, source, targets = _batch_context()
+    target = targets["ORD-TARGET"]
+    warning = warning.model_copy(update={"group_key": None})
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 10000),
+    ).model_copy(
+        update={
+            "source_group_key": target.group_key,
+            "source_order_code": target.order_code,
+        }
+    )
+    _, module = _evaluator()
+
+    with pytest.raises(
+        module.MachineSelectionEvaluationError,
+        match="candidate source group does not match warning",
+    ):
+        _select(
+            candidates,
+            snapshot_value=snapshot_value,
+            warning=warning,
+            intervals=intervals,
+            overflows=[],
+        )
+
+
+def test_batch_target_key_must_match_option_public_identity():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        targets=(
+            ("ORD-TARGET", "BUF-TARGET", -10000, 1000, 100000),
+            ("ORD-SECOND", "BUF-SECOND", -10000, 1000, 100000),
+        )
+    )
+    candidate = overflow_candidate("M-01", 10000)
+    mismatched_option = candidate.target_options[0].model_copy(
+        update={"target_group_key": targets["ORD-SECOND"].group_key}
+    )
+    candidate = candidate.model_copy(
+        update={
+            "source_group_key": source.group_key,
+            "target_options": [mismatched_option],
+        }
+    )
+    candidates = overflow_candidates(candidate).model_copy(
+        update={"source_group_key": source.group_key}
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    assert result.selected_machines == []
+    assert result.rejected_machines[0].reason == "target_group_not_found"

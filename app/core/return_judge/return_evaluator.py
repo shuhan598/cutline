@@ -30,6 +30,7 @@ class ReturnEvaluator:
             if event.status != "active":
                 continue
             target_interval = self._algorithm_target_interval(
+                snapshot,
                 event,
                 interval_results,
             )
@@ -44,9 +45,36 @@ class ReturnEvaluator:
 
     def _algorithm_target_interval(
         self,
+        snapshot: AlgorithmSnapshot,
         event: AlgorithmActiveCutlineEvent,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmIntervalNetRateResult:
+        batch = snapshot.main_buffer_batch
+        if batch.groups_by_group_key:
+            group_key = batch.group_key_by_buffer_code.get(
+                event.target_buffer_code
+            )
+            group = batch.groups_by_group_key.get(group_key)
+            if group is None:
+                raise ReturnEvaluationError(
+                    "target_interval_not_found",
+                    event.event_id,
+                )
+            matches = [
+                interval
+                for interval in interval_results
+                if interval.group_key == group.group_key
+                and interval.order_code == event.target_order_code
+                and interval.wafer_size == event.target_wafer_size
+                and interval.wafer_spec == event.target_wafer_spec
+                and interval.workshop_code == event.workshop_code
+                and interval.upstream_process_code
+                == event.upstream_process_code
+                and interval.downstream_process_code
+                == event.downstream_process_code
+            ]
+            return self._unique_target_interval(event, matches)
+
         event_key = (
             event.workshop_code,
             event.target_buffer_code,
@@ -70,6 +98,13 @@ class ReturnEvaluator:
             )
             == event_key
         ]
+        return self._unique_target_interval(event, matches)
+
+    @staticmethod
+    def _unique_target_interval(
+        event: AlgorithmActiveCutlineEvent,
+        matches: list[AlgorithmIntervalNetRateResult],
+    ) -> AlgorithmIntervalNetRateResult:
         if not matches:
             raise ReturnEvaluationError(
                 "target_interval_not_found",

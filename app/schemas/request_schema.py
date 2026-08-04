@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.buffer_aggregation.models import MainBufferAggregationBatch
+
 from app.schemas.common_schema import (
     AlgorithmActiveCutlineEvent,
     AlgorithmAgvRelation,
@@ -488,6 +490,11 @@ class AlgorithmSnapshot(BaseModel):
     buffer_order_inventories: list[AlgorithmBufferOrderInventory] = Field(
         ...,
         description="当前快照时刻，各订单在各物理Buffer中的实时库存明细列表",
+    )
+    main_buffer_batch: MainBufferAggregationBatch = Field(
+        default_factory=MainBufferAggregationBatch.empty,
+        exclude=True,
+        description="本轮算法共享且只构建一次的内部 main Buffer 聚合批次",
     )
 
     agv_relations: list[AlgorithmAgvRelation] = Field(

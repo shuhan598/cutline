@@ -2,6 +2,10 @@ from datetime import datetime
 
 import pytest
 
+from app.core.buffer_aggregation.models import (
+    MainBufferAggregationBatch,
+    MainBufferAggregationIssue,
+)
 from app.core.mixing_trace.mixing_trace_calculator import MixingTraceCalculator
 from app.core.net_rate.net_rate_calculator import NetRateCalculationError
 from app.core.return_judge.return_evaluator import ReturnEvaluator
@@ -293,6 +297,37 @@ def test_evaluate_algorithm_returns_upper_flow_result_with_snapshot_time():
 
     assert isinstance(result, AlgorithmEvaluateResult)
     assert result.calculation_time == snapshot.current_time
+
+
+def test_evaluate_algorithm_maps_aggregation_issues_once():
+    issue = MainBufferAggregationIssue(
+        code="capacity_unavailable",
+        main_id="MAIN-BUF-STOCK",
+        representative_buffer_code="BUF-STOCK",
+        message="Capacity unavailable for BUF-STOCK",
+        affected_capabilities=("auto_receive_eligible",),
+    )
+    snapshot = _snapshot().model_copy(
+        update={
+            "main_buffer_batch": MainBufferAggregationBatch(
+                issues=(issue, issue),
+            )
+        }
+    )
+
+    result = CutlinePipeline().evaluate_algorithm(snapshot)
+
+    aggregation_errors = [
+        error
+        for error in result.errors
+        if error.stage == "main_buffer_aggregation"
+    ]
+    assert len(aggregation_errors) == 1
+    error = aggregation_errors[0]
+    assert error.warning_type is None
+    assert error.warning_key == "MAIN-BUF-STOCK"
+    assert error.reason == "capacity_unavailable"
+    assert error.message == "Capacity unavailable for BUF-STOCK"
 
 
 def test_evaluate_algorithm_calculates_interval_rates_and_depletion():

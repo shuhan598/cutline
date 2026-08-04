@@ -79,7 +79,7 @@
         "source_order_code": "ORD-S2-002",
         "target_order_code": "ORD-S2-001",
         "workshop_code": "S2",
-        "source_buffer_code": "310110302",
+        "source_buffer_code": "310112802",
         "target_buffer_code": "310110302",
         "upstream_process_code": "制绒",
         "downstream_process_code": "碱抛",

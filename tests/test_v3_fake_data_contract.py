@@ -8,6 +8,7 @@ from tests.fixtures.v3_full_route_factory import (
     BUFFER_INTERVALS,
     MULTILAYER_BUFFER_CODES,
     PROCESS_CODES,
+    SUPPORT_BUFFER_CODE,
     TARGET_BUFFER_CODE,
     V3_SCENARIO_BUILDERS,
     _set_agv_binding,
@@ -105,6 +106,13 @@ def test_all_scenarios_use_adjacent_numeric_buffers(scenario_payload):
                 for buffer_code in MULTILAYER_BUFFER_CODES
             }
         )
+    if any(
+        item["buffer_code"] == SUPPORT_BUFFER_CODE
+        for item in payload["buffer_master"]
+    ):
+        expected_by_code[SUPPORT_BUFFER_CODE] = expected_by_code[
+            TARGET_BUFFER_CODE
+        ]
 
     assert len(payload["buffer_master"]) == len(expected_by_code)
     assert set(expected_by_code) == {

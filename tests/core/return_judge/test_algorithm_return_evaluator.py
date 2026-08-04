@@ -3,6 +3,12 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.core import return_judge
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferAggregationBatch,
+    MainBufferGroup,
+    PhysicalBufferKey,
+)
 from app.core.return_judge.active_cutline_event_tracker import (
     ActiveCutlineEventTracker,
 )
@@ -16,14 +22,75 @@ from tests.core.return_judge.helpers import (
 )
 
 
-def _evaluate(*, event=None, intervals=None, current_time=CURRENT_TIME):
+def _evaluate(
+    *,
+    event=None,
+    intervals=None,
+    current_time=CURRENT_TIME,
+    main_buffer_batch=None,
+):
     events = [] if event is None else [event]
+    snapshot = algorithm_snapshot(
+        current_time=current_time,
+        active_cutline_events=events,
+    )
+    if main_buffer_batch is not None:
+        snapshot = snapshot.model_copy(
+            update={"main_buffer_batch": main_buffer_batch}
+        )
     return ReturnEvaluator().evaluate_algorithm(
-        snapshot=algorithm_snapshot(
-            current_time=current_time,
-            active_cutline_events=events,
-        ),
+        snapshot=snapshot,
         interval_results=list(intervals or []),
+    )
+
+
+def _target_batch(
+    *,
+    include_old_layer: bool = True,
+) -> tuple[MainBufferAggregationBatch, GroupKey]:
+    physical_key = PhysicalBufferKey("WS-01", ("P01", "P02"))
+    group_key = GroupKey(physical_key, "MAIN-TARGET", "ORD-TARGET")
+    buffer_codes = (
+        ("BUF-TARGET", "BUF-TARGET-NEW")
+        if include_old_layer
+        else ("BUF-TARGET-NEW",)
+    )
+    group = MainBufferGroup(
+        group_key=group_key,
+        main_id=group_key.main_id,
+        workshop_code=physical_key.workshop_code,
+        ordered_service_process_codes=("P01", "P02"),
+        physical_buffer_key=physical_key,
+        order_code=group_key.order_code,
+        product_code="PROD-TARGET",
+        buffer_codes=buffer_codes,
+        total_inventory=5000,
+        total_capacity=10000,
+        remaining_capacity=5000,
+        representative_buffer_code="BUF-TARGET-NEW",
+        stockout_eligible=True,
+        overflow_eligible=True,
+        stockout_warning_eligible=True,
+        overflow_warning_eligible=True,
+        auto_receive_eligible=True,
+        auto_donate_eligible=True,
+    )
+    return (
+        MainBufferAggregationBatch(
+            groups=(group,),
+            groups_by_group_key={group_key: group},
+            group_keys_by_main_id={group_key.main_id: (group_key,)},
+            group_key_by_buffer_code={
+                code: group_key for code in buffer_codes
+            },
+            group_key_by_representative_buffer_code={
+                "BUF-TARGET-NEW": group_key
+            },
+            group_keys_by_physical_buffer_key={
+                physical_key: (group_key,)
+            },
+        ),
+        group_key,
     )
 
 
@@ -65,6 +132,46 @@ def test_active_event_uses_full_seven_field_interval_key():
     assert result.target_buffer_code == "BUF-TARGET"
     assert result.net_consumption_rate == -4800
     assert result.reason == "stability_window_not_met"
+
+
+def test_old_representative_layer_resolves_current_group_interval():
+    batch, group_key = _target_batch()
+    current_interval = interval(
+        buffer_code="BUF-TARGET-NEW",
+        net_consumption_rate=-4800,
+    ).model_copy(
+        update={
+            "main_id": group_key.main_id,
+            "buffer_codes": ["BUF-TARGET", "BUF-TARGET-NEW"],
+            "group_key": group_key,
+        }
+    )
+
+    result = _evaluate(
+        event=active_event(target_buffer_code="BUF-TARGET"),
+        intervals=[current_interval],
+        main_buffer_batch=batch,
+    )[0]
+
+    assert result.target_buffer_code == "BUF-TARGET"
+    assert result.net_consumption_rate == -4800
+
+
+def test_unmapped_buffer_code_does_not_use_prefix_guessing():
+    batch, group_key = _target_batch(include_old_layer=False)
+    current_interval = interval(
+        buffer_code="BUF-TARGET-NEW",
+    ).model_copy(update={"group_key": group_key})
+
+    with pytest.raises(Exception) as exc_info:
+        _evaluate(
+            event=active_event(target_buffer_code="BUF-TARGET"),
+            intervals=[current_interval],
+            main_buffer_batch=batch,
+        )
+
+    assert exc_info.value.__class__.__name__ == "ReturnEvaluationError"
+    assert exc_info.value.reason == "target_interval_not_found"
 
 
 def test_missing_target_interval_raises_explicit_error():

@@ -15,10 +15,32 @@ from app.schemas.result_schema import AlgorithmStockoutWarningResult
 from app.service.cutline_pipeline import CutlinePipeline
 from tests.fixtures.v3_full_route_factory import (
     TARGET_BUFFER_CODE,
+    _upsert_parallel_inventory,
     build_base_request_payload,
     build_stockout_manual_payload,
 )
 from tests.integration.helpers import evaluate, runtime, snapshot
+
+
+R_BUFFER_CODE = "310112803"
+P_BUFFER_CODE = "310112804"
+
+
+def _add_r_p_buffer_groups(payload):
+    _upsert_parallel_inventory(
+        payload,
+        template_buffer_code=TARGET_BUFFER_CODE,
+        buffer_code=R_BUFFER_CODE,
+        product_name="210R华晟产品",
+        quantity=100,
+    )
+    _upsert_parallel_inventory(
+        payload,
+        template_buffer_code=TARGET_BUFFER_CODE,
+        buffer_code=P_BUFFER_CODE,
+        product_name="210P晶澳产品",
+        quantity=100,
+    )
 
 
 def test_v3_backend_running_and_abnormal_statuses_map_and_filter_consistently():
@@ -75,14 +97,12 @@ def test_v3_missing_agv_relation_cannot_determine_order_wafer_spec():
         for relation in payload["agv_relations"]
         if relation["equipmentid"] != "EA023"
     ]
-    payload["buffer_realtime"].append(
-        {
-            "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
-            "buffer_code": TARGET_BUFFER_CODE,
-            "bound_source_name": "210R华晟产品",
-            "current_quantity": 100,
-            "current_utilization_rate": 0.001,
-        }
+    _upsert_parallel_inventory(
+        payload,
+        template_buffer_code=TARGET_BUFFER_CODE,
+        buffer_code=R_BUFFER_CODE,
+        product_name="210R华晟产品",
+        quantity=100,
     )
     algorithm_snapshot = snapshot(payload)
 
@@ -130,24 +150,7 @@ def test_v3_r_and_p_order_specs_come_from_agv_relations_not_machine_lines():
     for relation in payload["machine_lines"]:
         if relation["machine_code"] in {"EA023", "EA024"}:
             relation["wafer_spec"] = "N"
-    payload["buffer_realtime"].extend(
-        [
-            {
-                "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
-                "buffer_code": TARGET_BUFFER_CODE,
-                "bound_source_name": "210R华晟产品",
-                "current_quantity": 100,
-                "current_utilization_rate": 0.001,
-            },
-            {
-                "main_id": f"MAIN-{TARGET_BUFFER_CODE}",
-                "buffer_code": TARGET_BUFFER_CODE,
-                "bound_source_name": "210P晶澳产品",
-                "current_quantity": 100,
-                "current_utilization_rate": 0.001,
-            },
-        ]
-    )
+    _add_r_p_buffer_groups(payload)
 
     rates = NetRateCalculator().calculate(snapshot(payload))
     inferred = {
@@ -160,11 +163,18 @@ def test_v3_r_and_p_order_specs_come_from_agv_relations_not_machine_lines():
 
 
 def _r_target_warning(algorithm_snapshot):
+    group = next(
+        group
+        for group in algorithm_snapshot.main_buffer_batch.groups
+        if group.order_code == "ORD-S2-003"
+        and group.physical_buffer_key.ordered_service_process_codes
+        == ("制绒", "碱抛")
+    )
     return AlgorithmStockoutWarningResult(
         warning_time=algorithm_snapshot.current_time,
-        main_id=f"MAIN-{TARGET_BUFFER_CODE}",
-        buffer_code=TARGET_BUFFER_CODE,
-        buffer_codes=[TARGET_BUFFER_CODE],
+        main_id=group.main_id,
+        buffer_code=group.representative_buffer_code,
+        buffer_codes=list(group.buffer_codes),
         order_code="ORD-S2-003",
         wafer_size="210",
         wafer_spec="R",
@@ -177,11 +187,14 @@ def _r_target_warning(algorithm_snapshot):
         net_consumption_rate=200,
         depletion_minutes=30,
         stockout_warning_lead_minutes=30,
+        group_key=group.group_key,
     )
 
 
 def test_v3_r_p_candidate_compatibility_still_requires_size_and_source_grade():
-    compatible_snapshot = snapshot(build_base_request_payload())
+    compatible_payload = build_base_request_payload()
+    _add_r_p_buffer_groups(compatible_payload)
+    compatible_snapshot = snapshot(compatible_payload)
     candidates = StockoutCandidateFinder().find_algorithm(
         compatible_snapshot,
         [_r_target_warning(compatible_snapshot)],
@@ -189,6 +202,7 @@ def test_v3_r_p_candidate_compatibility_still_requires_size_and_source_grade():
     assert [item.machine_code for item in candidates] == ["EA024"]
 
     size_mismatch_payload = build_base_request_payload()
+    _add_r_p_buffer_groups(size_mismatch_payload)
     next(
         item
         for item in size_mismatch_payload["products"]
@@ -201,6 +215,7 @@ def test_v3_r_p_candidate_compatibility_still_requires_size_and_source_grade():
     )[0].candidates == []
 
     grade_mismatch_payload = build_base_request_payload()
+    _add_r_p_buffer_groups(grade_mismatch_payload)
     next(
         item
         for item in grade_mismatch_payload["products"]

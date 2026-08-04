@@ -5,6 +5,9 @@ import pytest
 from pydantic import ValidationError
 
 import app.adapters.snapshot_adapter as snapshot_adapter_module
+from app.core.buffer_aggregation.main_buffer_aggregator import (
+    MainBufferAggregator,
+)
 from app.schemas.request_schema import AlgorithmSnapshot, CutlineAlgorithmRequest
 
 
@@ -218,6 +221,36 @@ def _assert_conversion_error(payload: dict, match: str | None = None) -> None:
     error_type = getattr(snapshot_adapter_module, "SnapshotConversionError", ValueError)
     with pytest.raises(error_type, match=match):
         _convert(payload)
+
+
+def _assert_aggregation_issue(payload: dict, code: str):
+    snapshot = _convert(payload)
+    matching = [
+        issue for issue in snapshot.main_buffer_batch.issues if issue.code == code
+    ]
+    assert matching
+    return snapshot, matching
+
+
+def test_snapshot_adapter_builds_main_buffer_batch_exactly_once(monkeypatch):
+    calls = []
+    original = MainBufferAggregator.aggregate
+
+    def counting_aggregate(self, **kwargs):
+        calls.append(kwargs)
+        return original(self, **kwargs)
+
+    monkeypatch.setattr(MainBufferAggregator, "aggregate", counting_aggregate)
+
+    snapshot = _convert()
+
+    assert len(calls) == 1
+    assert snapshot.main_buffer_batch.groups_by_group_key
+    assert snapshot.main_buffer_batch.issues
+    assert any(
+        issue.code == "multiple_orders_in_main"
+        for issue in snapshot.main_buffer_batch.issues
+    )
 
 
 def _append_process_route(
@@ -590,59 +623,62 @@ def test_duplicate_product_name_current_orders_fail_before_inventory_match():
     _assert_conversion_error(payload, "产品一.*multiple current orders")
 
 
-def test_missing_buffer_product_name_match_fails():
+def test_missing_buffer_product_name_match_is_isolated():
     payload = _payload()
     payload["buffer_realtime"][0]["bound_source_name"] = "不存在"
 
-    _assert_conversion_error(payload, "BUF-001.*不存在")
+    _, issues = _assert_aggregation_issue(payload, "order_mapping_unresolved")
+    assert "不存在" in issues[0].message
 
 
-def test_blank_buffer_bound_source_name_fails():
+def test_blank_buffer_bound_source_name_is_isolated():
     payload = _payload()
     payload["buffer_realtime"][0]["bound_source_name"] = "   "
 
-    _assert_conversion_error(payload, "BUF-001.*name")
+    _assert_aggregation_issue(payload, "order_mapping_unresolved")
 
 
-def test_buffer_product_order_workshop_must_match_buffer_process_workshop():
+def test_buffer_product_order_workshop_conflict_is_isolated():
     payload = _payload()
     payload["orders"][0]["workshop_code"] = "S2"
     payload["orders"][0]["workshop_name"] = "二车间"
     payload["agv_relations"][0]["product_name"] = "产品二"
     payload["agv_relations"][0]["previous_product_name"] = "产品一"
 
-    _assert_conversion_error(
-        payload,
-        r"Buffer BUF-001 product_name '产品一'.*ORD-001.*S2.*S1",
-    )
+    _assert_aggregation_issue(payload, "workshop_conflict")
 
 
-def test_duplicate_buffer_order_inventory_fails():
+def test_duplicate_buffer_order_inventory_is_isolated_without_double_counting():
     payload = _payload()
     payload["buffer_realtime"].append(deepcopy(payload["buffer_realtime"][0]))
 
-    _assert_conversion_error(
-        payload,
-        "MAIN-001.*BUF-001.*ORD-001.*duplicate",
-    )
+    snapshot, issues = _assert_aggregation_issue(payload, "duplicate_buffer_id")
+    assert len(issues) == 1
+    assert sum(
+        item.current_quantity
+        for item in snapshot.buffer_order_inventories
+        if item.order_code == "ORD-001" and item.buffer_code == "BUF-001"
+    ) == 1200
 
 
 @pytest.mark.parametrize("main_id", [None, "", "   "])
-def test_buffer_main_id_must_not_be_null_or_blank(main_id):
+def test_buffer_main_id_null_or_blank_is_isolated(main_id):
     payload = _payload()
     payload["buffer_realtime"][0]["main_id"] = main_id
 
-    _assert_conversion_error(payload, "BUF-001.*main_id.*blank")
+    _assert_aggregation_issue(payload, "main_id_unavailable")
 
 
-def test_one_physical_buffer_cannot_belong_to_different_main_ids():
+def test_one_real_buffer_mapped_to_different_main_ids_is_isolated():
     payload = _payload()
     payload["buffer_realtime"][1]["main_id"] = "MAIN-OTHER"
 
-    _assert_conversion_error(
+    snapshot, issues = _assert_aggregation_issue(
         payload,
-        "BUF-001.*MAIN-001.*MAIN-OTHER.*ORD-002",
+        "buffer_code_index_conflict",
     )
+    assert {issue.main_id for issue in issues} == {"MAIN-001", "MAIN-OTHER"}
+    assert "BUF-001" not in snapshot.main_buffer_batch.group_key_by_buffer_code
 
 
 def test_same_main_different_buffers_same_order_is_not_duplicate():
@@ -658,7 +694,7 @@ def test_same_main_different_buffers_same_order_is_not_duplicate():
     ]
 
 
-def test_same_main_with_different_workshops_fails_with_both_contexts():
+def test_same_main_with_different_workshops_is_isolated():
     payload = _payload()
     s2_process_codes = _copy_process_pair_to_context(
         payload,
@@ -670,13 +706,12 @@ def test_same_main_with_different_workshops_fails_with_both_contexts():
     payload["buffer_master"][1]["served_process_codes"] = s2_process_codes
     payload["buffer_master"][1]["served_process_names"] = s2_process_codes
 
-    _assert_conversion_error(
-        payload,
-        "MAIN-001.*workshop_code.*BUF-001.*S1.*BUF-002.*S2",
-    )
+    _, issues = _assert_aggregation_issue(payload, "workshop_conflict")
+    assert "S1" in issues[0].message
+    assert "S2" in issues[0].message
 
 
-def test_same_main_with_different_upstream_processes_fails():
+def test_same_main_with_different_upstream_processes_is_isolated():
     payload = _payload()
     payload["process_routes"][0]["sequence"] = 2
     payload["process_routes"][1]["sequence"] = 3
@@ -694,13 +729,10 @@ def test_same_main_with_different_upstream_processes_fails():
         "PROC-01",
     ]
 
-    _assert_conversion_error(
-        payload,
-        "MAIN-001.*upstream_process_code.*BUF-001.*PROC-01.*BUF-002.*PROC-00",
-    )
+    _assert_aggregation_issue(payload, "service_process_conflict")
 
 
-def test_same_main_with_different_downstream_processes_fails():
+def test_same_main_with_different_downstream_processes_is_isolated():
     payload = _payload()
     _append_process_route(
         payload,
@@ -716,13 +748,10 @@ def test_same_main_with_different_downstream_processes_fails():
         "PROC-03",
     ]
 
-    _assert_conversion_error(
-        payload,
-        "MAIN-001.*downstream_process_code.*BUF-001.*PROC-02.*BUF-002.*PROC-03",
-    )
+    _assert_aggregation_issue(payload, "service_process_conflict")
 
 
-def test_same_main_with_different_loop_codes_fails():
+def test_same_main_with_different_loop_codes_keeps_physical_key_definition():
     payload = _payload()
     _copy_process_pair_to_context(
         payload,
@@ -731,9 +760,16 @@ def test_same_main_with_different_loop_codes_fails():
     )
     payload["buffer_master"][1]["loop_code"] = "LOOP-2"
 
-    _assert_conversion_error(
-        payload,
-        "MAIN-001.*loop_code.*BUF-001.*LOOP-1.*BUF-002.*LOOP-2",
+    snapshot = _convert(payload)
+    group = next(iter(snapshot.main_buffer_batch.groups_by_group_key.values()))
+    assert group.physical_buffer_key.workshop_code == "S1"
+    assert group.physical_buffer_key.ordered_service_process_codes == (
+        "PROC-01",
+        "PROC-02",
+    )
+    assert not any(
+        issue.code == "service_process_conflict"
+        for issue in snapshot.main_buffer_batch.issues
     )
 
 

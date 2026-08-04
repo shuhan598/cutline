@@ -9,6 +9,12 @@ from app.core.cutline_confirmation.pending_cutline_detector import (
     PendingCutlineDetectionError,
     PendingCutlineDetector,
 )
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferAggregationBatch,
+    MainBufferGroup,
+    PhysicalBufferKey,
+)
 
 from .helpers import (
     ALTERNATE_BUFFER,
@@ -36,6 +42,79 @@ from .helpers import (
     make_snapshot,
     make_stockout_plan,
 )
+
+
+def _pending_batch(*, map_warning_layer: bool) -> MainBufferAggregationBatch:
+    physical_key = PhysicalBufferKey(
+        WORKSHOP,
+        (CUT_PROCESS, DOWNSTREAM_PROCESS),
+    )
+    groups = []
+    for main_id, order_code, product_code, representative, codes in (
+        (
+            "MAIN-WARNING",
+            MONITORED_ORDER,
+            "P-MON",
+            "B-WARN-NEW",
+            (WARNING_BUFFER, "B-WARN-NEW"),
+        ),
+        (
+            "MAIN-SOURCE",
+            SOURCE_ORDER,
+            "P-SOURCE",
+            SOURCE_BUFFER,
+            (SOURCE_BUFFER,),
+        ),
+    ):
+        key = GroupKey(physical_key, main_id, order_code)
+        groups.append(
+            MainBufferGroup(
+                group_key=key,
+                main_id=main_id,
+                workshop_code=WORKSHOP,
+                ordered_service_process_codes=(
+                    CUT_PROCESS,
+                    DOWNSTREAM_PROCESS,
+                ),
+                physical_buffer_key=physical_key,
+                order_code=order_code,
+                product_code=product_code,
+                buffer_codes=codes,
+                total_inventory=100,
+                total_capacity=1000,
+                remaining_capacity=900,
+                representative_buffer_code=representative,
+                stockout_eligible=True,
+                overflow_eligible=True,
+                stockout_warning_eligible=True,
+                overflow_warning_eligible=True,
+                auto_receive_eligible=True,
+                auto_donate_eligible=True,
+            )
+        )
+    groups_by_key = {group.group_key: group for group in groups}
+    key_by_buffer = {
+        code: group.group_key
+        for group in groups
+        for code in group.buffer_codes
+        if map_warning_layer or code != WARNING_BUFFER
+    }
+    return MainBufferAggregationBatch(
+        groups=tuple(groups),
+        groups_by_group_key=groups_by_key,
+        group_keys_by_main_id={
+            group.main_id: (group.group_key,) for group in groups
+        },
+        group_key_by_buffer_code=key_by_buffer,
+        group_key_by_representative_buffer_code={
+            group.representative_buffer_code: group.group_key
+            for group in groups
+            if group.representative_buffer_code is not None
+        },
+        group_keys_by_physical_buffer_key={
+            physical_key: tuple(group.group_key for group in groups)
+        },
+    )
 
 
 def test_unchanged_binding_keeps_plan_pending_without_transition() -> None:
@@ -114,6 +193,56 @@ def test_recommended_stockout_binding_creates_complete_typed_transition() -> Non
     assert evaluation.status == "CONFIRMED"
     assert evaluation.confirmed_machine_codes == ["M1"]
     assert evaluation.new_confirmed_machine_codes == ["M1"]
+
+
+def test_recommended_confirmation_accepts_mapped_old_representative_layer() -> None:
+    plan = make_stockout_plan()
+    changed = make_agv_binding(
+        "M1",
+        MONITORED_ORDER,
+        CREATED_AT + timedelta(minutes=3),
+        previous_product_name=SOURCE_PRODUCT_NAME,
+    )
+    current_snapshot = make_snapshot(
+        pending_plans=[plan],
+        history=[changed],
+        current_orders={"M1": MONITORED_ORDER, "M2": MONITORED_ORDER},
+    ).model_copy(
+        update={"main_buffer_batch": _pending_batch(map_warning_layer=True)}
+    )
+
+    result = PendingCutlineDetector().detect(
+        snapshot=current_snapshot,
+        interval_results=[],
+    )
+
+    assert result.transitions[0].target_buffer_code == WARNING_BUFFER
+
+
+def test_recommended_confirmation_blocks_unmapped_persisted_buffer_code() -> None:
+    plan = make_stockout_plan()
+    changed = make_agv_binding(
+        "M1",
+        MONITORED_ORDER,
+        CREATED_AT + timedelta(minutes=3),
+        previous_product_name=SOURCE_PRODUCT_NAME,
+    )
+    current_snapshot = make_snapshot(
+        pending_plans=[plan],
+        history=[changed],
+        current_orders={"M1": MONITORED_ORDER, "M2": MONITORED_ORDER},
+    ).model_copy(
+        update={"main_buffer_batch": _pending_batch(map_warning_layer=False)}
+    )
+
+    with pytest.raises(PendingCutlineDetectionError) as exc_info:
+        PendingCutlineDetector().detect(
+            snapshot=current_snapshot,
+            interval_results=[],
+        )
+
+    assert plan.plan_id in str(exc_info.value)
+    assert WARNING_BUFFER in str(exc_info.value)
 
 
 def test_recommended_overflow_binding_uses_target_interval() -> None:

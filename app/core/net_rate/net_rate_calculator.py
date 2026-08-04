@@ -9,6 +9,7 @@ from app.core.workshop.machine_workshop_resolver import (
     MachineWorkshopResolutionError,
     MachineWorkshopResolver,
 )
+from app.core.buffer_aggregation.models import MainBufferGroup
 from app.schemas.common_schema import (
     AlgorithmAgvRelation,
     AlgorithmBufferOrderInventory,
@@ -53,6 +54,12 @@ class NetRateCalculator:
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmIntervalNetRateResult]:
         context = self._build_machine_context(snapshot)
+        if snapshot.main_buffer_batch.groups_by_group_key:
+            return [
+                self._calculate_group_net_rate(snapshot, group, context)
+                for group in snapshot.main_buffer_batch.groups
+                if group.stockout_eligible
+            ]
         return [
             self._calculate_inventory_net_rate(
                 snapshot,
@@ -65,6 +72,78 @@ class NetRateCalculator:
                 context,
             )
         ]
+
+    def _calculate_group_net_rate(
+        self,
+        snapshot: AlgorithmSnapshot,
+        group: MainBufferGroup,
+        context: _AlgorithmNetRateContext,
+    ) -> AlgorithmIntervalNetRateResult:
+        order = context.order_by_code.get(group.order_code)
+        if order is None:
+            raise NetRateCalculationError(
+                f"{group.order_code} order does not exist for main Buffer group"
+            )
+        product = context.product_by_code.get(order.product_code)
+        if product is None:
+            raise NetRateCalculationError(
+                f"{order.product_code} product does not exist for order "
+                f"{order.order_code}"
+            )
+        representative = group.representative_buffer_code
+        if representative is None:
+            raise NetRateCalculationError(
+                f"{group.main_id} eligible main Buffer group has no representative layer"
+            )
+        if len(group.ordered_service_process_codes) != 2:
+            raise NetRateCalculationError(
+                f"{group.main_id} main Buffer group process interval is invalid"
+            )
+        upstream_process, downstream_process = (
+            group.ordered_service_process_codes
+        )
+        relation = AlgorithmBufferProcessRelation(
+            buffer_code=representative,
+            workshop_code=group.workshop_code,
+            upstream_process_code=upstream_process,
+            downstream_process_code=downstream_process,
+        )
+        wafer_spec = self._resolve_order_wafer_spec(
+            group.order_code,
+            snapshot.agv_relations,
+        )
+        upstream_output_rate = self._calculate_upstream_output_rate(
+            snapshot,
+            group.order_code,
+            wafer_spec,
+            relation,
+            context,
+        )
+        downstream_input_rate = self._calculate_downstream_input_rate(
+            snapshot,
+            group.order_code,
+            wafer_spec,
+            relation,
+            context,
+        )
+        inventory_change_rate = upstream_output_rate - downstream_input_rate
+        return AlgorithmIntervalNetRateResult(
+            main_id=group.main_id,
+            buffer_code=representative,
+            buffer_codes=list(group.buffer_codes),
+            order_code=group.order_code,
+            wafer_size=product.wafer_size,
+            wafer_spec=wafer_spec,
+            workshop_code=group.workshop_code,
+            upstream_process_code=upstream_process,
+            downstream_process_code=downstream_process,
+            current_quantity=group.total_inventory,
+            upstream_output_rate=upstream_output_rate,
+            downstream_input_rate=downstream_input_rate,
+            net_consumption_rate=-inventory_change_rate,
+            inventory_change_rate=inventory_change_rate,
+            group_key=group.group_key,
+        )
 
     def _group_buffer_inventories(
         self,
@@ -192,8 +271,15 @@ class NetRateCalculator:
         )
 
         buffer_relation_by_code: dict[str, AlgorithmBufferProcessRelation] = {}
+        ambiguous_buffer_codes: set[str] = set()
         for relation in snapshot.buffer_process_relations:
+            if relation.buffer_code in ambiguous_buffer_codes:
+                continue
             if relation.buffer_code in buffer_relation_by_code:
+                if snapshot.main_buffer_batch.groups_by_group_key:
+                    buffer_relation_by_code.pop(relation.buffer_code)
+                    ambiguous_buffer_codes.add(relation.buffer_code)
+                    continue
                 raise NetRateCalculationError(
                     f"{relation.buffer_code} has multiple process relations"
                 )
@@ -304,6 +390,7 @@ class NetRateCalculator:
             upstream_output_rate=upstream_output_rate,
             downstream_input_rate=downstream_input_rate,
             net_consumption_rate=downstream_input_rate - upstream_output_rate,
+            inventory_change_rate=upstream_output_rate - downstream_input_rate,
         )
 
     def _calculate_upstream_output_rate(

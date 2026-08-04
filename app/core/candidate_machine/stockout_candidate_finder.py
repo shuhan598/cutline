@@ -38,6 +38,7 @@ class StockoutCandidateFinder:
         context: CandidateContext,
     ) -> AlgorithmStockoutCandidateResult:
         context.validate_warning_relation(warning)
+        receiver_group = context.warning_group(warning)
         target_order, target_product = context.order_product(
             warning.order_code
         )
@@ -55,6 +56,14 @@ class StockoutCandidateFinder:
             candidate_agv = context.candidate_agv(runtime.machine_code)
             if candidate_agv.order_code == warning.order_code:
                 continue
+            donor_group = None
+            if receiver_group is not None:
+                donor_group = context.unique_group_for_order(
+                    receiver_group.physical_buffer_key,
+                    candidate_agv.order_code,
+                )
+                if donor_group is None or not donor_group.auto_donate_eligible:
+                    continue
 
             _, machine = context.machine_context(runtime.machine_code)
             machine_workshop_code = context.machine_workshop_code(
@@ -115,6 +124,17 @@ class StockoutCandidateFinder:
                     contribution_capacity=hourly_output,
                     utilization_rate=utilization_rate,
                     idle_rate=idle_rate,
+                    receiver_group_key=(
+                        receiver_group.group_key
+                        if receiver_group is not None
+                        else None
+                    ),
+                    donor_group_key=(
+                        donor_group.group_key if donor_group is not None else None
+                    ),
+                    donor_main_id=(
+                        donor_group.main_id if donor_group is not None else None
+                    ),
                 )
             )
 
@@ -137,4 +157,7 @@ class StockoutCandidateFinder:
             downstream_process_code=warning.downstream_process_code,
             capacity_gap=warning.net_consumption_rate,
             candidates=candidates,
+            receiver_group_key=(
+                receiver_group.group_key if receiver_group is not None else None
+            ),
         )

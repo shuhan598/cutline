@@ -1,6 +1,12 @@
 import pytest
 
 import app.core.candidate_machine.overflow_candidate_finder as overflow_module
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferAggregationBatch,
+    MainBufferGroup,
+    PhysicalBufferKey,
+)
 from app.schemas.result_schema import (
     AlgorithmIntervalNetRateResult,
     AlgorithmOrderGrowthDetail,
@@ -171,6 +177,93 @@ def _find(candidate_snapshot, warning=None):
         candidate_snapshot,
         [_warning() if warning is None else warning],
     )[0]
+
+
+def _batch_group(
+    *,
+    physical_key: PhysicalBufferKey,
+    main_id: str,
+    order_code: str,
+    buffer_code: str,
+    auto_receive_eligible: bool = True,
+    auto_donate_eligible: bool = True,
+) -> MainBufferGroup:
+    key = GroupKey(physical_key, main_id, order_code)
+    return MainBufferGroup(
+        group_key=key,
+        main_id=main_id,
+        workshop_code=physical_key.workshop_code,
+        ordered_service_process_codes=(
+            physical_key.ordered_service_process_codes
+        ),
+        physical_buffer_key=physical_key,
+        order_code=order_code,
+        product_code=f"PROD-{order_code.removeprefix('ORD-')}",
+        buffer_codes=(buffer_code,),
+        total_inventory=1000,
+        total_capacity=10000,
+        remaining_capacity=9000,
+        representative_buffer_code=buffer_code,
+        stockout_eligible=True,
+        overflow_eligible=True,
+        stockout_warning_eligible=True,
+        overflow_warning_eligible=True,
+        auto_receive_eligible=auto_receive_eligible,
+        auto_donate_eligible=auto_donate_eligible,
+    )
+
+
+def _with_batch(candidate_snapshot, *groups: MainBufferGroup):
+    groups_by_key = {group.group_key: group for group in groups}
+    physical_index: dict[PhysicalBufferKey, list[GroupKey]] = {}
+    for group in groups:
+        physical_index.setdefault(group.physical_buffer_key, []).append(
+            group.group_key
+        )
+    candidate_snapshot.main_buffer_batch = MainBufferAggregationBatch(
+        groups=tuple(groups),
+        groups_by_group_key=groups_by_key,
+        group_keys_by_main_id={
+            group.main_id: tuple(
+                item.group_key for item in groups if item.main_id == group.main_id
+            )
+            for group in groups
+        },
+        group_key_by_buffer_code={
+            code: group.group_key
+            for group in groups
+            for code in group.buffer_codes
+        },
+        group_key_by_representative_buffer_code={
+            group.representative_buffer_code: group.group_key
+            for group in groups
+            if group.representative_buffer_code is not None
+        },
+        group_keys_by_physical_buffer_key={
+            key: tuple(values) for key, values in physical_index.items()
+        },
+    )
+    return candidate_snapshot
+
+
+def _group_interval(group: MainBufferGroup, rate: float):
+    return AlgorithmIntervalNetRateResult(
+        main_id=group.main_id,
+        buffer_code=group.representative_buffer_code or "",
+        buffer_codes=list(group.buffer_codes),
+        order_code=group.order_code,
+        wafer_size="182",
+        wafer_spec="N",
+        workshop_code=group.workshop_code,
+        upstream_process_code="P01",
+        downstream_process_code="P02",
+        current_quantity=group.total_inventory,
+        upstream_output_rate=max(rate, 0),
+        downstream_input_rate=max(-rate, 0),
+        net_consumption_rate=-rate,
+        inventory_change_rate=rate,
+        group_key=group.group_key,
+    )
 
 
 def _set_workshop(candidate_snapshot, workshop_code: str) -> None:
@@ -749,4 +842,231 @@ def test_warning_interval_must_match_buffer_process_relation():
         _find(
             _candidate_snapshot(),
             _warning(upstream_process_code="OTHER"),
+        )
+
+
+def test_batch_targets_come_from_physical_groups_not_warning_details():
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    source = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SOURCE",
+        buffer_code="BUF-01",
+    )
+    target = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-TARGET",
+        order_code="ORD-TARGET",
+        buffer_code="BUF-TARGET",
+    )
+    candidate_snapshot = _with_batch(_candidate_snapshot(), source, target)
+    warning = _warning(
+        _source_detail("ORD-SECOND", growth_rate=4000),
+        _target_detail("ORD-SECOND", capacity_gap=4000),
+    ).model_copy(update={"group_key": source.group_key})
+
+    result = overflow_module.OverflowCandidateFinder().find_algorithm(
+        candidate_snapshot,
+        [warning],
+        interval_results=[
+            _group_interval(source, 3000),
+            _group_interval(target, -1800),
+        ],
+    )[0]
+
+    assert result.source_order_code == "ORD-SOURCE"
+    assert result.source_growth_rate == 3000
+    assert result.buffer_code == "BUF-01"
+    assert [
+        option.target_order_code
+        for option in result.candidates[0].target_options
+    ] == ["ORD-TARGET"]
+    option = result.candidates[0].target_options[0]
+    assert option.target_buffer_code == "BUF-TARGET"
+    assert option.capacity_gap == 1800
+    assert option.target_group_key == target.group_key
+    assert result.source_group_key == source.group_key
+    assert result.candidates[0].source_group_key == source.group_key
+
+
+def test_batch_target_filters_group_identity_and_receive_capability():
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    other_physical_key = PhysicalBufferKey("S1", ("P01", "P03"))
+    source = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SOURCE",
+        buffer_code="BUF-01",
+    )
+    valid = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-TARGET",
+        order_code="ORD-TARGET",
+        buffer_code="BUF-TARGET",
+    )
+    same_main = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SECOND",
+        buffer_code="BUF-SAME-MAIN",
+    )
+    same_order = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SAME-ORDER",
+        order_code="ORD-SOURCE",
+        buffer_code="BUF-SAME-ORDER",
+    )
+    unavailable = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-UNAVAILABLE",
+        order_code="ORD-UNAVAILABLE",
+        buffer_code="BUF-UNAVAILABLE",
+        auto_receive_eligible=False,
+    )
+    other_physical = _batch_group(
+        physical_key=other_physical_key,
+        main_id="MAIN-OTHER-PHYSICAL",
+        order_code="ORD-OTHER-PHYSICAL",
+        buffer_code="BUF-OTHER-PHYSICAL",
+    )
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.orders.extend(
+        [
+            order("ORD-UNAVAILABLE", "PROD-UNAVAILABLE", "S1"),
+            order("ORD-OTHER-PHYSICAL", "PROD-OTHER-PHYSICAL", "S1"),
+        ]
+    )
+    candidate_snapshot.products.extend(
+        [
+            product("PROD-UNAVAILABLE", "182", "A"),
+            product("PROD-OTHER-PHYSICAL", "182", "A"),
+        ]
+    )
+    _with_batch(
+        candidate_snapshot,
+        source,
+        valid,
+        same_main,
+        same_order,
+        unavailable,
+        other_physical,
+    )
+    warning = _warning().model_copy(update={"group_key": source.group_key})
+    intervals = [
+        _group_interval(group, 3000 if group is source else -1000)
+        for group in (
+            source,
+            valid,
+            same_main,
+            same_order,
+            unavailable,
+            other_physical,
+        )
+    ]
+
+    result = overflow_module.OverflowCandidateFinder().find_algorithm(
+        candidate_snapshot,
+        [warning],
+        interval_results=intervals,
+    )[0]
+
+    assert [
+        option.target_order_code
+        for option in result.candidates[0].target_options
+    ] == ["ORD-TARGET"]
+
+
+def test_batch_source_must_be_auto_donate_eligible():
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    source = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SOURCE",
+        buffer_code="BUF-01",
+        auto_donate_eligible=False,
+    )
+    target = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-TARGET",
+        order_code="ORD-TARGET",
+        buffer_code="BUF-TARGET",
+    )
+    candidate_snapshot = _with_batch(_candidate_snapshot(), source, target)
+    warning = _warning().model_copy(update={"group_key": source.group_key})
+
+    result = overflow_module.OverflowCandidateFinder().find_algorithm(
+        candidate_snapshot,
+        [warning],
+        interval_results=[
+            _group_interval(source, 3000),
+            _group_interval(target, -1800),
+        ],
+    )[0]
+
+    assert result.candidates == []
+
+
+def test_overflow_group_keys_are_internal_only():
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    source = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SOURCE",
+        buffer_code="BUF-01",
+    )
+    target = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-TARGET",
+        order_code="ORD-TARGET",
+        buffer_code="BUF-TARGET",
+    )
+    candidate_snapshot = _with_batch(_candidate_snapshot(), source, target)
+    warning = _warning().model_copy(update={"group_key": source.group_key})
+    result = overflow_module.OverflowCandidateFinder().find_algorithm(
+        candidate_snapshot,
+        [warning],
+        interval_results=[
+            _group_interval(source, 3000),
+            _group_interval(target, -1800),
+        ],
+    )[0]
+
+    dumped = result.model_dump()
+
+    assert "source_group_key" not in dumped
+    assert "source_group_key" not in dumped["candidates"][0]
+    assert "target_group_key" not in dumped["candidates"][0]["target_options"][0]
+
+
+def test_batch_source_rate_must_be_finite():
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    source = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SOURCE",
+        buffer_code="BUF-01",
+    )
+    target = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-TARGET",
+        order_code="ORD-TARGET",
+        buffer_code="BUF-TARGET",
+    )
+    candidate_snapshot = _with_batch(_candidate_snapshot(), source, target)
+    warning = _warning().model_copy(update={"group_key": source.group_key})
+    invalid_source_rate = _group_interval(source, 3000).model_copy(
+        update={"inventory_change_rate": float("nan")}
+    )
+
+    with pytest.raises(
+        overflow_module.CandidateMachineCalculationError,
+        match="source group rate.*finite",
+    ):
+        overflow_module.OverflowCandidateFinder().find_algorithm(
+            candidate_snapshot,
+            [warning],
+            interval_results=[
+                invalid_source_rate,
+                _group_interval(target, -1800),
+            ],
         )

@@ -62,6 +62,7 @@ class OverflowWarningEvaluator:
                         detail.model_copy(deep=True)
                         for detail in overflow.order_growth_details
                     ],
+                    group_key=overflow.group_key,
                 )
             )
 

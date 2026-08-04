@@ -367,24 +367,21 @@ def test_validator_reports_agv_machine_order_workshop_conflict():
     )
 
 
-def test_validator_reports_unknown_buffer_product_name():
+def test_validator_defers_unknown_buffer_product_name_to_main_aggregator():
     source = payload()
     add_valid_buffer(source)
     source["buffer_realtime"][0]["bound_source_name"] = "未知产品"
 
     result = validate(source)
 
-    assert any(
-        issue.code == "missing_reference"
-        and issue.dataset == "buffer_realtime"
+    assert not any(
+        issue.dataset == "buffer_realtime"
         and issue.field == "bound_source_name"
-        and "未知产品" in issue.message
-        and "orders.product_name" in issue.message
         for issue in result.issues
     )
 
 
-def test_validator_reports_buffer_order_workshop_conflict():
+def test_validator_defers_buffer_order_workshop_conflict_to_main_aggregator():
     source = payload()
     add_valid_buffer(source)
     source["orders"][0]["workshop_code"] = "S2"
@@ -392,13 +389,8 @@ def test_validator_reports_buffer_order_workshop_conflict():
 
     result = validate(source)
 
-    assert any(
-        issue.code == "workshop_mismatch"
-        and issue.dataset == "buffer_realtime"
+    assert not any(
+        issue.dataset == "buffer_realtime"
         and issue.field == "bound_source_name"
-        and "BUF-1" in issue.message
-        and "ORD-S2-001" in issue.message
-        and "S1" in issue.message
-        and "S2" in issue.message
         for issue in result.issues
     )

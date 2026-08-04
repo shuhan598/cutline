@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from app.core.buffer_aggregation.models import MainBufferGroup
 from app.core.prediction_time.errors import PredictionTimeCalculationError
 from app.schemas.common_schema import (
     AlgorithmBufferMaster,
@@ -21,6 +22,9 @@ class OverflowTimeCalculator:
         snapshot: AlgorithmSnapshot,
         net_rate_results: list[AlgorithmIntervalNetRateResult],
     ) -> list[AlgorithmBufferOverflowTimeResult]:
+        if snapshot.main_buffer_batch.groups_by_group_key:
+            return self._calculate_from_batch(snapshot, net_rate_results)
+
         buffer_by_code: dict[str, AlgorithmBufferMaster] = {}
         for buffer in snapshot.buffer_masters:
             if buffer.buffer_code in buffer_by_code:
@@ -117,6 +121,91 @@ class OverflowTimeCalculator:
             )
             for main_id in sorted(rates_by_main)
         ]
+
+    def _calculate_from_batch(
+        self,
+        snapshot: AlgorithmSnapshot,
+        net_rate_results: list[AlgorithmIntervalNetRateResult],
+    ) -> list[AlgorithmBufferOverflowTimeResult]:
+        rates_by_key = {}
+        for rate in net_rate_results:
+            if rate.group_key is None:
+                continue
+            if rate.group_key in rates_by_key:
+                raise PredictionTimeCalculationError(
+                    f"{rate.group_key} duplicate interval net rate"
+                )
+            rates_by_key[rate.group_key] = rate
+
+        results: list[AlgorithmBufferOverflowTimeResult] = []
+        for group in snapshot.main_buffer_batch.groups:
+            if not group.overflow_eligible:
+                continue
+            rate = rates_by_key.get(group.group_key)
+            if rate is None:
+                continue
+            results.append(self._calculate_batch_group(group, rate))
+        return results
+
+    def _calculate_batch_group(
+        self,
+        group: MainBufferGroup,
+        net_rate: AlgorithmIntervalNetRateResult,
+    ) -> AlgorithmBufferOverflowTimeResult:
+        if group.total_capacity is None:
+            raise PredictionTimeCalculationError(
+                f"{group.main_id} overflow-eligible group has no capacity"
+            )
+        representative = group.representative_buffer_code
+        if representative is None:
+            raise PredictionTimeCalculationError(
+                f"{group.main_id} overflow-eligible group has no representative"
+            )
+        if len(group.ordered_service_process_codes) != 2:
+            raise PredictionTimeCalculationError(
+                f"{group.main_id} overflow-eligible group has invalid processes"
+            )
+        inventory_change_rate = (
+            net_rate.inventory_change_rate
+            if net_rate.inventory_change_rate is not None
+            else -net_rate.net_consumption_rate
+        )
+        remaining_capacity = group.total_capacity - group.total_inventory
+        if remaining_capacity <= 0:
+            overflow_minutes = 0.0
+        elif inventory_change_rate > 0:
+            overflow_minutes = remaining_capacity / inventory_change_rate * 60
+        else:
+            overflow_minutes = None
+        upstream_process, downstream_process = (
+            group.ordered_service_process_codes
+        )
+        return AlgorithmBufferOverflowTimeResult(
+            main_id=group.main_id,
+            buffer_code=representative,
+            buffer_codes=list(group.buffer_codes),
+            workshop_code=group.workshop_code,
+            upstream_process_code=upstream_process,
+            downstream_process_code=downstream_process,
+            max_capacity=group.total_capacity,
+            total_inventory=group.total_inventory,
+            remaining_capacity=remaining_capacity,
+            buffer_growth_rate=inventory_change_rate,
+            overflow_minutes=overflow_minutes,
+            order_growth_details=[
+                AlgorithmOrderGrowthDetail(
+                    order_code=net_rate.order_code,
+                    wafer_size=net_rate.wafer_size,
+                    wafer_spec=net_rate.wafer_spec,
+                    current_quantity=group.total_inventory,
+                    upstream_output_rate=net_rate.upstream_output_rate,
+                    downstream_input_rate=net_rate.downstream_input_rate,
+                    net_consumption_rate=net_rate.net_consumption_rate,
+                    growth_rate=inventory_change_rate,
+                )
+            ],
+            group_key=group.group_key,
+        )
 
     def _calculate_algorithm_buffer(
         self,

@@ -45,4 +45,5 @@ class DepletionTimeCalculator:
             downstream_input_rate=net_rate.downstream_input_rate,
             net_consumption_rate=net_rate.net_consumption_rate,
             depletion_minutes=depletion_minutes,
+            group_key=net_rate.group_key,
         )

@@ -65,7 +65,6 @@ _REQUIRED_DATASETS = (
 
 _REQUIRED_NULLABLE_FIELDS = (
     ("workshops", "workshop_name"),
-    ("buffer_realtime", "main_id"),
 )
 
 _RELATIONSHIPS = (
@@ -84,7 +83,6 @@ _RELATIONSHIPS = (
         "machine_code",
     ),
     ("machine_process_times", "product_code", "products", "product_code"),
-    ("buffer_realtime", "buffer_code", "buffer_master", "buffer_code"),
 )
 
 _RECORD_KEY_FIELDS = {
@@ -138,7 +136,6 @@ class BackendRequestCompletenessValidator:
         self._validate_unique_reference_fields(request, issues)
         self._validate_references(request, issues)
         self._validate_order_products(request, issues)
-        self._validate_buffer_bindings(request, issues)
         self._validate_agv_bindings(
             request,
             selected_agv_relations,

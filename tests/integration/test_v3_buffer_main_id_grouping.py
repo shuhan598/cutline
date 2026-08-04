@@ -47,7 +47,7 @@ def test_v3_multilayer_buffer_is_grouped_once_across_the_full_upper_flow():
     assert overflow.buffer_code == MULTILAYER_BUFFER_CODES[0]
     assert overflow.buffer_codes == list(MULTILAYER_BUFFER_CODES)
     assert overflow.max_capacity == 30000
-    assert overflow.total_inventory == 12800
+    assert overflow.total_inventory == 10800
     assert sum(
         item.main_id == MULTILAYER_MAIN_ID
         for item in result.overflow_time_results

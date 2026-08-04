@@ -41,6 +41,7 @@ MACHINE_CODES_BY_PROCESS = {
 SNAPSHOT_TIME = "2026-07-17T08:00:00+08:00"
 CATALOG_TIME = "2026-07-17T07:55:00+08:00"
 TARGET_BUFFER_CODE = "310110302"
+SUPPORT_BUFFER_CODE = "310112802"
 TARGET_ORDER_CODE = "ORD-S2-001"
 SUPPORT_ORDER_CODE = "ORD-S2-002"
 MULTILAYER_MAIN_ID = "MAIN-31011280"
@@ -520,6 +521,33 @@ def _upsert_inventory(
     item["current_utilization_rate"] = float(quantity) / max_capacity
 
 
+def _upsert_parallel_inventory(
+    payload: dict[str, Any],
+    *,
+    template_buffer_code: str,
+    buffer_code: str,
+    product_name: str,
+    quantity: float,
+    capacity: float | None = None,
+) -> None:
+    if not any(
+        item["buffer_code"] == buffer_code
+        for item in payload["buffer_master"]
+    ):
+        layer = deepcopy(_buffer(payload, template_buffer_code))
+        layer["buffer_code"] = buffer_code
+        if capacity is not None:
+            layer["max_capacity"] = float(capacity)
+        payload["buffer_master"].append(layer)
+    _upsert_inventory(
+        payload,
+        buffer_code=buffer_code,
+        product_name=product_name,
+        quantity=quantity,
+        capacity=capacity,
+    )
+
+
 def _scenario(name: str) -> dict[str, Any]:
     payload = build_base_request_payload()
     payload["snapshot_meta"]["run_id"] = f"RUN-V3-{name.upper().replace('_', '-')}"
@@ -562,6 +590,18 @@ def build_multilayer_buffer_payload() -> dict[str, Any]:
         item["order_code"]: item["product_name"]
         for item in payload["orders"]
     }
+    payload["buffer_realtime"] = [
+        item
+        for item in payload["buffer_realtime"]
+        if item["buffer_code"] != TARGET_BUFFER_CODE
+    ]
+    _upsert_parallel_inventory(
+        payload,
+        template_buffer_code=TARGET_BUFFER_CODE,
+        buffer_code=SUPPORT_BUFFER_CODE,
+        product_name=product_names[SUPPORT_ORDER_CODE],
+        quantity=2000.0,
+    )
     first_code, second_code = MULTILAYER_BUFFER_CODES
     payload["buffer_realtime"].extend(
         [
@@ -578,13 +618,6 @@ def build_multilayer_buffer_payload() -> dict[str, Any]:
                 "bound_source_name": product_names[TARGET_ORDER_CODE],
                 "current_quantity": 7200.0,
                 "current_utilization_rate": 0.36,
-            },
-            {
-                "main_id": MULTILAYER_MAIN_ID,
-                "buffer_code": second_code,
-                "bound_source_name": product_names[SUPPORT_ORDER_CODE],
-                "current_quantity": 2000.0,
-                "current_utilization_rate": 0.1,
             },
         ]
     )
@@ -631,9 +664,10 @@ def _stockout_payload(name: str) -> dict[str, Any]:
         product_name="182N至上产品",
         quantity=100,
     )
-    _upsert_inventory(
+    _upsert_parallel_inventory(
         payload,
-        buffer_code=TARGET_BUFFER_CODE,
+        template_buffer_code=TARGET_BUFFER_CODE,
+        buffer_code=SUPPORT_BUFFER_CODE,
         product_name="182N支援产品",
         quantity=2000,
     )
@@ -685,13 +719,6 @@ def build_multilayer_stockout_payload() -> dict[str, Any]:
                 "current_quantity": 60.0,
                 "current_utilization_rate": 0.0012,
             },
-            {
-                "main_id": MULTILAYER_MAIN_ID,
-                "buffer_code": second_code,
-                "bound_source_name": product_names[SUPPORT_ORDER_CODE],
-                "current_quantity": 2000.0,
-                "current_utilization_rate": 0.04,
-            },
         ]
     )
     return payload
@@ -717,8 +744,8 @@ def build_stockout_manual_insufficient_payload() -> dict[str, Any]:
         "EA004",
         status="运行",
         order_code=SUPPORT_ORDER_CODE,
-        input_quantity=100,
-        output_quantity=100,
+        input_quantity=50,
+        output_quantity=50,
     )
     return payload
 
@@ -765,9 +792,10 @@ def build_overflow_warning_payload() -> dict[str, Any]:
         quantity=450,
         capacity=1000,
     )
-    _upsert_inventory(
+    _upsert_parallel_inventory(
         payload,
-        buffer_code=TARGET_BUFFER_CODE,
+        template_buffer_code=TARGET_BUFFER_CODE,
+        buffer_code=SUPPORT_BUFFER_CODE,
         product_name="182N支援产品",
         quantity=450,
         capacity=1000,
@@ -814,14 +842,15 @@ def build_overflow_manual_payload() -> dict[str, Any]:
         payload,
         buffer_code=TARGET_BUFFER_CODE,
         product_name="182N至上产品",
-        quantity=200,
+        quantity=950,
         capacity=1000,
     )
-    _upsert_inventory(
+    _upsert_parallel_inventory(
         payload,
-        buffer_code=TARGET_BUFFER_CODE,
+        template_buffer_code=TARGET_BUFFER_CODE,
+        buffer_code=SUPPORT_BUFFER_CODE,
         product_name="182N支援产品",
-        quantity=750,
+        quantity=850,
         capacity=1000,
     )
     return payload
@@ -927,7 +956,7 @@ def _round_one_pending_plan(payload: dict[str, Any]) -> dict[str, Any]:
                 "expected_target_source_grade": target_product["source_grade"],
                 "process_code": "制绒",
                 "workshop_code": "S2",
-                "source_buffer_code": TARGET_BUFFER_CODE,
+                "source_buffer_code": SUPPORT_BUFFER_CODE,
                 "target_buffer_code": TARGET_BUFFER_CODE,
                 "target_upstream_process_code": "制绒",
                 "target_downstream_process_code": "碱抛",

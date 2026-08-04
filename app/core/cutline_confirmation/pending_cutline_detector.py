@@ -245,8 +245,16 @@ class PendingCutlineDetector:
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> ConfirmedCutlineTransition | None:
         self._validate_machine_scope(context, plan, baseline)
+        self._validate_persisted_buffer_code(
+            context=context,
+            plan=plan,
+            buffer_code=plan.buffer_code,
+            expected_order_code=plan.monitored_order_code,
+            role="warning",
+        )
         if candidate is not None:
             recommended = self._recommended_transition(
+                context,
                 plan,
                 baseline,
                 candidate,
@@ -315,6 +323,7 @@ class PendingCutlineDetector:
 
     def _recommended_transition(
         self,
+        context: CandidateContext,
         plan: PendingCutlinePlan,
         baseline: BaselineMachineBinding,
         candidate: PendingCandidateMachine,
@@ -325,6 +334,21 @@ class PendingCutlineDetector:
             or relation.product_code != candidate.expected_target_product_code
         ):
             return None
+        if candidate.source_buffer_code is not None:
+            self._validate_persisted_buffer_code(
+                context=context,
+                plan=plan,
+                buffer_code=candidate.source_buffer_code,
+                expected_order_code=baseline.order_code,
+                role="source",
+            )
+        self._validate_persisted_buffer_code(
+            context=context,
+            plan=plan,
+            buffer_code=candidate.target_buffer_code,
+            expected_order_code=candidate.expected_target_order_code,
+            role="target",
+        )
         return self._transition(
             plan=plan,
             baseline=baseline,
@@ -342,6 +366,31 @@ class PendingCutlineDetector:
             target_wafer_spec=relation.wafer_spec,
             is_recommended_candidate=True,
         )
+
+    def _validate_persisted_buffer_code(
+        self,
+        *,
+        context: CandidateContext,
+        plan: PendingCutlinePlan,
+        buffer_code: str,
+        expected_order_code: str,
+        role: str,
+    ) -> None:
+        batch = context.main_buffer_batch
+        if not batch.groups_by_group_key:
+            return
+        group_key = batch.group_key_by_buffer_code.get(buffer_code)
+        group = batch.groups_by_group_key.get(group_key)
+        if (
+            group is None
+            or group.order_code != expected_order_code
+            or group.workshop_code != plan.workshop_code
+        ):
+            raise PendingCutlineDetectionError(
+                f"plan_id={plan.plan_id}, warning_id={plan.warning_id}: "
+                f"{role} buffer_code {buffer_code} cannot be uniquely "
+                "located in the current main Buffer batch"
+            )
 
     def _nonrecommended_stockout_transition(
         self,

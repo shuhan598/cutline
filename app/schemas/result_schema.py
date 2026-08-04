@@ -14,6 +14,7 @@ from pydantic import (
 )
 
 from app.schemas.common_schema import AlgorithmActiveCutlineEvent
+from app.core.buffer_aggregation.models import GroupKey
 from app.schemas.pending_cutline_schema import (
     PendingCutlinePlan,
     PendingCutlinePlanStatus,
@@ -35,6 +36,8 @@ class AlgorithmIntervalNetRateResult(BaseModel):
     upstream_output_rate: float
     downstream_input_rate: float
     net_consumption_rate: float
+    inventory_change_rate: float | None = Field(default=None, exclude=True)
+    group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class ConfirmedCutlineTransition(BaseModel):
@@ -177,6 +180,7 @@ class AlgorithmDepletionTimeResult(BaseModel):
     downstream_input_rate: float = Field(..., ge=0)
     net_consumption_rate: float
     depletion_minutes: float | None = Field(..., ge=0)
+    group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmOrderGrowthDetail(BaseModel):
@@ -209,6 +213,7 @@ class AlgorithmBufferOverflowTimeResult(BaseModel):
     order_growth_details: list[AlgorithmOrderGrowthDetail] = Field(
         default_factory=list
     )
+    group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmStockoutWarningResult(BaseModel):
@@ -231,6 +236,7 @@ class AlgorithmStockoutWarningResult(BaseModel):
     net_consumption_rate: float
     depletion_minutes: float = Field(..., ge=0)
     stockout_warning_lead_minutes: float = Field(..., gt=0)
+    group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmOverflowWarningResult(BaseModel):
@@ -253,6 +259,7 @@ class AlgorithmOverflowWarningResult(BaseModel):
     order_growth_details: list[AlgorithmOrderGrowthDetail] = Field(
         default_factory=list
     )
+    group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmStockoutCandidateMachine(BaseModel):
@@ -281,6 +288,9 @@ class AlgorithmStockoutCandidateMachine(BaseModel):
     contribution_capacity: float = Field(..., ge=0)
     utilization_rate: float
     idle_rate: float
+    receiver_group_key: GroupKey | None = Field(default=None, exclude=True)
+    donor_group_key: GroupKey | None = Field(default=None, exclude=True)
+    donor_main_id: str | None = Field(default=None, exclude=True)
 
 
 class AlgorithmStockoutCandidateResult(BaseModel):
@@ -300,6 +310,7 @@ class AlgorithmStockoutCandidateResult(BaseModel):
     candidates: list[AlgorithmStockoutCandidateMachine] = Field(
         default_factory=list
     )
+    receiver_group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmOverflowTargetOption(BaseModel):
@@ -316,6 +327,7 @@ class AlgorithmOverflowTargetOption(BaseModel):
     target_downstream_process_code: str | None = None
     capacity_gap: float
     estimated_contribution_capacity: float = Field(..., ge=0)
+    target_group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmOverflowCandidateMachine(BaseModel):
@@ -342,6 +354,7 @@ class AlgorithmOverflowCandidateMachine(BaseModel):
     target_options: list[AlgorithmOverflowTargetOption] = Field(
         default_factory=list
     )
+    source_group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmOverflowCandidateResult(BaseModel):
@@ -362,6 +375,7 @@ class AlgorithmOverflowCandidateResult(BaseModel):
     candidates: list[AlgorithmOverflowCandidateMachine] = Field(
         default_factory=list
     )
+    source_group_key: GroupKey | None = Field(default=None, exclude=True)
 
 
 class AlgorithmRejectedMachineEvaluation(BaseModel):
@@ -405,6 +419,11 @@ class AlgorithmSelectedMachineEvaluation(BaseModel):
     target_net_rate_before: float
     target_net_rate_after: float
     target_overflow_minutes_after: float | None = Field(default=None, ge=0)
+    receiver_group_key: GroupKey | None = Field(default=None, exclude=True)
+    donor_group_key: GroupKey | None = Field(default=None, exclude=True)
+    donor_main_id: str | None = Field(default=None, exclude=True)
+    source_group_key: GroupKey | None = Field(default=None, exclude=True)
+    target_group_key: GroupKey | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def validate_capacity_kind(self):
@@ -448,10 +467,6 @@ class AlgorithmStockoutSelectionResult(BaseModel):
         ):
             raise ValueError(
                 "stockout selected machines require contribution capacity"
-            )
-        if self.risk_resolved and self.remaining_capacity_gap > 0:
-            raise ValueError(
-                "resolved stockout selection cannot have a remaining capacity gap"
             )
         if not self.risk_resolved and self.remaining_capacity_gap <= 0:
             raise ValueError(

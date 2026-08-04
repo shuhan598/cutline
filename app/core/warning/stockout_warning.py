@@ -84,6 +84,7 @@ class StockoutWarningEvaluator:
                     stockout_warning_lead_minutes=(
                         stockout_warning_lead_minutes
                     ),
+                    group_key=depletion.group_key,
                 )
             )
 

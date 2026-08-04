@@ -1,6 +1,12 @@
 import pytest
 
 import app.core.candidate_machine.stockout_candidate_finder as stockout_module
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferAggregationBatch,
+    MainBufferGroup,
+    PhysicalBufferKey,
+)
 from app.schemas.result_schema import AlgorithmStockoutWarningResult
 from tests.core.candidate_machine.helpers import (
     agv_relation,
@@ -108,6 +114,37 @@ def _find(candidate_snapshot, warning=None):
     )[0]
 
 
+def _main_group(
+    *,
+    physical_key: PhysicalBufferKey,
+    main_id: str,
+    order_code: str,
+    buffer_code: str,
+    auto_donate_eligible: bool,
+) -> MainBufferGroup:
+    group_key = GroupKey(physical_key, main_id, order_code)
+    return MainBufferGroup(
+        group_key=group_key,
+        main_id=main_id,
+        workshop_code=physical_key.workshop_code,
+        ordered_service_process_codes=("P01", "P02"),
+        physical_buffer_key=physical_key,
+        order_code=order_code,
+        product_code=order_code.replace("ORD-", "PROD-", 1),
+        buffer_codes=(buffer_code,),
+        total_inventory=1000.0,
+        total_capacity=10000.0,
+        remaining_capacity=9000.0,
+        representative_buffer_code=buffer_code,
+        stockout_eligible=auto_donate_eligible,
+        overflow_eligible=auto_donate_eligible,
+        stockout_warning_eligible=auto_donate_eligible,
+        overflow_warning_eligible=auto_donate_eligible,
+        auto_receive_eligible=auto_donate_eligible,
+        auto_donate_eligible=auto_donate_eligible,
+    )
+
+
 def _set_workshop(candidate_snapshot, workshop_code: str) -> None:
     candidate_snapshot.lines[0] = candidate_snapshot.lines[0].model_copy(
         update={"workshop_code": workshop_code}
@@ -165,6 +202,71 @@ def test_stockout_candidate_result_contains_complete_realtime_context():
     assert candidate.contribution_capacity == 16000
     assert candidate.utilization_rate == pytest.approx(0.8)
     assert candidate.idle_rate == pytest.approx(0.2)
+
+
+def test_stockout_skips_conflicted_donor_and_keeps_other_healthy_donor():
+    candidate_snapshot = _candidate_snapshot()
+    candidate_snapshot.orders.append(
+        order("ORD-HEALTHY", "PROD-HEALTHY", "S1")
+    )
+    candidate_snapshot.products.append(product("PROD-HEALTHY", "182", "A"))
+    _add_machine(
+        candidate_snapshot,
+        machine_code="M-HEALTHY",
+        order_code="ORD-HEALTHY",
+        product_name="Healthy Product",
+    )
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    receiver = _main_group(
+        physical_key=physical_key,
+        main_id="MAIN-RECEIVER",
+        order_code="ORD-TARGET",
+        buffer_code="BUF-01",
+        auto_donate_eligible=True,
+    )
+    conflicted_donors = (
+        _main_group(
+            physical_key=physical_key,
+            main_id="MAIN-CONFLICT-A",
+            order_code="ORD-CURRENT",
+            buffer_code="BUF-CONFLICT-A",
+            auto_donate_eligible=False,
+        ),
+        _main_group(
+            physical_key=physical_key,
+            main_id="MAIN-CONFLICT-B",
+            order_code="ORD-CURRENT",
+            buffer_code="BUF-CONFLICT-B",
+            auto_donate_eligible=False,
+        ),
+    )
+    healthy_donor = _main_group(
+        physical_key=physical_key,
+        main_id="MAIN-HEALTHY",
+        order_code="ORD-HEALTHY",
+        buffer_code="BUF-HEALTHY",
+        auto_donate_eligible=True,
+    )
+    groups = (receiver, *conflicted_donors, healthy_donor)
+    candidate_snapshot.main_buffer_batch = MainBufferAggregationBatch(
+        groups=groups,
+        groups_by_group_key={group.group_key: group for group in groups},
+        group_key_by_buffer_code={
+            group.representative_buffer_code: group.group_key
+            for group in groups
+        },
+        group_keys_by_physical_buffer_key={
+            physical_key: tuple(group.group_key for group in groups)
+        },
+    )
+    warning = _warning().model_copy(update={"group_key": receiver.group_key})
+
+    result = _find(candidate_snapshot, warning)
+
+    assert [candidate.machine_code for candidate in result.candidates] == [
+        "M-HEALTHY"
+    ]
+    assert result.candidates[0].donor_group_key == healthy_donor.group_key
 
 
 def test_stockout_candidate_runs_without_line_data():

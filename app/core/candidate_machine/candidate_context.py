@@ -16,6 +16,11 @@ from app.schemas.common_schema import (
     AlgorithmProduct,
 )
 from app.schemas.request_schema import AlgorithmSnapshot
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferGroup,
+    PhysicalBufferKey,
+)
 
 
 ModelT = TypeVar("ModelT")
@@ -25,6 +30,7 @@ class CandidateContext:
     """新版候选筛选共用的唯一索引和引用解析上下文。"""
 
     def __init__(self, snapshot: AlgorithmSnapshot):
+        self.main_buffer_batch = snapshot.main_buffer_batch
         self.runtime_by_machine_code = self._unique_index(
             snapshot.machine_runtimes,
             "machine_code",
@@ -45,11 +51,17 @@ class CandidateContext:
             "product_code",
             "product",
         )
-        self.buffer_relation_by_code = self._unique_index(
-            snapshot.buffer_process_relations,
-            "buffer_code",
-            "buffer process relation",
-        )
+        if self.main_buffer_batch.groups_by_group_key:
+            self.buffer_relation_by_code = self._unambiguous_index(
+                snapshot.buffer_process_relations,
+                "buffer_code",
+            )
+        else:
+            self.buffer_relation_by_code = self._unique_index(
+                snapshot.buffer_process_relations,
+                "buffer_code",
+                "buffer process relation",
+            )
         self.agv_by_machine_code = self._unique_index(
             snapshot.agv_relations,
             "machine_code",
@@ -75,6 +87,20 @@ class CandidateContext:
                 )
             result[key] = item
         return result
+
+    def _unambiguous_index(
+        self,
+        items: Iterable[ModelT],
+        field_name: str,
+    ) -> dict[str, ModelT]:
+        grouped: dict[str, list[ModelT]] = {}
+        for item in items:
+            grouped.setdefault(getattr(item, field_name), []).append(item)
+        return {
+            key: matches[0]
+            for key, matches in grouped.items()
+            if len(matches) == 1
+        }
 
     def _validate_references(self) -> None:
         for runtime in self.runtime_by_machine_code.values():
@@ -166,3 +192,39 @@ class CandidateContext:
                 f"process relation: warning={expected}, relation={actual}"
             )
         return relation
+
+    def warning_group(self, warning) -> MainBufferGroup | None:
+        if not self.main_buffer_batch.groups_by_group_key:
+            return None
+        group_key = getattr(warning, "group_key", None)
+        if group_key is None:
+            group_key = self.main_buffer_batch.group_key_by_buffer_code.get(
+                warning.buffer_code
+            )
+        if group_key is None:
+            raise CandidateMachineCalculationError(
+                f"{warning.buffer_code} warning main Buffer group cannot be located"
+            )
+        group = self.main_buffer_batch.groups_by_group_key.get(group_key)
+        if group is None:
+            raise CandidateMachineCalculationError(
+                f"{group_key} warning main Buffer group does not exist"
+            )
+        return group
+
+    def unique_group_for_order(
+        self,
+        physical_buffer_key: PhysicalBufferKey,
+        order_code: str,
+    ) -> MainBufferGroup | None:
+        matches = [
+            self.main_buffer_batch.groups_by_group_key[group_key]
+            for group_key in self.main_buffer_batch.group_keys_by_physical_buffer_key.get(
+                physical_buffer_key, ()
+            )
+            if group_key.order_code == order_code
+            and self.main_buffer_batch.groups_by_group_key[
+                group_key
+            ].auto_donate_eligible
+        ]
+        return matches[0] if len(matches) == 1 else None

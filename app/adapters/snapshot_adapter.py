@@ -25,6 +25,9 @@ from app.core.workshop.buffer_process_resolver import (
     BufferProcessResolutionError,
     BufferProcessResolver,
 )
+from app.core.buffer_aggregation.main_buffer_aggregator import (
+    MainBufferAggregator,
+)
 from app.core.workshop.machine_workshop_resolver import (
     MachineWorkshopResolutionError,
     MachineWorkshopResolver,
@@ -145,14 +148,14 @@ class SnapshotAdapter:
             )
 
             buffer_masters = self._convert_buffer_masters(request.buffer_master)
-            buffer_by_code = self._index_unique(
+            buffer_by_code = self._index_unambiguous(
                 buffer_masters, "buffer_code", "buffer"
             )
             buffer_process_relations = self._build_buffer_process_relations(
                 buffer_masters,
                 process_routes,
             )
-            relation_by_buffer = self._index_unique(
+            relation_by_buffer = self._index_unambiguous(
                 buffer_process_relations, "buffer_code", "buffer process relation"
             )
             buffer_order_inventories = self._convert_buffer_order_inventories(
@@ -160,6 +163,12 @@ class SnapshotAdapter:
                 order_index,
                 buffer_by_code,
                 relation_by_buffer,
+            )
+            main_buffer_batch = MainBufferAggregator().aggregate(
+                realtime_buffers=request.buffer_realtime,
+                buffer_masters=buffer_masters,
+                buffer_relations=buffer_process_relations,
+                orders=orders,
             )
 
             pending_cutline_plans = PendingCutlinePlanAdapter().convert(
@@ -210,6 +219,7 @@ class SnapshotAdapter:
                 buffer_masters=buffer_masters,
                 buffer_process_relations=buffer_process_relations,
                 buffer_order_inventories=buffer_order_inventories,
+                main_buffer_batch=main_buffer_batch,
                 agv_relations=agv_relations,
                 pending_cutline_plans=pending_cutline_plans,
                 agv_binding_history=agv_binding_history,
@@ -547,85 +557,26 @@ class SnapshotAdapter:
     ) -> list[AlgorithmBufferOrderInventory]:
         result: list[AlgorithmBufferOrderInventory] = []
         seen: set[tuple[str, str, str]] = set()
-        main_id_by_buffer: dict[str, str] = {}
-        group_context_by_main_id: dict[
-            str, tuple[str, dict[str, str]]
-        ] = {}
         for item in source:
             if item.buffer_code not in buffer_by_code:
-                raise SnapshotConversionError(
-                    f"{item.buffer_code} buffer does not exist for realtime inventory"
-                )
+                continue
 
             main_id = item.main_id
             if main_id is None or not main_id.strip():
-                raise SnapshotConversionError(
-                    f"Buffer {item.buffer_code} main_id is required and must not be blank"
-                )
-
-            relation = relation_by_buffer[item.buffer_code]
-            buffer = buffer_by_code[item.buffer_code]
-            context = {
-                "workshop_code": relation.workshop_code,
-                "upstream_process_code": relation.upstream_process_code,
-                "downstream_process_code": relation.downstream_process_code,
-                "loop_code": buffer.loop_code,
-            }
-            existing_group_context = group_context_by_main_id.get(main_id)
-            if existing_group_context is None:
-                group_context_by_main_id[main_id] = (
-                    item.buffer_code,
-                    context,
-                )
-            else:
-                existing_buffer_code, expected_context = (
-                    existing_group_context
-                )
-                for field_name, expected_value in expected_context.items():
-                    actual_value = context[field_name]
-                    if actual_value != expected_value:
-                        raise SnapshotConversionError(
-                            f"Buffer main_id {main_id} conflict for "
-                            f"{field_name}: buffer_code "
-                            f"{existing_buffer_code}={expected_value!r}, "
-                            f"buffer_code {item.buffer_code}={actual_value!r}"
-                        )
+                continue
 
             source_name = item.bound_source_name.strip()
-            order = order_index.resolve_product_name(
-                source_name,
-                source=(
-                    f"Buffer {item.buffer_code} bound_source_name"
-                ),
-            )
-            if order.workshop_code != relation.workshop_code:
-                raise SnapshotConversionError(
-                    f"Buffer {item.buffer_code} product_name {source_name!r} "
-                    f"resolved order {order.order_code!r} in workshop "
-                    f"{order.workshop_code!r}, but the Buffer process relation "
-                    f"belongs to workshop {relation.workshop_code!r}"
+            try:
+                order = order_index.resolve_product_name(
+                    source_name,
+                    source=f"Buffer {item.buffer_code} bound_source_name",
                 )
-
-            existing_main_id = main_id_by_buffer.get(item.buffer_code)
-            if (
-                existing_main_id is not None
-                and existing_main_id != main_id
-            ):
-                raise SnapshotConversionError(
-                    f"Buffer {item.buffer_code} main_id conflict: "
-                    f"existing main_id={existing_main_id!r}, "
-                    f"current main_id={main_id!r}, "
-                    f"order_code={order.order_code!r}"
-                )
-            main_id_by_buffer[item.buffer_code] = main_id
+            except SnapshotReferenceIndexError:
+                continue
 
             key = (main_id, item.buffer_code, order.order_code)
             if key in seen:
-                raise SnapshotConversionError(
-                    f"Buffer main_id {main_id} buffer_code "
-                    f"{item.buffer_code} order {order.order_code} "
-                    "duplicate inventory"
-                )
+                continue
             seen.add(key)
             result.append(
                 AlgorithmBufferOrderInventory(
@@ -1030,6 +981,19 @@ class SnapshotAdapter:
                 raise SnapshotConversionError(f"{key} duplicate {label}")
             result[key] = item
         return result
+
+    def _index_unambiguous(
+        self, items: Iterable[ModelT], field: str, label: str
+    ) -> dict[str, ModelT]:
+        """Index only uniquely mapped records for strict downstream lookup."""
+        grouped: dict[str, list[ModelT]] = {}
+        for item in items:
+            grouped.setdefault(getattr(item, field), []).append(item)
+        return {
+            key: matches[0]
+            for key, matches in grouped.items()
+            if len(matches) == 1
+        }
 
     def _index_process_routes(
         self, routes: Iterable[AlgorithmProcessRoute]

@@ -1404,13 +1404,6 @@
       "current_utilization_rate": 0.01
     },
     {
-      "main_id": "MAIN-310110302",
-      "buffer_code": "310110302",
-      "bound_source_name": "182N至上产品",
-      "current_quantity": 1000.0,
-      "current_utilization_rate": 0.01
-    },
-    {
       "main_id": "MAIN-310110303",
       "buffer_code": "310110303",
       "bound_source_name": "182N至上产品",
@@ -1467,6 +1460,13 @@
       "current_utilization_rate": 0.01
     },
     {
+      "main_id": "MAIN-310112802",
+      "buffer_code": "310112802",
+      "bound_source_name": "182N支援产品",
+      "current_quantity": 2000.0,
+      "current_utilization_rate": 0.02
+    },
+    {
       "main_id": "MAIN-31011280",
       "buffer_code": "310112803",
       "bound_source_name": "182N至上产品",
@@ -1479,13 +1479,6 @@
       "bound_source_name": "182N至上产品",
       "current_quantity": 7200.0,
       "current_utilization_rate": 0.36
-    },
-    {
-      "main_id": "MAIN-31011280",
-      "buffer_code": "310112804",
-      "bound_source_name": "182N支援产品",
-      "current_quantity": 2000.0,
-      "current_utilization_rate": 0.1
     }
   ],
   "buffer_master": [
@@ -1693,6 +1686,24 @@
       "buffer_type": "PROCESS",
       "buffer_type_title": "工序缓存",
       "max_capacity": 20000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "制绒",
+        "碱抛"
+      ],
+      "served_process_names": [
+        "制绒",
+        "碱抛"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310112802",
+      "buffer_name": "制绒-碱抛Buffer",
+      "buffer_type": "PROCESS",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
       "safety_low": 100.0,
       "served_process_codes": [
         "制绒",

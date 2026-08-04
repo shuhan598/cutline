@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import isclose
+from math import isclose, isfinite
 
 from app.core.cutline_plan.errors import MachineSelectionEvaluationError
+from app.core.buffer_aggregation.models import GroupKey, MainBufferGroup
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (
     AlgorithmBufferOverflowTimeResult,
@@ -34,6 +35,13 @@ class VirtualCutlineState:
     selected_machine_codes: set[str]
 
 
+@dataclass
+class VirtualGroupState:
+    inventory_change_rate: float
+    total_inventory: float
+    total_capacity: float | None
+
+
 class MachineSelectionEvaluator:
     """保持候选顺序，逐台模拟双侧影响并累计选择安全机台。"""
 
@@ -55,6 +63,13 @@ class MachineSelectionEvaluator:
         if warning.net_consumption_rate <= 0:
             raise MachineSelectionEvaluationError(
                 "stockout warning net consumption rate must be positive"
+            )
+        if snapshot.main_buffer_batch.groups_by_group_key:
+            return self._select_stockout_from_batch(
+                snapshot=snapshot,
+                warning=warning,
+                candidate_result=candidate_result,
+                interval_results=interval_results,
             )
 
         interval_by_key = self._interval_index(interval_results)
@@ -276,6 +291,316 @@ class MachineSelectionEvaluator:
             ),
         )
 
+    def _select_stockout_from_batch(
+        self,
+        *,
+        snapshot: AlgorithmSnapshot,
+        warning: AlgorithmStockoutWarningResult,
+        candidate_result: AlgorithmStockoutCandidateResult,
+        interval_results: list[AlgorithmIntervalNetRateResult],
+    ) -> AlgorithmStockoutSelectionResult:
+        batch = snapshot.main_buffer_batch
+        receiver_key = (
+            warning.group_key or candidate_result.receiver_group_key
+        )
+        if receiver_key is None:
+            receiver_key = batch.group_key_by_buffer_code.get(
+                warning.buffer_code
+            )
+        receiver = batch.groups_by_group_key.get(receiver_key)
+        if receiver is None:
+            raise MachineSelectionEvaluationError(
+                "stockout receiver group cannot be located"
+            )
+
+        rates_by_key = {
+            result.group_key: result
+            for result in interval_results
+            if result.group_key is not None
+        }
+        receiver_rate = rates_by_key.get(receiver.group_key)
+        if receiver_rate is None:
+            raise MachineSelectionEvaluationError(
+                "stockout receiver rate cannot be located"
+            )
+        initial_rate = self._inventory_change_rate(receiver_rate)
+        initial_gap = max(0.0, -initial_rate)
+        if not receiver.auto_receive_eligible:
+            rejected = [
+                self._rejected(
+                    candidate,
+                    reason="target_capacity_unavailable",
+                    target_interval=receiver_rate,
+                    target_before=-initial_rate,
+                    message=(
+                        "receiver capacity is unavailable; target overflow "
+                        "risk cannot be validated"
+                    ),
+                )
+                for candidate in candidate_result.candidates
+            ]
+            return self._stockout_batch_result(
+                warning=warning,
+                initial_gap=initial_gap,
+                remaining_gap=initial_gap,
+                selected=[],
+                rejected=rejected,
+                failure_reason="target_capacity_unavailable",
+            )
+
+        virtual_groups: dict[GroupKey, VirtualGroupState] = {
+            receiver.group_key: VirtualGroupState(
+                inventory_change_rate=initial_rate,
+                total_inventory=receiver.total_inventory,
+                total_capacity=receiver.total_capacity,
+            )
+        }
+        selected_codes: set[str] = set()
+        selected: list[AlgorithmSelectedMachineEvaluation] = []
+        rejected: list[AlgorithmRejectedMachineEvaluation] = []
+        total_contribution = 0.0
+        risk_resolved = self._stockout_resolved(
+            virtual_groups[receiver.group_key],
+            snapshot.config.stockout_warning_lead_minutes,
+        )
+
+        for candidate in candidate_result.candidates:
+            if risk_resolved:
+                break
+            if candidate.machine_code in selected_codes:
+                rejected.append(
+                    self._rejected(
+                        candidate,
+                        reason="duplicate_machine_selection",
+                        message="machine has already been selected",
+                    )
+                )
+                continue
+            donor_key = candidate.donor_group_key
+            donor = batch.groups_by_group_key.get(donor_key)
+            donor_rate = rates_by_key.get(donor_key)
+            if (
+                donor is None
+                or donor_rate is None
+                or not donor.auto_donate_eligible
+            ):
+                rejected.append(
+                    self._rejected(
+                        candidate,
+                        reason="donor_group_not_found",
+                        message="candidate donor group cannot be safely located",
+                    )
+                )
+                continue
+            contribution = self._validated_capacity(
+                candidate.contribution_capacity,
+                candidate.output_quantity_30m,
+                candidate.machine_code,
+            )
+            if contribution <= 0:
+                rejected.append(
+                    self._rejected(
+                        candidate,
+                        reason="no_effective_contribution",
+                        message="candidate contribution capacity is not positive",
+                    )
+                )
+                continue
+
+            donor_state = virtual_groups.setdefault(
+                donor.group_key,
+                VirtualGroupState(
+                    inventory_change_rate=self._inventory_change_rate(
+                        donor_rate
+                    ),
+                    total_inventory=donor.total_inventory,
+                    total_capacity=donor.total_capacity,
+                ),
+            )
+            receiver_state = virtual_groups[receiver.group_key]
+            donor_before = donor_state.inventory_change_rate
+            receiver_before = receiver_state.inventory_change_rate
+            donor_after = donor_before - contribution
+            receiver_after = receiver_before + contribution
+            if max(0.0, -receiver_after) >= max(0.0, -receiver_before):
+                rejected.append(
+                    self._rejected(
+                        candidate,
+                        reason="target_risk_not_improved",
+                        message="candidate does not strictly improve receiver risk",
+                    )
+                )
+                continue
+            donor_depletion = self._group_depletion_minutes(
+                donor.total_inventory,
+                donor_after,
+            )
+            if (
+                donor_depletion is not None
+                and donor_depletion
+                <= snapshot.config.stockout_warning_lead_minutes
+            ):
+                rejected.append(
+                    self._rejected(
+                        candidate,
+                        reason="source_order_stockout_risk",
+                        message="borrowing the machine creates donor stockout risk",
+                    )
+                )
+                continue
+            receiver_overflow = self._group_overflow_minutes(
+                receiver,
+                receiver_after,
+            )
+            if (
+                receiver_overflow is not None
+                and receiver_overflow
+                <= snapshot.config.overflow_warning_lead_minutes
+            ):
+                rejected.append(
+                    self._rejected(
+                        candidate,
+                        reason="target_buffer_overflow_risk",
+                        message="switching in creates receiver overflow risk",
+                    )
+                )
+                continue
+
+            donor_state.inventory_change_rate = donor_after
+            receiver_state.inventory_change_rate = receiver_after
+            selected_codes.add(candidate.machine_code)
+            total_contribution += contribution
+            selected.append(
+                AlgorithmSelectedMachineEvaluation(
+                    machine_code=candidate.machine_code,
+                    source_order_code=donor.order_code,
+                    target_order_code=receiver.order_code,
+                    source_buffer_code=(
+                        donor.representative_buffer_code or ""
+                    ),
+                    target_buffer_code=(
+                        receiver.representative_buffer_code or ""
+                    ),
+                    process_code=candidate.process_code,
+                    workshop_code=candidate.workshop_code,
+                    wafer_size=warning.wafer_size,
+                    source_wafer_spec=candidate.current_wafer_spec,
+                    target_wafer_spec=warning.wafer_spec,
+                    contribution_capacity=contribution,
+                    reduced_capacity=None,
+                    utilization_rate=candidate.utilization_rate,
+                    idle_rate=candidate.idle_rate,
+                    source_net_rate_before=-donor_before,
+                    source_net_rate_after=-donor_after,
+                    source_depletion_minutes_after=donor_depletion,
+                    target_net_rate_before=-receiver_before,
+                    target_net_rate_after=-receiver_after,
+                    target_overflow_minutes_after=receiver_overflow,
+                    receiver_group_key=receiver.group_key,
+                    donor_group_key=donor.group_key,
+                    donor_main_id=donor.main_id,
+                )
+            )
+            risk_resolved = self._stockout_resolved(
+                receiver_state,
+                snapshot.config.stockout_warning_lead_minutes,
+            )
+
+        remaining_gap = max(
+            0.0,
+            -virtual_groups[receiver.group_key].inventory_change_rate,
+        )
+        failure_reason = None
+        if not risk_resolved:
+            failure_reason = self._stockout_failure_reason(
+                candidate_count=len(candidate_result.candidates),
+                selected_count=len(selected),
+                risk_resolved=False,
+            )
+        return self._stockout_batch_result(
+            warning=warning,
+            initial_gap=initial_gap,
+            remaining_gap=remaining_gap,
+            selected=selected,
+            rejected=rejected,
+            failure_reason=failure_reason,
+            total_contribution=total_contribution,
+            risk_resolved=risk_resolved,
+        )
+
+    @staticmethod
+    def _inventory_change_rate(
+        result: AlgorithmIntervalNetRateResult,
+    ) -> float:
+        if result.inventory_change_rate is not None:
+            return result.inventory_change_rate
+        return -result.net_consumption_rate
+
+    @staticmethod
+    def _group_depletion_minutes(
+        total_inventory: float,
+        inventory_change_rate: float,
+    ) -> float | None:
+        if inventory_change_rate >= 0:
+            return None
+        return total_inventory / abs(inventory_change_rate) * 60
+
+    @staticmethod
+    def _group_overflow_minutes(
+        group: MainBufferGroup,
+        inventory_change_rate: float,
+    ) -> float | None:
+        if inventory_change_rate <= 0:
+            return None
+        if group.total_capacity is None:
+            return 0.0
+        remaining = group.total_capacity - group.total_inventory
+        if remaining <= 0:
+            return 0.0
+        return remaining / inventory_change_rate * 60
+
+    def _stockout_resolved(
+        self,
+        state: VirtualGroupState,
+        lead_minutes: float,
+    ) -> bool:
+        if state.inventory_change_rate >= 0:
+            return True
+        depletion = self._group_depletion_minutes(
+            state.total_inventory,
+            state.inventory_change_rate,
+        )
+        return depletion is not None and depletion >= lead_minutes
+
+    @staticmethod
+    def _stockout_batch_result(
+        *,
+        warning: AlgorithmStockoutWarningResult,
+        initial_gap: float,
+        remaining_gap: float,
+        selected: list[AlgorithmSelectedMachineEvaluation],
+        rejected: list[AlgorithmRejectedMachineEvaluation],
+        failure_reason: str | None,
+        total_contribution: float = 0.0,
+        risk_resolved: bool = False,
+    ) -> AlgorithmStockoutSelectionResult:
+        return AlgorithmStockoutSelectionResult(
+            workshop_code=warning.workshop_code,
+            buffer_code=warning.buffer_code,
+            order_code=warning.order_code,
+            wafer_size=warning.wafer_size,
+            wafer_spec=warning.wafer_spec,
+            upstream_process_code=warning.upstream_process_code,
+            downstream_process_code=warning.downstream_process_code,
+            initial_capacity_gap=initial_gap,
+            total_contribution_capacity=total_contribution,
+            remaining_capacity_gap=remaining_gap,
+            selected_machines=selected,
+            rejected_machines=rejected,
+            risk_resolved=risk_resolved,
+            failure_reason=failure_reason,
+        )
+
     def select_overflow_machines(
         self,
         *,
@@ -285,6 +610,13 @@ class MachineSelectionEvaluator:
         interval_results: list[AlgorithmIntervalNetRateResult],
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> AlgorithmOverflowSelectionResult:
+        if snapshot.main_buffer_batch.groups_by_group_key:
+            return self._select_overflow_from_batch(
+                snapshot=snapshot,
+                warning=warning,
+                candidate_result=candidate_result,
+                interval_results=interval_results,
+            )
         stockout_warning_lead_minutes = (
             snapshot.config.stockout_warning_lead_minutes
         )
@@ -647,6 +979,429 @@ class MachineSelectionEvaluator:
                 rejected=rejected,
                 risk_resolved=risk_resolved,
             ),
+        )
+
+    def _select_overflow_from_batch(
+        self,
+        *,
+        snapshot: AlgorithmSnapshot,
+        warning: AlgorithmOverflowWarningResult,
+        candidate_result: AlgorithmOverflowCandidateResult,
+        interval_results: list[AlgorithmIntervalNetRateResult],
+    ) -> AlgorithmOverflowSelectionResult:
+        batch = snapshot.main_buffer_batch
+        source_key = warning.group_key
+        if source_key is None:
+            source_key = batch.group_key_by_buffer_code.get(
+                warning.buffer_code
+            )
+        source_group = batch.groups_by_group_key.get(source_key)
+        if source_group is None:
+            raise MachineSelectionEvaluationError(
+                "overflow source group cannot be located"
+            )
+        if (
+            candidate_result.source_group_key is not None
+            and candidate_result.source_group_key != source_group.group_key
+        ):
+            raise MachineSelectionEvaluationError(
+                "candidate source group does not match warning"
+            )
+        if candidate_result.source_order_code != source_group.order_code:
+            raise MachineSelectionEvaluationError(
+                "candidate source order does not match overflow source group"
+            )
+
+        rates_by_key = {
+            result.group_key: result
+            for result in interval_results
+            if result.group_key is not None
+        }
+        source_rate_result = rates_by_key.get(source_group.group_key)
+        if source_rate_result is None:
+            raise MachineSelectionEvaluationError(
+                "overflow source group rate cannot be located"
+            )
+        initial_rate = self._inventory_change_rate(source_rate_result)
+        if not isfinite(initial_rate):
+            raise MachineSelectionEvaluationError(
+                "overflow source group rate must be finite"
+            )
+        virtual_groups: dict[GroupKey, VirtualGroupState] = {
+            source_group.group_key: VirtualGroupState(
+                inventory_change_rate=initial_rate,
+                total_inventory=source_group.total_inventory,
+                total_capacity=source_group.total_capacity,
+            )
+        }
+        selected_machine_codes: set[str] = set()
+        selected: list[AlgorithmSelectedMachineEvaluation] = []
+        rejected: list[AlgorithmRejectedMachineEvaluation] = []
+        total_reduced_capacity = 0.0
+        risk_resolved = self._overflow_group_resolved(
+            source_group,
+            virtual_groups[source_group.group_key],
+            snapshot.config.overflow_warning_lead_minutes,
+        )
+
+        for candidate in candidate_result.candidates:
+            if risk_resolved:
+                break
+            if candidate.machine_code in selected_machine_codes:
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="duplicate_machine_selection",
+                        message="machine has already been selected",
+                    )
+                )
+                continue
+            if not source_group.auto_donate_eligible:
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="source_group_not_found",
+                        message="overflow source group cannot safely donate",
+                    )
+                )
+                continue
+            if (
+                not isfinite(candidate.reduced_capacity)
+                or not isfinite(candidate.output_quantity_30m)
+            ):
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="invalid_reduction",
+                        message="candidate reduction must be finite",
+                    )
+                )
+                continue
+            reduction = self._validated_capacity(
+                candidate.reduced_capacity,
+                candidate.output_quantity_30m,
+                candidate.machine_code,
+            )
+            if reduction <= 0:
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="no_effective_reduction",
+                        message="candidate reduced capacity is not positive",
+                    )
+                )
+                continue
+            if (
+                candidate.source_group_key is not None
+                and candidate.source_group_key != source_group.group_key
+            ):
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="source_group_not_found",
+                        message="candidate source group does not match warning",
+                    )
+                )
+                continue
+            if (
+                candidate.current_order_code != source_group.order_code
+                or candidate.current_product_code != source_group.product_code
+                or candidate.current_wafer_size
+                != source_rate_result.wafer_size
+                or candidate.current_wafer_spec
+                != source_rate_result.wafer_spec
+                or candidate.workshop_code != source_group.workshop_code
+                or candidate.process_code
+                != source_rate_result.upstream_process_code
+            ):
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="source_group_not_found",
+                        message="candidate source identity does not match group",
+                    )
+                )
+                continue
+
+            source_state = virtual_groups[source_group.group_key]
+            source_before = source_state.inventory_change_rate
+            source_after = source_before - reduction
+            if max(0.0, source_after) >= max(0.0, source_before):
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="source_risk_not_improved",
+                        source_interval=source_rate_result,
+                        source_before=-source_before,
+                        source_after=-source_after,
+                        message="candidate does not strictly improve source risk",
+                    )
+                )
+                continue
+            source_depletion = self._group_depletion_minutes(
+                source_group.total_inventory,
+                source_after,
+            )
+            if (
+                source_depletion is not None
+                and source_depletion
+                < snapshot.config.stockout_warning_lead_minutes
+            ):
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="source_order_stockout_risk",
+                        source_interval=source_rate_result,
+                        source_before=-source_before,
+                        source_after=-source_after,
+                        source_depletion=source_depletion,
+                        message="borrowing the machine creates source stockout risk",
+                    )
+                )
+                continue
+            if not candidate.target_options:
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="no_valid_target_order",
+                        source_interval=source_rate_result,
+                        source_before=-source_before,
+                        source_after=-source_after,
+                        source_depletion=source_depletion,
+                        message="candidate has no target options",
+                    )
+                )
+                continue
+
+            option_rejections: list[
+                AlgorithmRejectedMachineEvaluation
+            ] = []
+            selected_option = False
+            for option in candidate.target_options:
+                target_group = batch.groups_by_group_key.get(
+                    option.target_group_key
+                )
+                target_rate_result = rates_by_key.get(
+                    option.target_group_key
+                )
+                if (
+                    target_group is None
+                    or target_rate_result is None
+                    or not target_group.auto_receive_eligible
+                    or target_group.group_key == source_group.group_key
+                    or target_group.main_id == source_group.main_id
+                    or target_group.order_code == source_group.order_code
+                    or target_group.physical_buffer_key
+                    != source_group.physical_buffer_key
+                    or target_group.order_code
+                    != option.target_order_code
+                    or target_group.product_code
+                    != option.target_product_code
+                    or target_group.representative_buffer_code
+                    != option.target_buffer_code
+                    or target_group.workshop_code
+                    != option.target_workshop_code
+                    or target_rate_result.main_id != target_group.main_id
+                    or target_rate_result.buffer_code
+                    != target_group.representative_buffer_code
+                    or target_rate_result.order_code
+                    != option.target_order_code
+                    or target_rate_result.wafer_size
+                    != option.target_wafer_size
+                    or target_rate_result.wafer_spec
+                    != option.target_wafer_spec
+                    or target_rate_result.workshop_code
+                    != option.target_workshop_code
+                    or target_rate_result.upstream_process_code
+                    != option.target_upstream_process_code
+                    or target_rate_result.downstream_process_code
+                    != option.target_downstream_process_code
+                ):
+                    option_rejections.append(
+                        self._overflow_rejected(
+                            candidate,
+                            option,
+                            reason="target_group_not_found",
+                            source_interval=source_rate_result,
+                            source_before=-source_before,
+                            source_after=-source_after,
+                            source_depletion=source_depletion,
+                            message="target group cannot be safely located",
+                        )
+                    )
+                    continue
+                target_state = virtual_groups.get(target_group.group_key)
+                if target_state is None:
+                    target_rate = self._inventory_change_rate(
+                        target_rate_result
+                    )
+                    if not isfinite(target_rate):
+                        option_rejections.append(
+                            self._overflow_rejected(
+                                candidate,
+                                option,
+                                reason="invalid_target_rate",
+                                source_interval=source_rate_result,
+                                target_interval=target_rate_result,
+                                source_before=-source_before,
+                                source_after=-source_after,
+                                source_depletion=source_depletion,
+                                message="target group rate must be finite",
+                            )
+                        )
+                        continue
+                    target_state = VirtualGroupState(
+                        inventory_change_rate=target_rate,
+                        total_inventory=target_group.total_inventory,
+                        total_capacity=target_group.total_capacity,
+                    )
+                target_before = target_state.inventory_change_rate
+                target_after = target_before + reduction
+                if max(0.0, -target_after) >= max(0.0, -target_before):
+                    option_rejections.append(
+                        self._overflow_rejected(
+                            candidate,
+                            option,
+                            reason="target_risk_not_improved",
+                            source_interval=source_rate_result,
+                            target_interval=target_rate_result,
+                            source_before=-source_before,
+                            source_after=-source_after,
+                            source_depletion=source_depletion,
+                            target_before=-target_before,
+                            target_after=-target_after,
+                            message="candidate does not strictly improve target gap",
+                        )
+                    )
+                    continue
+                target_overflow = self._group_overflow_minutes(
+                    target_group,
+                    target_after,
+                )
+                if (
+                    target_overflow is not None
+                    and target_overflow
+                    < snapshot.config.overflow_warning_lead_minutes
+                ):
+                    option_rejections.append(
+                        self._overflow_rejected(
+                            candidate,
+                            option,
+                            reason="target_buffer_overflow_risk",
+                            source_interval=source_rate_result,
+                            target_interval=target_rate_result,
+                            source_before=-source_before,
+                            source_after=-source_after,
+                            source_depletion=source_depletion,
+                            target_before=-target_before,
+                            target_after=-target_after,
+                            target_overflow=target_overflow,
+                            message="switching in creates target buffer overflow risk",
+                        )
+                    )
+                    continue
+
+                source_state.inventory_change_rate = source_after
+                target_state.inventory_change_rate = target_after
+                virtual_groups[target_group.group_key] = target_state
+                selected_machine_codes.add(candidate.machine_code)
+                total_reduced_capacity += reduction
+                selected.append(
+                    AlgorithmSelectedMachineEvaluation(
+                        machine_code=candidate.machine_code,
+                        source_order_code=source_group.order_code,
+                        target_order_code=target_group.order_code,
+                        source_buffer_code=(
+                            source_group.representative_buffer_code or ""
+                        ),
+                        target_buffer_code=(
+                            target_group.representative_buffer_code or ""
+                        ),
+                        process_code=candidate.process_code,
+                        workshop_code=candidate.workshop_code,
+                        wafer_size=candidate.current_wafer_size,
+                        source_wafer_spec=source_rate_result.wafer_spec,
+                        target_wafer_spec=target_rate_result.wafer_spec,
+                        contribution_capacity=None,
+                        reduced_capacity=reduction,
+                        utilization_rate=candidate.utilization_rate,
+                        idle_rate=candidate.idle_rate,
+                        source_net_rate_before=-source_before,
+                        source_net_rate_after=-source_after,
+                        source_depletion_minutes_after=source_depletion,
+                        target_net_rate_before=-target_before,
+                        target_net_rate_after=-target_after,
+                        target_overflow_minutes_after=target_overflow,
+                        source_group_key=source_group.group_key,
+                        target_group_key=target_group.group_key,
+                    )
+                )
+                selected_option = True
+                risk_resolved = self._overflow_group_resolved(
+                    source_group,
+                    source_state,
+                    snapshot.config.overflow_warning_lead_minutes,
+                )
+                break
+
+            if not selected_option:
+                rejected.extend(option_rejections)
+
+        source_state = virtual_groups[source_group.group_key]
+        remaining_rate = source_state.inventory_change_rate
+        updated_overflow_minutes = self._group_overflow_minutes(
+            source_group,
+            remaining_rate,
+        )
+        failure_reason = self._overflow_failure_reason(
+            candidate_count=len(candidate_result.candidates),
+            warning=warning,
+            selected_count=len(selected),
+            rejected=rejected,
+            risk_resolved=risk_resolved,
+        )
+        return AlgorithmOverflowSelectionResult(
+            workshop_code=source_group.workshop_code,
+            buffer_code=source_group.representative_buffer_code or "",
+            upstream_process_code=warning.upstream_process_code,
+            downstream_process_code=warning.downstream_process_code,
+            source_order_code=source_group.order_code,
+            source_wafer_size=candidate_result.source_wafer_size,
+            source_wafer_spec=source_rate_result.wafer_spec,
+            initial_growth_rate=initial_rate,
+            total_reduced_capacity=total_reduced_capacity,
+            remaining_growth_rate=remaining_rate,
+            updated_overflow_minutes=updated_overflow_minutes,
+            selected_machines=selected,
+            rejected_machines=rejected,
+            risk_resolved=risk_resolved,
+            failure_reason=failure_reason,
+        )
+
+    def _overflow_group_resolved(
+        self,
+        group: MainBufferGroup,
+        state: VirtualGroupState,
+        lead_minutes: float,
+    ) -> bool:
+        if state.inventory_change_rate <= 0:
+            return True
+        overflow_minutes = self._group_overflow_minutes(
+            group,
+            state.inventory_change_rate,
+        )
+        return (
+            overflow_minutes is not None
+            and overflow_minutes >= lead_minutes
         )
 
     def _maximum_growth_detail(

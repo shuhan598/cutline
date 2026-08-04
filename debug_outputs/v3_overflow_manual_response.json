@@ -3,22 +3,22 @@
   "stockout_warnings": [],
   "overflow_warnings": [
     {
-      "warning_id": "overflow:2026-07-17T08:00:00+08:00:310110302",
+      "warning_id": "overflow:2026-07-17T08:00:00+08:00:310112802",
       "warning_type": "overflow",
       "warning_time": "2026-07-17T08:00:00+08:00",
-      "buffer_code": "310110302",
+      "buffer_code": "310112802",
       "workshop_code": "S2",
-      "total_inventory": 950.0,
+      "total_inventory": 850.0,
       "max_capacity": 1000.0,
-      "remaining_capacity": 50.0,
-      "buffer_growth_rate": 200.0,
-      "overflow_minutes": 15.0,
+      "remaining_capacity": 150.0,
+      "buffer_growth_rate": 400.0,
+      "overflow_minutes": 22.5,
       "overflow_warning_lead_minutes": 30.0
     }
   ],
   "cutline_decisions": [
     {
-      "warning_id": "overflow:2026-07-17T08:00:00+08:00:310110302",
+      "warning_id": "overflow:2026-07-17T08:00:00+08:00:310112802",
       "manual_intervention": {
         "reason": "no_valid_target_order"
       }

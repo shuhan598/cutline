@@ -91,12 +91,11 @@ class CutlinePipeline:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> AlgorithmEvaluateResult:
+        errors = self._aggregation_errors(snapshot)
         net_rate_results = cast(
             list[AlgorithmIntervalNetRateResult],
             self._net_rate.calculate(snapshot),
         )
-        errors: list[AlgorithmPipelineError] = []
-
         confirmed_transitions: list[ConfirmedCutlineTransition] = []
         plan_evaluations: list[PendingCutlinePlanEvaluation] = []
         if snapshot.pending_cutline_plans:
@@ -315,6 +314,28 @@ class CutlinePipeline:
             errors=errors,
             persistence_state=persistence_state,
         )
+
+    @staticmethod
+    def _aggregation_errors(
+        snapshot: AlgorithmSnapshot,
+    ) -> list[AlgorithmPipelineError]:
+        errors: list[AlgorithmPipelineError] = []
+        seen: set[tuple[str, str]] = set()
+        for issue in snapshot.main_buffer_batch.issues:
+            key = (issue.code, issue.main_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            errors.append(
+                AlgorithmPipelineError(
+                    stage="main_buffer_aggregation",
+                    warning_type=None,
+                    warning_key=issue.main_id,
+                    reason=issue.code,
+                    message=issue.message,
+                )
+            )
+        return errors
 
     def _reconcile_plan_evaluations(
         self,
