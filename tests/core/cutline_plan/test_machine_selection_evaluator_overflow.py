@@ -885,7 +885,7 @@ def test_batch_virtual_state_is_new_for_each_warning_evaluation():
     assert [item.machine_code for item in second.selected_machines] == ["M-01"]
 
 
-def test_batch_source_depletion_at_exact_lead_boundary_is_allowed():
+def test_batch_source_depletion_at_exact_lead_boundary_is_rejected():
     snapshot_value, warning, intervals, source, targets = _batch_context(
         source_rate=1000,
         source_inventory=500,
@@ -906,11 +906,12 @@ def test_batch_source_depletion_at_exact_lead_boundary_is_allowed():
         overflows=[],
     )
 
-    assert [item.machine_code for item in result.selected_machines] == ["M-01"]
-    assert result.selected_machines[0].source_depletion_minutes_after == 30
+    assert result.selected_machines == []
+    assert result.rejected_machines[0].reason == "source_order_stockout_risk"
+    assert result.rejected_machines[0].source_depletion_minutes_after == 30
 
 
-def test_batch_target_overflow_at_exact_lead_boundary_is_allowed():
+def test_batch_target_overflow_at_exact_lead_boundary_is_rejected():
     snapshot_value, warning, intervals, source, targets = _batch_context(
         source_rate=1000,
         source_inventory=1000,
@@ -931,8 +932,36 @@ def test_batch_target_overflow_at_exact_lead_boundary_is_allowed():
         overflows=[],
     )
 
+    assert result.selected_machines == []
+    assert result.rejected_machines[0].reason == "target_buffer_overflow_risk"
+    assert result.rejected_machines[0].target_overflow_minutes_after == 30
+
+
+def test_batch_source_overflow_at_exact_lead_boundary_remains_unresolved():
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=10000,
+        source_inventory=10000,
+        source_capacity=11000,
+        targets=(("ORD-TARGET", "BUF-TARGET", -30000, 1000, 100000),),
+    )
+    candidates = _batch_candidates(
+        source,
+        targets,
+        overflow_candidate("M-01", 8000),
+    )
+
+    result = _select(
+        candidates,
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
     assert [item.machine_code for item in result.selected_machines] == ["M-01"]
-    assert result.selected_machines[0].target_overflow_minutes_after == 30
+    assert result.updated_overflow_minutes == 30
+    assert result.risk_resolved is False
+    assert result.failure_reason == "insufficient_reduced_capacity"
 
 
 def test_batch_candidates_exhausted_builds_manual_decision():

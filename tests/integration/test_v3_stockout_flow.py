@@ -140,7 +140,7 @@ def test_v3_stockout_without_running_candidate_requires_manual_intervention():
     assert response.errors == []
 
 
-def test_v3_stockout_candidate_resolves_at_exact_depletion_lead_boundary():
+def test_v3_stockout_candidate_at_exact_depletion_lead_boundary_requires_manual():
     payload = build_stockout_auto_payload()
     candidate = runtime(payload, "EA004")
     candidate["input_quantity"] = 100.0
@@ -149,20 +149,21 @@ def test_v3_stockout_candidate_resolves_at_exact_depletion_lead_boundary():
     response = evaluate(payload)
 
     decision = response.cutline_decisions[0]
-    assert "manual_intervention" not in decision.model_dump()
-    plan = decision.plan
-    assert plan is not None
-    assert plan.total_contribution_capacity == 200
-    assert plan.remaining_capacity_gap == 200
+    assert "plan" not in decision.model_dump()
+    manual = decision.manual_intervention
+    assert manual is not None
+    assert manual.reason == "insufficient_capacity"
 
-    internal_plan = _internal_result(
+    internal_manual = _internal_result(
         payload
-    ).cutline_decisions[0].plan
-    assert internal_plan is not None
-    assert internal_plan.risk_resolved is True
-    assert [item.machine_code for item in internal_plan.selected_machines] == [
+    ).cutline_decisions[0].manual_intervention
+    assert internal_manual is not None
+    assert internal_manual.risk_resolved is False
+    assert internal_manual.remaining_risk_value == 200
+    assert [item.machine_code for item in internal_manual.passed_machines] == [
         "EA004"
     ]
+    assert _internal_result(payload).persistence_state.pending_cutline_plans == []
     assert response.new_active_cutline_events == []
     assert response.mixing_trace_records == []
 

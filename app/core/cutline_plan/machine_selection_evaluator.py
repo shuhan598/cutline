@@ -570,7 +570,7 @@ class MachineSelectionEvaluator:
             state.total_inventory,
             state.inventory_change_rate,
         )
-        return depletion is not None and depletion >= lead_minutes
+        return depletion is not None and depletion > lead_minutes
 
     @staticmethod
     def _stockout_batch_result(
@@ -1152,7 +1152,7 @@ class MachineSelectionEvaluator:
             if (
                 source_depletion is not None
                 and source_depletion
-                < snapshot.config.stockout_warning_lead_minutes
+                <= snapshot.config.stockout_warning_lead_minutes
             ):
                 rejected.append(
                     self._overflow_rejected(
@@ -1290,7 +1290,7 @@ class MachineSelectionEvaluator:
                 if (
                     target_overflow is not None
                     and target_overflow
-                    < snapshot.config.overflow_warning_lead_minutes
+                    <= snapshot.config.overflow_warning_lead_minutes
                 ):
                     option_rejections.append(
                         self._overflow_rejected(
@@ -1401,7 +1401,7 @@ class MachineSelectionEvaluator:
         )
         return (
             overflow_minutes is not None
-            and overflow_minutes >= lead_minutes
+            and overflow_minutes > lead_minutes
         )
 
     def _maximum_growth_detail(
