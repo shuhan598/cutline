@@ -33,7 +33,11 @@ from app.schemas.backend_request_schema import (
 )
 from app.schemas.request_schema import (
     AgvRelationRequest,
+    BufferMasterRequest,
     CutlineAlgorithmRequest,
+    MachineMasterRequest,
+    OrderRequest,
+    ProductRequest,
 )
 from app.schemas.pending_cutline_schema import (
     PendingCutlinePlan,
@@ -109,6 +113,10 @@ _RECORD_KEY_FIELDS = {
 }
 
 CompletenessRequest = BackendAlgorithmRequest | CutlineAlgorithmRequest
+ProductRecord = BackendProduct | ProductRequest
+OrderRecord = BackendOrder | OrderRequest
+BufferMasterRecord = BackendBufferMaster | BufferMasterRequest
+MachineMasterRecord = BackendMachineMaster | MachineMasterRequest
 
 
 class BackendRequestCompletenessValidator:
@@ -421,7 +429,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
-        products_by_code: dict[str, list[BackendProduct]] = defaultdict(list)
+        products_by_code: dict[str, list[ProductRecord]] = defaultdict(list)
         for product in request.products:
             products_by_code[product.product_code.strip()].append(product)
 
@@ -454,7 +462,7 @@ class BackendRequestCompletenessValidator:
     ) -> None:
         orders_by_product_name: dict[
             str,
-            list[BackendOrder],
+            list[OrderRecord],
         ] = defaultdict(list)
         for order in request.orders:
             if not is_current_order_status(order.order_status):
@@ -463,7 +471,7 @@ class BackendRequestCompletenessValidator:
 
         buffers_by_code: dict[
             str,
-            list[tuple[int, BackendBufferMaster]],
+            list[tuple[int, BufferMasterRecord]],
         ] = defaultdict(list)
         for index, buffer in enumerate(request.buffer_master):
             buffers_by_code[buffer.buffer_code.strip()].append((index, buffer))
@@ -586,11 +594,11 @@ class BackendRequestCompletenessValidator:
     ) -> None:
         machines_by_standard_code: dict[
             str,
-            list[BackendMachineMaster],
+            list[MachineMasterRecord],
         ] = defaultdict(list)
         machines_by_realtime_code: dict[
             str,
-            list[BackendMachineMaster],
+            list[MachineMasterRecord],
         ] = defaultdict(list)
         for machine in request.machine_master:
             machines_by_standard_code[machine.machine_code.strip()].append(
@@ -600,13 +608,13 @@ class BackendRequestCompletenessValidator:
                 machine
             )
 
-        products_by_name: dict[str, list[BackendProduct]] = defaultdict(list)
+        products_by_name: dict[str, list[ProductRecord]] = defaultdict(list)
         for product in request.products:
             products_by_name[product.product_name.strip()].append(product)
 
         orders_by_product_name: dict[
             str,
-            list[BackendOrder],
+            list[OrderRecord],
         ] = defaultdict(list)
         for order in request.orders:
             if not is_current_order_status(order.order_status):

@@ -1,5 +1,7 @@
 """把机台选择结果构建为自动计划或人工干预决策。"""
 
+from typing import Literal
+
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (
     AlgorithmCutlineDecisionResult,
@@ -148,7 +150,7 @@ class CutlinePlanBuilder:
     def _algorithm_manual_intervention(
         self,
         *,
-        warning_type: str,
+        warning_type: Literal["stockout", "overflow"],
         warning_time,
         workshop_code: str,
         buffer_code: str,

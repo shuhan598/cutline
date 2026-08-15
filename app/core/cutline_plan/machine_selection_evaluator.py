@@ -315,6 +315,10 @@ class MachineSelectionEvaluator:
             receiver_key = batch.group_key_by_buffer_code.get(
                 warning.buffer_code
             )
+        if receiver_key is None:
+            raise MachineSelectionEvaluationError(
+                "stockout receiver group cannot be located"
+            )
         receiver = batch.groups_by_group_key.get(receiver_key)
         if receiver is None:
             raise MachineSelectionEvaluationError(
@@ -356,8 +360,7 @@ class MachineSelectionEvaluator:
                 failure_reason="target_capacity_unavailable",
             )
 
-        # 一次 overflow 评估共享同一份 virtual state；每轮都从这里读取
-        # 所有订单的最新速率，而不是回到原始 snapshot。
+        # 一次 stockout 评估共享同一份 virtual state，避免从原始快照重置。
         virtual_groups: dict[GroupKey, VirtualGroupState] = {
             receiver.group_key: VirtualGroupState(
                 inventory_change_rate=initial_rate,
@@ -387,8 +390,16 @@ class MachineSelectionEvaluator:
                 )
                 continue
             donor_key = candidate.donor_group_key
-            donor = batch.groups_by_group_key.get(donor_key)
-            donor_rate = rates_by_key.get(donor_key)
+            donor = (
+                batch.groups_by_group_key.get(donor_key)
+                if donor_key is not None
+                else None
+            )
+            donor_rate = (
+                rates_by_key.get(donor_key)
+                if donor_key is not None
+                else None
+            )
             if (
                 donor is None
                 or donor_rate is None
@@ -1005,6 +1016,10 @@ class MachineSelectionEvaluator:
             source_key = batch.group_key_by_buffer_code.get(
                 warning.buffer_code
             )
+        if source_key is None:
+            raise MachineSelectionEvaluationError(
+                "overflow source group cannot be located"
+            )
         warning_source_group = batch.groups_by_group_key.get(source_key)
         if warning_source_group is None:
             raise MachineSelectionEvaluationError(
@@ -1098,8 +1113,9 @@ class MachineSelectionEvaluator:
                 options = sorted(
                     candidate.target_options,
                     key=lambda option: (
-                        virtual_groups.get(option.target_group_key).inventory_change_rate
-                        if option.target_group_key in virtual_groups
+                        virtual_groups[option.target_group_key].inventory_change_rate
+                        if option.target_group_key is not None
+                        and option.target_group_key in virtual_groups
                         else float("inf"),
                         option.target_order_code,
                     ),
@@ -1140,8 +1156,10 @@ class MachineSelectionEvaluator:
                 item for item in remaining_candidates
                 if item[0] != candidate_position
             ]
-            source_group = batch.groups_by_group_key.get(
-                candidate.source_group_key
+            source_group = (
+                batch.groups_by_group_key.get(candidate.source_group_key)
+                if candidate.source_group_key is not None
+                else None
             )
             if source_group is None:
                 rejected.append(
@@ -1313,18 +1331,23 @@ class MachineSelectionEvaluator:
             options = sorted(
                 candidate.target_options,
                 key=lambda option: (
-                    virtual_groups.get(option.target_group_key).inventory_change_rate
-                    if option.target_group_key in virtual_groups
+                    virtual_groups[option.target_group_key].inventory_change_rate
+                    if option.target_group_key is not None
+                    and option.target_group_key in virtual_groups
                     else float("inf"),
                     option.target_order_code,
                 ),
             )
             for option in options:
-                target_group = batch.groups_by_group_key.get(
-                    option.target_group_key
+                target_group = (
+                    batch.groups_by_group_key.get(option.target_group_key)
+                    if option.target_group_key is not None
+                    else None
                 )
-                target_rate_result = rates_by_key.get(
-                    option.target_group_key
+                target_rate_result = (
+                    rates_by_key.get(option.target_group_key)
+                    if option.target_group_key is not None
+                    else None
                 )
                 if (
                     target_group is None
@@ -1643,6 +1666,10 @@ class MachineSelectionEvaluator:
             )
         )
         if has_complete_context:
+            assert option.target_workshop_code is not None
+            assert option.target_buffer_code is not None
+            assert option.target_upstream_process_code is not None
+            assert option.target_downstream_process_code is not None
             key: IntervalKey = (
                 option.target_workshop_code,
                 option.target_buffer_code,

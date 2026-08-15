@@ -1,5 +1,7 @@
 """评估活动切线机台是否满足切回原订单的业务条件。"""
 
+from typing import Literal
+
 from app.schemas.common_schema import AlgorithmActiveCutlineEvent
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (
@@ -54,6 +56,11 @@ class ReturnEvaluator:
             group_key = batch.group_key_by_buffer_code.get(
                 event.target_buffer_code
             )
+            if group_key is None:
+                raise ReturnEvaluationError(
+                    "target_interval_not_found",
+                    event.event_id,
+                )
             group = batch.groups_by_group_key.get(group_key)
             if group is None:
                 raise ReturnEvaluationError(
@@ -213,7 +220,12 @@ class ReturnEvaluator:
         condition_net_rate_met: bool,
         condition_stability_met: bool,
         condition_inventory_met: bool,
-    ) -> str:
+    ) -> Literal[
+        "net_rate_not_negative",
+        "stability_window_not_met",
+        "inventory_not_above_safe_level",
+        "all_return_conditions_met",
+    ]:
         if not condition_net_rate_met:
             return "net_rate_not_negative"
         if not condition_stability_met:

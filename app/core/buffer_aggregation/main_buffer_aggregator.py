@@ -28,9 +28,14 @@ class BufferRealtimeView(Protocol):
 
 
 class BufferMasterView(Protocol):
-    buffer_code: str
-    max_capacity: float | None
-    served_process_codes: list[str]
+    @property
+    def buffer_code(self) -> str: ...
+
+    @property
+    def max_capacity(self) -> float | None: ...
+
+    @property
+    def served_process_codes(self) -> list[str]: ...
 
 
 class BufferRelationView(Protocol):

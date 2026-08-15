@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import timedelta
+from typing import Literal, TypeVar
 
 from app.core.silk_screen.errors import (
     SilkScreenTransitionCalculationError,
@@ -15,6 +17,9 @@ from app.core.workshop.machine_workshop_resolver import (
 from app.schemas.common_schema import AlgorithmOrder
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import AlgorithmSilkScreenTransitionResult
+
+
+_T = TypeVar("_T")
 
 
 @dataclass
@@ -123,6 +128,12 @@ class SilkScreenOrderTransitionPlanner:
             0.0,
         )
 
+        reason: Literal[
+            "not_yet_time_to_prepare",
+            "clearance_preparation_required",
+            "current_order_completed",
+            "current_order_capacity_unavailable",
+        ]
         if remaining_quantity <= 0:
             remaining_hours = None
             estimated_finish_time = snapshot.current_time
@@ -185,12 +196,12 @@ class SilkScreenOrderTransitionPlanner:
 
     def _unique_by_code(
         self,
-        items,
+        items: Iterable[_T],
         *,
         field_name: str,
         duplicate_label: str,
-    ) -> dict[str, object]:
-        result: dict[str, object] = {}
+    ) -> dict[str, _T]:
+        result: dict[str, _T] = {}
         for item in items:
             code = getattr(item, field_name)
             if code in result:

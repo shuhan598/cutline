@@ -391,6 +391,12 @@ class PendingCutlineDetector:
         if not batch.groups_by_group_key:
             return
         group_key = batch.group_key_by_buffer_code.get(buffer_code)
+        if group_key is None:
+            raise PendingCutlineDetectionError(
+                f"plan_id={plan.plan_id}, warning_id={plan.warning_id}: "
+                f"{role} buffer_code {buffer_code} cannot be uniquely "
+                "located in the current main Buffer batch"
+            )
         group = batch.groups_by_group_key.get(group_key)
         if (
             group is None
