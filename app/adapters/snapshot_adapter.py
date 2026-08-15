@@ -32,6 +32,10 @@ from app.core.workshop.machine_workshop_resolver import (
     MachineWorkshopResolutionError,
     MachineWorkshopResolver,
 )
+from app.core.workshop.process_loop_catalog import (
+    UnknownProcessNameError,
+    resolve_process_loop,
+)
 from app.schemas.common_schema import (
     AlgorithmActiveCutlineEvent,
     AlgorithmAgvRelation,
@@ -474,6 +478,14 @@ class SnapshotAdapter:
                 raise SnapshotConversionError(
                     f"{item.workshop_code} workshop does not exist for process {item.process_code}"
                 )
+            try:
+                assignment = resolve_process_loop(item.process_name)
+            except UnknownProcessNameError as exc:
+                raise SnapshotConversionError(
+                    f"process_code={item.process_code!r}, "
+                    f"process_name={item.process_name!r} cannot be mapped "
+                    f"to an internal loop: {exc}"
+                ) from exc
             result.append(
                 AlgorithmProcessRoute(
                     process_code=item.process_code,
@@ -482,8 +494,8 @@ class SnapshotAdapter:
                     cache_type=item.cache_type,
                     workshop_code=item.workshop_code,
                     workshop_name=item.workshop_name,
-                    loop_code=item.loop_code,
-                    loop_name=item.loop_name,
+                    loop_code=assignment.loop_code,
+                    loop_name=assignment.loop_name,
                     upstream_process_code=item.upstream_process_code,
                     upstream_process_name=item.upstream_process_name,
                     downstream_process_code=item.downstream_process_code,
@@ -997,13 +1009,14 @@ class SnapshotAdapter:
 
     def _index_process_routes(
         self, routes: Iterable[AlgorithmProcessRoute]
-    ) -> dict[tuple[str, str, str], AlgorithmProcessRoute]:
-        result: dict[tuple[str, str, str], AlgorithmProcessRoute] = {}
+    ) -> dict[tuple[str, str], AlgorithmProcessRoute]:
+        result: dict[tuple[str, str], AlgorithmProcessRoute] = {}
         for route in routes:
-            key = (route.workshop_code, route.loop_code, route.process_code)
+            key = (route.workshop_code, route.process_code)
             if key in result:
                 raise SnapshotConversionError(
-                    f"{route.workshop_code} {route.loop_code} {route.process_code} duplicate process route"
+                    f"{route.workshop_code} {route.process_code} "
+                    "duplicate process route"
                 )
             result[key] = route
         return result

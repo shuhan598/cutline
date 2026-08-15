@@ -36,6 +36,38 @@ def test_same_missing_orders_payload_is_valid_false_and_evaluate_422():
     )
 
 
+def test_evaluate_maps_unknown_process_name_to_backend_data_invalid():
+    payload = build_stockout_auto_payload()
+    route = payload["process_routes"][3]
+    original_process_code = route["process_code"]
+    route["process_name"] = "未知工序"
+    client = _client()
+
+    validation_response = client.post("/backend/validate", json=payload)
+    evaluation_response = client.post("/cutline/evaluate", json=payload)
+
+    assert validation_response.status_code == 200
+    validation_body = validation_response.json()
+    assert validation_body["valid"] is False
+    assert any(
+        issue["code"] == "unknown_process_name"
+        and issue["dataset"] == "process_routes"
+        and issue["field"] == "process_name"
+        and issue["record_key"] == original_process_code
+        for issue in validation_body["issues"]
+    )
+    assert evaluation_response.status_code == 422
+    detail = evaluation_response.json()["detail"]
+    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert any(
+        issue["code"] == "unknown_process_name"
+        and issue["dataset"] == "process_routes"
+        and issue["field"] == "process_name"
+        and issue["record_key"] == original_process_code
+        for issue in detail["issues"]
+    )
+
+
 def test_duplicate_route_sequence_is_rejected_before_snapshot_conversion():
     payload = build_stockout_auto_payload()
     payload["process_routes"][1]["sequence"] = payload["process_routes"][0][

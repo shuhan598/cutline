@@ -8,20 +8,18 @@ from typing import Protocol
 
 
 class BufferProcessResolutionError(ValueError):
-    """A Buffer cannot be mapped to one valid adjacent process interval."""
+    """A Buffer cannot be mapped to one unambiguous process interval."""
 
 
 class ProcessRouteView(Protocol):
     process_code: str
     sequence: int
     workshop_code: str
-    loop_code: str
 
 
 class BufferMasterView(Protocol):
     buffer_code: str
     served_process_codes: list[str]
-    loop_code: str
 
 
 @dataclass(frozen=True)
@@ -43,65 +41,55 @@ class BufferProcessResolver:
                 f"Buffer {buffer.buffer_code} must serve exactly two processes"
             )
 
-        upstream_code, downstream_code = buffer.served_process_codes
-        upstream_candidates = [
+        first_code, second_code = buffer.served_process_codes
+        first_candidates = [
             route
             for route in self._routes
-            if route.loop_code == buffer.loop_code
-            and route.process_code == upstream_code
+            if route.process_code == first_code
         ]
-        downstream_candidates = [
+        second_candidates = [
             route
             for route in self._routes
-            if route.loop_code == buffer.loop_code
-            and route.process_code == downstream_code
+            if route.process_code == second_code
         ]
-        if not upstream_candidates:
+        if not first_candidates:
             raise BufferProcessResolutionError(
-                f"Buffer {buffer.buffer_code} process {upstream_code} "
-                f"has no route in loop {buffer.loop_code}"
+                f"Buffer {buffer.buffer_code} process {first_code} has no route"
             )
-        if not downstream_candidates:
+        if not second_candidates:
             raise BufferProcessResolutionError(
-                f"Buffer {buffer.buffer_code} process {downstream_code} "
-                f"has no route in loop {buffer.loop_code}"
+                f"Buffer {buffer.buffer_code} process {second_code} has no route"
             )
 
         pairs = [
-            (upstream, downstream)
-            for upstream in upstream_candidates
-            for downstream in downstream_candidates
-            if upstream.workshop_code == downstream.workshop_code
+            (first, second)
+            for first in first_candidates
+            for second in second_candidates
+            if first.workshop_code == second.workshop_code
         ]
         if not pairs:
             raise BufferProcessResolutionError(
-                f"Buffer {buffer.buffer_code} served processes must belong "
-                "to the same workshop"
+                f"Buffer {buffer.buffer_code} served processes {first_code} "
+                f"and {second_code} must belong to the same workshop"
             )
         if len(pairs) > 1:
             raise BufferProcessResolutionError(
-                f"Buffer {buffer.buffer_code} process routes match multiple "
-                "workshops"
+                f"Buffer {buffer.buffer_code} process routes for {first_code} "
+                f"and {second_code} match multiple workshop pairs"
             )
 
-        upstream, downstream = pairs[0]
-        if upstream.sequence >= downstream.sequence:
+        first, second = pairs[0]
+        if first.sequence == second.sequence:
             raise BufferProcessResolutionError(
-                f"Buffer {buffer.buffer_code} upstream sequence must precede "
-                "downstream sequence"
+                f"Buffer {buffer.buffer_code} served process routes have "
+                "equal sequence"
             )
-        has_intermediate_process = any(
-            route.loop_code == buffer.loop_code
-            and route.workshop_code == upstream.workshop_code
-            and upstream.sequence < route.sequence < downstream.sequence
-            for route in self._routes
+        upstream, downstream = sorted(
+            (first, second),
+            key=lambda route: route.sequence,
         )
-        if has_intermediate_process:
-            raise BufferProcessResolutionError(
-                f"Buffer {buffer.buffer_code} served processes must be adjacent"
-            )
         return BufferProcessResolution(
             workshop_code=upstream.workshop_code,
-            upstream_process_code=upstream_code,
-            downstream_process_code=downstream_code,
+            upstream_process_code=upstream.process_code,
+            downstream_process_code=downstream.process_code,
         )

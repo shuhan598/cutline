@@ -211,7 +211,15 @@
 - 机台所属车间的权威链路为
   `machine_master.process_code -> process_routes.process_code
   -> process_routes.workshop_code`。
-- 同一工序可在同一车间的多个循环中出现；如果映射到多个不同车间则明确报错。
+- `process_code` 是关联主键，同一 workshop 内不得因外部 loop 不同而重复。
+- `loop_code` / `loop_name` 是 Optional 兼容字段；旧请求可继续传入原值、旧值或错误值，
+  但 Snapshot 会忽略并根据 `process_name` 重建内部循环。
+- 内部目录严格为：发料机→`LOOP1`/一循环；制绒、硼扩、氧化→`LOOP2`/二循环；
+  碱抛、`POLY`、退火→`LOOP3`/三循环；`RCA`→`LOOP4`/四循环；`ALD`、正膜、背膜、
+  丝网→`LOOP5`/五循环。中文 trim 后精确匹配，仅三个英文名称兼容大小写，不增加别名。
+- `sequence` 完全由后端输入，每项仍须为正整数且在 workshop 内唯一；不固定具体
+  顺序，车间最小值不必等于 1，也不要求连续。完整路线和唯一末序丝网按 workshop
+  校验，上下游引用可以跨循环。
 - 本次快照中 runtime 引用机台的工序缺少路线时明确报错，不回退到产线车间。
 
 ## `buffer_realtime`
@@ -250,6 +258,11 @@
 
 - 文档里同时出现“buffer类型”和“buffer类型_类型”两层表达。
 - 当前实现将第二层标题语义映射为 `buffer_type_title`。
+- `served_process_codes` 是服务工序权威来源，算法运行时必须恰好包含两个编码；两个
+  工序在同一 workshop 完整路线中解析，并按 route `sequence` 确定上游和下游，不依赖
+  原数组顺序，也不要求同循环或固定相邻。
+- Buffer 的 `loop_code` / `loop_name` 仅作为兼容/描述字段，不限制服务工序，不决定
+  方向、跨循环合法性或断料/溢满区间。
 
 ## `agv_relations`
 
@@ -292,6 +305,10 @@
 ## 额外说明
 
 - 当前外发字段命名全部统一为英文 `snake_case`。
+- 仍使用目录内规范名称且满足 workshop 内唯一性的旧 Request，其 route loop 字段保持
+  兼容；非目录名称属于有意收紧。正式 Response 的字段、层级和业务语义不变。
+  首轮返回的 `persistence_state.pending_cutline_plans` 必须完整保存，并在下一轮
+  请求以 `pending_cutline_plans` 原样回传，算法服务本身不保存跨轮状态。
 - 只有契约中明确声明可空的字段才允许 `null`；必填 AGV 业务字段（包括
   `waferspec`）不得缺失或为 `null`。允许为空的数据集可以传空数组，但必须在
   `snapshot_meta.degraded_flags` 中留下可诊断标记。

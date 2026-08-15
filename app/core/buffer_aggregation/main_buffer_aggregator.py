@@ -159,9 +159,9 @@ class MainBufferAggregator:
                     mapped_codes.add(buffer_code)
                     workshops.add(self._normalize(relation.workshop_code))
                     process_lists.add(
-                        tuple(
-                            self._normalize(code)
-                            for code in master.served_process_codes
+                        (
+                            self._normalize(relation.upstream_process_code),
+                            self._normalize(relation.downstream_process_code),
                         )
                     )
                     capacity = self._number_or_none(master.max_capacity)

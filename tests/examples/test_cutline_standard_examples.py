@@ -40,6 +40,20 @@ STANDARD_JSON_FILES = (
     *SUCCESS_OUTPUTS,
     *ERROR_OUTPUTS,
 )
+RESPONSE_TOP_LEVEL_FIELDS = {
+    "calculation_time",
+    "stockout_warnings",
+    "overflow_warnings",
+    "cutline_decisions",
+    "silk_screen_results",
+    "new_active_cutline_events",
+    "return_recommendations",
+    "updated_active_cutline_events",
+    "closed_active_cutline_event_ids",
+    "mixing_trace_records",
+    "persistence_state",
+    "errors",
+}
 
 
 def _load_json(path: Path):
@@ -90,7 +104,7 @@ def test_first_round_explicitly_starts_without_cross_round_state():
 
 
 @pytest.mark.parametrize("path", (FIRST_ROUND_INPUT, NEXT_ROUND_INPUT))
-def test_standard_input_uses_chinese_business_values(path: Path):
+def test_standard_input_uses_approved_business_values(path: Path):
     payload = _load_json(path)
 
     assert payload["snapshot_meta"]["trigger_type"] == "手动触发"
@@ -103,17 +117,60 @@ def test_standard_input_uses_chinese_business_values(path: Path):
     process_names = {
         route["process_name"] for route in payload["process_routes"]
     }
-    assert "多晶硅沉积" in process_names
-    assert "RCA清洗" in process_names
-    assert process_names.isdisjoint({"POLY", "RCA"})
+    assert {"POLY", "RCA", "ALD"} <= process_names
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "多晶硅沉积" not in serialized
+    assert "RCA清洗" not in serialized
     assert all(
         "Buffer" not in buffer["buffer_name"]
         for buffer in payload["buffer_master"]
     )
+
+
+@pytest.mark.parametrize(
+    "path",
+    (
+        EXAMPLES / "backend_request_standard.json",
+        FIRST_ROUND_INPUT,
+    ),
+    ids=lambda path: path.name,
+)
+def test_standard_requests_omit_only_route_loop_compatibility_fields(
+    path: Path,
+):
+    payload = _load_json(path)
+
+    assert payload["process_routes"]
     assert all(
-        "POLY机" not in machine["machine_name"]
-        and "RCA机" not in machine["machine_name"]
-        for machine in payload["machine_master"]
+        {"loop_code", "loop_name"}.isdisjoint(route)
+        for route in payload["process_routes"]
+    )
+    assert all(
+        {"loop_code", "loop_name"} <= buffer.keys()
+        for buffer in payload["buffer_master"]
+    )
+
+
+def test_next_round_legacy_route_loop_values_are_ignored():
+    payload = _load_json(NEXT_ROUND_INPUT)
+    external_oxidation = next(
+        route
+        for route in payload["process_routes"]
+        if route["process_name"] == "氧化"
+    )
+    request = BackendRequestLoader().load_cutline_dict(payload)
+    algorithm_snapshot = SnapshotAdapter().to_algorithm_snapshot(request)
+    internal_oxidation = next(
+        route
+        for route in algorithm_snapshot.process_routes
+        if route.process_code == external_oxidation["process_code"]
+    )
+
+    assert external_oxidation["loop_code"] == "S2-LOOP01"
+    assert external_oxidation["loop_name"] == "S2主工艺循环"
+    assert (internal_oxidation.loop_code, internal_oxidation.loop_name) == (
+        "LOOP2",
+        "二循环",
     )
 
 
@@ -146,8 +203,14 @@ def test_all_example_request_json_uses_current_machine_realtime_contract():
 
 def test_next_round_replays_pending_and_keeps_all_state_keys_explicit():
     payload = _load_json(NEXT_ROUND_INPUT)
+    stockout_output = _load_json(
+        EXAMPLES / "cutline_standard_output_stockout_plan.json"
+    )
 
     assert payload["pending_cutline_plans"]
+    assert payload["pending_cutline_plans"] == stockout_output[
+        "persistence_state"
+    ]["pending_cutline_plans"]
     assert payload["active_cutline_events"] == []
     assert payload["return_suggested_event_ids"] == []
     assert payload["mixed_cutline_event_ids"] == []
@@ -166,7 +229,10 @@ def test_next_round_replays_pending_and_keeps_all_state_keys_explicit():
 
 @pytest.mark.parametrize("path", SUCCESS_OUTPUTS, ids=lambda path: path.name)
 def test_standard_success_output_matches_public_response_schema(path: Path):
-    CutlineEvaluateResponse.model_validate(_load_json(path))
+    payload = _load_json(path)
+
+    assert set(payload) == RESPONSE_TOP_LEVEL_FIELDS
+    CutlineEvaluateResponse.model_validate(payload)
 
 
 def test_standard_stockout_output_contains_plan_and_pending_state():

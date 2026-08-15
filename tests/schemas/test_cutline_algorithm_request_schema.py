@@ -491,6 +491,53 @@ def test_nullable_required_fields_accept_null(payload, dataset, field):
         CutlineAlgorithmRequest.model_validate(payload)
 
 
+def test_cutline_process_route_allows_omitted_compatibility_loop_fields(payload):
+    copied_payload = deepcopy(payload)
+    route = copied_payload["process_routes"][0]
+    del route["loop_code"]
+    del route["loop_name"]
+
+    request = CutlineAlgorithmRequest.model_validate(copied_payload)
+
+    assert request.process_routes[0].loop_code is None
+    assert request.process_routes[0].loop_name is None
+
+
+@pytest.mark.parametrize(
+    ("loop_code", "loop_name"),
+    [
+        (None, None),
+        ("LEGACY-WRONG-LOOP", "legacy incorrect loop"),
+    ],
+)
+def test_cutline_process_route_compatibility_loop_fields_allow_null_and_legacy_values(
+    payload,
+    loop_code,
+    loop_name,
+):
+    copied_payload = deepcopy(payload)
+    route = copied_payload["process_routes"][0]
+    route["loop_code"] = loop_code
+    route["loop_name"] = loop_name
+
+    request = CutlineAlgorithmRequest.model_validate(copied_payload)
+
+    assert request.process_routes[0].loop_code == loop_code
+    assert request.process_routes[0].loop_name == loop_name
+
+
+@pytest.mark.parametrize("field", ["loop_code", "loop_name"])
+def test_cutline_buffer_loop_fields_remain_required(payload, field):
+    copied_payload = deepcopy(payload)
+    del copied_payload["buffer_master"][0][field]
+
+    with pytest.raises(ValidationError) as error:
+        CutlineAlgorithmRequest.model_validate(copied_payload)
+
+    assert error.value.errors()[0]["loc"] == ("buffer_master", 0, field)
+    assert error.value.errors()[0]["type"] == "missing"
+
+
 @pytest.mark.parametrize(
     ("dataset", "field", "value"),
     (("machine_realtime", "input_quantity", -1), ("machine_realtime", "output_quantity", -1),

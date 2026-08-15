@@ -39,7 +39,28 @@ machine_realtime.machine_code
 `lastlinename` 只记录上一产品，不参与当前订单匹配，也不能作为确认切线的唯一证据。
 Buffer 的
 `bound_source_name` 表示当前产品型号名称，通过唯一的 `orders.product_name` 转换为
-内部 `order_code`。所有名称匹配均为安全去空格后的精确匹配。
+内部 `order_code`。上述产品/订单名称匹配均为安全去空格后的精确匹配；
+`process_name` 的限定大小写规则见下一节。
+
+## 工艺路线与循环归属
+
+| 算法语义 | 权威来源 |
+| --- | --- |
+| 工序关联 | `process_code`；路线、机台和 Buffer 引用均以编码关联 |
+| 工序循环 | trim 后的 `process_routes.process_name` 经内部严格目录生成 |
+| 完整路线顺序 | 后端 `process_routes.sequence`；每项为正整数且同 workshop 唯一，可不连续，车间最小值不必等于 1 |
+| 完整路线范围 | `process_routes.workshop_code`；上下游引用可以跨内部循环 |
+| 丝网末序 | 每个 workshop 完整路线恰好一个 `丝网`，且为最大 sequence |
+
+内部目录仅含：发料机→`LOOP1`/一循环；制绒、硼扩、氧化→`LOOP2`/二循环；碱抛、
+`POLY`、退火→`LOOP3`/三循环；`RCA`→`LOOP4`/四循环；`ALD`、正膜、背膜、丝网→
+`LOOP5`/五循环。中文只在 trim 后精确匹配；仅 `POLY`、`RCA`、`ALD` 兼容大小写，
+不接受其他别名或模糊名称。
+
+外部 `process_routes.loop_code` / `loop_name` 均为 Optional 兼容字段。仍使用目录内规范名称且
+满足 workshop 内唯一性的旧请求，继续传入旧值或错误 loop 值也不会成为内部权威，
+Snapshot 一律按 `process_name` 重建。非目录名称属于本次有意收紧；该变化不增删或
+调整正式 Response 字段。
 
 ## Pending 确认与活动事件
 
@@ -88,19 +109,23 @@ Pending 的数量口径是同一预警车间、预警区间产出侧工序、现
 修复后重试。同一机台后续产生新的事件 ID 时仍可再次生成混料。切回建议只表示算法
 建议，不表示现场已经切回，也不会创建 PendingReturnPlan。
 
-同一 `process_code` 可在不同 `loop_code` 中重复，只要 `workshop_code` 相同。
-如果映射到多个不同车间，解析器按编码排序列出冲突并报错。runtime 引用机台的工序
-找不到路线时同样报错，不回退产线车间。
+同一 workshop 内的 `process_code` 必须唯一，不能通过不同外部 loop 重复。若同一编码
+映射到多个 workshop 而无法唯一确定机台车间，解析器按编码排序列出冲突并报错。
+runtime 引用机台的工序找不到路线时同样报错，不回退产线车间。
 
 ## Buffer、预警和结果
 
 | 算法语义 | 权威来源 |
 | --- | --- |
-| Buffer 所属车间和上下游区间 | Adapter 根据 Buffer 与工艺路线生成的 `buffer_process_relations` |
+| Buffer 所属车间和上下游区间 | `served_process_codes` 的两个编码在同 workshop 路线中解析，再按后端 route `sequence` 定向生成 `buffer_process_relations` |
 | 断料/溢满预警车间 | 对应 Buffer 区间结果中的 `workshop_code` |
 | 候选机台车间 | `MachineWorkshopResolver` 解析结果 |
 | S2 R/P 兼容判断车间 | `MachineWorkshopResolver` 解析结果 |
 | 丝网分组车间 | `MachineWorkshopResolver` 解析结果 |
+
+Buffer 的 `served_process_codes` 必须恰好有两个编码，但输入排列不决定方向；两工序可以
+跨内部循环且不要求固定相邻。`buffer_master.loop_code` / `loop_name` 只保留兼容/描述
+意义，不参与服务工序合法性、上下游方向、跨循环限制或断料/溢满区间判断。
 
 ## 兼容保留但不是机台状态权威的数据
 

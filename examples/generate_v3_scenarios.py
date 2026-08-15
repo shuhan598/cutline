@@ -153,9 +153,18 @@ def _without_line_compatibility(payload: dict) -> dict:
     return payload
 
 
+def _without_route_loop_compatibility(payload: dict) -> dict:
+    for route in payload["process_routes"]:
+        route.pop("loop_code", None)
+        route.pop("loop_name", None)
+    return payload
+
+
 def _standard_request_payload() -> dict:
-    return _algorithm_request_payload(
-        _without_line_compatibility(build_no_warning_payload())
+    return _without_route_loop_compatibility(
+        _algorithm_request_payload(
+            _without_line_compatibility(build_no_warning_payload())
+        )
     )
 
 

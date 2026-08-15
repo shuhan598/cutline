@@ -155,6 +155,22 @@
       "out_time": null
     },
     {
+      "machine_code": "P166-EA025",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA026",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
       "machine_code": "P166-EA019",
       "status": "运行",
       "tangent_time": null,
@@ -277,30 +293,30 @@
     {
       "machine_code": "EA011",
       "p166_jt_group": "P166-EA011",
-      "machine_name": "EA011多晶硅沉积机",
+      "machine_name": "EA011POLY机",
       "process_code": "POLY",
-      "process_name": "多晶硅沉积"
+      "process_name": "POLY"
     },
     {
       "machine_code": "EA012",
       "p166_jt_group": "P166-EA012",
-      "machine_name": "EA012多晶硅沉积机",
+      "machine_name": "EA012POLY机",
       "process_code": "POLY",
-      "process_name": "多晶硅沉积"
+      "process_name": "POLY"
     },
     {
       "machine_code": "EA013",
       "p166_jt_group": "P166-EA013",
-      "machine_name": "EA013RCA清洗机",
+      "machine_name": "EA013RCA机",
       "process_code": "RCA",
-      "process_name": "RCA清洗"
+      "process_name": "RCA"
     },
     {
       "machine_code": "EA014",
       "p166_jt_group": "P166-EA014",
-      "machine_name": "EA014RCA清洗机",
+      "machine_name": "EA014RCA机",
       "process_code": "RCA",
-      "process_name": "RCA清洗"
+      "process_name": "RCA"
     },
     {
       "machine_code": "EA015",
@@ -329,6 +345,20 @@
       "machine_name": "EA018氧化机",
       "process_code": "氧化",
       "process_name": "氧化"
+    },
+    {
+      "machine_code": "EA025",
+      "p166_jt_group": "P166-EA025",
+      "machine_name": "EA025ALD机",
+      "process_code": "ALD",
+      "process_name": "ALD"
+    },
+    {
+      "machine_code": "EA026",
+      "p166_jt_group": "P166-EA026",
+      "machine_name": "EA026ALD机",
+      "process_code": "ALD",
+      "process_name": "ALD"
     },
     {
       "machine_code": "EA019",
@@ -696,7 +726,7 @@
     },
     {
       "machine_code": "EA011",
-      "machine_name": "EA011多晶硅沉积机",
+      "machine_name": "EA011POLY机",
       "product_code": "PROD-S2-N-TARGET",
       "product_name": "182N至上产品",
       "proc_seconds": 120.0,
@@ -704,7 +734,7 @@
     },
     {
       "machine_code": "EA011",
-      "machine_name": "EA011多晶硅沉积机",
+      "machine_name": "EA011POLY机",
       "product_code": "PROD-S2-N-SUPPORT",
       "product_name": "182N支援产品",
       "proc_seconds": 120.0,
@@ -712,7 +742,7 @@
     },
     {
       "machine_code": "EA011",
-      "machine_name": "EA011多晶硅沉积机",
+      "machine_name": "EA011POLY机",
       "product_code": "PROD-S2-R",
       "product_name": "210R华晟产品",
       "proc_seconds": 120.0,
@@ -720,7 +750,7 @@
     },
     {
       "machine_code": "EA011",
-      "machine_name": "EA011多晶硅沉积机",
+      "machine_name": "EA011POLY机",
       "product_code": "PROD-S2-P",
       "product_name": "210P晶澳产品",
       "proc_seconds": 120.0,
@@ -728,7 +758,7 @@
     },
     {
       "machine_code": "EA012",
-      "machine_name": "EA012多晶硅沉积机",
+      "machine_name": "EA012POLY机",
       "product_code": "PROD-S2-N-TARGET",
       "product_name": "182N至上产品",
       "proc_seconds": 120.0,
@@ -736,7 +766,7 @@
     },
     {
       "machine_code": "EA012",
-      "machine_name": "EA012多晶硅沉积机",
+      "machine_name": "EA012POLY机",
       "product_code": "PROD-S2-N-SUPPORT",
       "product_name": "182N支援产品",
       "proc_seconds": 120.0,
@@ -744,7 +774,7 @@
     },
     {
       "machine_code": "EA012",
-      "machine_name": "EA012多晶硅沉积机",
+      "machine_name": "EA012POLY机",
       "product_code": "PROD-S2-R",
       "product_name": "210R华晟产品",
       "proc_seconds": 120.0,
@@ -752,7 +782,7 @@
     },
     {
       "machine_code": "EA012",
-      "machine_name": "EA012多晶硅沉积机",
+      "machine_name": "EA012POLY机",
       "product_code": "PROD-S2-P",
       "product_name": "210P晶澳产品",
       "proc_seconds": 120.0,
@@ -760,7 +790,7 @@
     },
     {
       "machine_code": "EA013",
-      "machine_name": "EA013RCA清洗机",
+      "machine_name": "EA013RCA机",
       "product_code": "PROD-S2-N-TARGET",
       "product_name": "182N至上产品",
       "proc_seconds": 120.0,
@@ -768,7 +798,7 @@
     },
     {
       "machine_code": "EA013",
-      "machine_name": "EA013RCA清洗机",
+      "machine_name": "EA013RCA机",
       "product_code": "PROD-S2-N-SUPPORT",
       "product_name": "182N支援产品",
       "proc_seconds": 120.0,
@@ -776,7 +806,7 @@
     },
     {
       "machine_code": "EA013",
-      "machine_name": "EA013RCA清洗机",
+      "machine_name": "EA013RCA机",
       "product_code": "PROD-S2-R",
       "product_name": "210R华晟产品",
       "proc_seconds": 120.0,
@@ -784,7 +814,7 @@
     },
     {
       "machine_code": "EA013",
-      "machine_name": "EA013RCA清洗机",
+      "machine_name": "EA013RCA机",
       "product_code": "PROD-S2-P",
       "product_name": "210P晶澳产品",
       "proc_seconds": 120.0,
@@ -792,7 +822,7 @@
     },
     {
       "machine_code": "EA014",
-      "machine_name": "EA014RCA清洗机",
+      "machine_name": "EA014RCA机",
       "product_code": "PROD-S2-N-TARGET",
       "product_name": "182N至上产品",
       "proc_seconds": 120.0,
@@ -800,7 +830,7 @@
     },
     {
       "machine_code": "EA014",
-      "machine_name": "EA014RCA清洗机",
+      "machine_name": "EA014RCA机",
       "product_code": "PROD-S2-N-SUPPORT",
       "product_name": "182N支援产品",
       "proc_seconds": 120.0,
@@ -808,7 +838,7 @@
     },
     {
       "machine_code": "EA014",
-      "machine_name": "EA014RCA清洗机",
+      "machine_name": "EA014RCA机",
       "product_code": "PROD-S2-R",
       "product_name": "210R华晟产品",
       "proc_seconds": 120.0,
@@ -816,7 +846,7 @@
     },
     {
       "machine_code": "EA014",
-      "machine_name": "EA014RCA清洗机",
+      "machine_name": "EA014RCA机",
       "product_code": "PROD-S2-P",
       "product_name": "210P晶澳产品",
       "proc_seconds": 120.0,
@@ -945,6 +975,70 @@
     {
       "machine_code": "EA018",
       "machine_name": "EA018氧化机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
       "product_code": "PROD-S2-P",
       "product_name": "210P晶澳产品",
       "proc_seconds": 120.0,
@@ -1247,8 +1341,6 @@
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": null,
       "upstream_process_name": null,
       "downstream_process_code": "制绒",
@@ -1261,8 +1353,6 @@
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "发料机",
       "upstream_process_name": "发料机",
       "downstream_process_code": "碱抛",
@@ -1275,8 +1365,6 @@
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "制绒",
       "upstream_process_name": "制绒",
       "downstream_process_code": "背膜",
@@ -1289,8 +1377,6 @@
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "碱抛",
       "upstream_process_name": "碱抛",
       "downstream_process_code": "硼扩",
@@ -1303,38 +1389,32 @@
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "背膜",
       "upstream_process_name": "背膜",
       "downstream_process_code": "POLY",
-      "downstream_process_name": "多晶硅沉积"
+      "downstream_process_name": "POLY"
     },
     {
       "process_code": "POLY",
-      "process_name": "多晶硅沉积",
+      "process_name": "POLY",
       "sequence": 6,
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "硼扩",
       "upstream_process_name": "硼扩",
       "downstream_process_code": "RCA",
-      "downstream_process_name": "RCA清洗"
+      "downstream_process_name": "RCA"
     },
     {
       "process_code": "RCA",
-      "process_name": "RCA清洗",
+      "process_name": "RCA",
       "sequence": 7,
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "POLY",
-      "upstream_process_name": "多晶硅沉积",
+      "upstream_process_name": "POLY",
       "downstream_process_code": "退火",
       "downstream_process_name": "退火"
     },
@@ -1345,10 +1425,8 @@
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "RCA",
-      "upstream_process_name": "RCA清洗",
+      "upstream_process_name": "RCA",
       "downstream_process_code": "氧化",
       "downstream_process_name": "氧化"
     },
@@ -1359,36 +1437,42 @@
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "退火",
       "upstream_process_name": "退火",
+      "downstream_process_code": "ALD",
+      "downstream_process_name": "ALD"
+    },
+    {
+      "process_code": "ALD",
+      "process_name": "ALD",
+      "sequence": 10,
+      "cache_type": "工序缓存",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "upstream_process_code": "氧化",
+      "upstream_process_name": "氧化",
       "downstream_process_code": "正膜",
       "downstream_process_name": "正膜"
     },
     {
       "process_code": "正膜",
       "process_name": "正膜",
-      "sequence": 10,
+      "sequence": 11,
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
-      "upstream_process_code": "氧化",
-      "upstream_process_name": "氧化",
+      "upstream_process_code": "ALD",
+      "upstream_process_name": "ALD",
       "downstream_process_code": "丝网",
       "downstream_process_name": "丝网"
     },
     {
       "process_code": "丝网",
       "process_name": "丝网",
-      "sequence": 11,
+      "sequence": 12,
       "cache_type": "工序缓存",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
-      "loop_code": "S2-LOOP01",
-      "loop_name": "S2主工艺循环",
       "upstream_process_code": "正膜",
       "upstream_process_name": "正膜",
       "downstream_process_code": null,
@@ -1462,6 +1546,13 @@
     {
       "main_id": "MAIN-310110310",
       "buffer_code": "310110310",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110311",
+      "buffer_code": "310110311",
       "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
@@ -1549,7 +1640,7 @@
     },
     {
       "buffer_code": "310110305",
-      "buffer_name": "硼扩-多晶硅沉积缓存区",
+      "buffer_name": "硼扩-POLY缓存区",
       "buffer_type": "工序",
       "buffer_type_title": "工序缓存",
       "max_capacity": 100000.0,
@@ -1560,14 +1651,14 @@
       ],
       "served_process_names": [
         "硼扩",
-        "多晶硅沉积"
+        "POLY"
       ],
       "loop_code": "S2-LOOP01",
       "loop_name": "S2主工艺循环"
     },
     {
       "buffer_code": "310110306",
-      "buffer_name": "多晶硅沉积-RCA清洗缓存区",
+      "buffer_name": "POLY-RCA缓存区",
       "buffer_type": "工序",
       "buffer_type_title": "工序缓存",
       "max_capacity": 100000.0,
@@ -1577,15 +1668,15 @@
         "RCA"
       ],
       "served_process_names": [
-        "多晶硅沉积",
-        "RCA清洗"
+        "POLY",
+        "RCA"
       ],
       "loop_code": "S2-LOOP01",
       "loop_name": "S2主工艺循环"
     },
     {
       "buffer_code": "310110307",
-      "buffer_name": "RCA清洗-退火缓存区",
+      "buffer_name": "RCA-退火缓存区",
       "buffer_type": "工序",
       "buffer_type_title": "工序缓存",
       "max_capacity": 100000.0,
@@ -1595,7 +1686,7 @@
         "退火"
       ],
       "served_process_names": [
-        "RCA清洗",
+        "RCA",
         "退火"
       ],
       "loop_code": "S2-LOOP01",
@@ -1621,18 +1712,18 @@
     },
     {
       "buffer_code": "310110309",
-      "buffer_name": "氧化-正膜缓存区",
+      "buffer_name": "氧化-ALD缓存区",
       "buffer_type": "工序",
       "buffer_type_title": "工序缓存",
       "max_capacity": 100000.0,
       "safety_low": 100.0,
       "served_process_codes": [
         "氧化",
-        "正膜"
+        "ALD"
       ],
       "served_process_names": [
         "氧化",
-        "正膜"
+        "ALD"
       ],
       "loop_code": "S2-LOOP01",
       "loop_name": "S2主工艺循环"
@@ -1651,6 +1742,24 @@
       "served_process_names": [
         "正膜",
         "丝网"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110311",
+      "buffer_name": "ALD-正膜缓存区",
+      "buffer_type": "工序",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "ALD",
+        "正膜"
+      ],
+      "served_process_names": [
+        "ALD",
+        "正膜"
       ],
       "loop_code": "S2-LOOP01",
       "loop_name": "S2主工艺循环"
@@ -1701,7 +1810,7 @@
     },
     {
       "equipmentid": "EA011",
-      "equipmentname": "EA011多晶硅沉积机",
+      "equipmentname": "EA011POLY机",
       "linename": "182N至上产品",
       "lastlinename": null,
       "waferspec": "N",
@@ -1709,7 +1818,7 @@
     },
     {
       "equipmentid": "EA013",
-      "equipmentname": "EA013RCA清洗机",
+      "equipmentname": "EA013RCA机",
       "linename": "182N至上产品",
       "lastlinename": null,
       "waferspec": "N",
@@ -1726,6 +1835,14 @@
     {
       "equipmentid": "EA017",
       "equipmentname": "EA017氧化机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA025",
+      "equipmentname": "EA025ALD机",
       "linename": "182N至上产品",
       "lastlinename": null,
       "waferspec": "N",

@@ -123,29 +123,29 @@ def _payload() -> dict:
         "process_routes": [
             {
                 "process_code": "PROC-01",
-                "process_name": "工序一",
+                "process_name": "制绒",
                 "sequence": 1,
                 "cache_type": "BUFFER",
                 "workshop_code": "S1",
                 "workshop_name": "一车间",
-                "loop_code": "LOOP-1",
-                "loop_name": "循环一",
+                "loop_code": "LOOP2",
+                "loop_name": "二循环",
                 "upstream_process_code": None,
                 "upstream_process_name": None,
                 "downstream_process_code": "PROC-02",
-                "downstream_process_name": "工序二",
+                "downstream_process_name": "氧化",
             },
             {
                 "process_code": "PROC-02",
-                "process_name": "工序二",
+                "process_name": "氧化",
                 "sequence": 2,
                 "cache_type": "BUFFER",
                 "workshop_code": "S1",
                 "workshop_name": "一车间",
-                "loop_code": "LOOP-1",
-                "loop_name": "循环一",
+                "loop_code": "LOOP2",
+                "loop_name": "二循环",
                 "upstream_process_code": "PROC-01",
-                "upstream_process_name": "工序一",
+                "upstream_process_name": "制绒",
                 "downstream_process_code": None,
                 "downstream_process_name": None,
             },
@@ -182,9 +182,9 @@ def _payload() -> dict:
                 "max_capacity": 2000,
                 "safety_low": 100,
                 "served_process_codes": ["PROC-01", "PROC-02"],
-                "served_process_names": ["工序一", "工序二"],
-                "loop_code": "LOOP-1",
-                "loop_name": "循环一",
+                "served_process_names": ["制绒", "氧化"],
+                "loop_code": "LOOP2",
+                "loop_name": "二循环",
             },
             {
                 "buffer_code": "BUF-002",
@@ -194,9 +194,9 @@ def _payload() -> dict:
                 "max_capacity": 500,
                 "safety_low": 50,
                 "served_process_codes": ["PROC-01", "PROC-02"],
-                "served_process_names": ["工序一", "工序二"],
-                "loop_code": "LOOP-1",
-                "loop_name": "循环一",
+                "served_process_names": ["制绒", "氧化"],
+                "loop_code": "LOOP2",
+                "loop_name": "二循环",
             },
         ],
         "agv_relations": [
@@ -258,6 +258,7 @@ def _append_process_route(
     *,
     process_code: str,
     sequence: int,
+    process_name: str = "退火",
     workshop_code: str = "S1",
     loop_code: str = "LOOP-1",
 ) -> None:
@@ -265,7 +266,7 @@ def _append_process_route(
         {
             **deepcopy(payload["process_routes"][0]),
             "process_code": process_code,
-            "process_name": process_code,
+            "process_name": process_name,
             "sequence": sequence,
             "workshop_code": workshop_code,
             "workshop_name": (
@@ -322,6 +323,143 @@ def test_minimal_complete_request_converts_to_algorithm_snapshot():
     assert isinstance(snapshot, AlgorithmSnapshot)
     assert len(snapshot.workshops) == 2
     assert len(snapshot.buffer_order_inventories) == 3
+
+
+@pytest.mark.parametrize(
+    ("process_name", "expected_loop_code", "expected_loop_name"),
+    [
+        ("发料机", "LOOP1", "一循环"),
+        ("制绒", "LOOP2", "二循环"),
+        ("硼扩", "LOOP2", "二循环"),
+        ("氧化", "LOOP2", "二循环"),
+        ("碱抛", "LOOP3", "三循环"),
+        ("POLY", "LOOP3", "三循环"),
+        ("退火", "LOOP3", "三循环"),
+        ("RCA", "LOOP4", "四循环"),
+        ("ALD", "LOOP5", "五循环"),
+        ("正膜", "LOOP5", "五循环"),
+        ("背膜", "LOOP5", "五循环"),
+        ("丝网", "LOOP5", "五循环"),
+    ],
+)
+def test_snapshot_derives_all_process_route_loops_from_process_names(
+    process_name,
+    expected_loop_code,
+    expected_loop_name,
+):
+    payload = _payload()
+    process_code = f"CATALOG-{process_name}"
+    _append_process_route(
+        payload,
+        process_code=process_code,
+        process_name=process_name,
+        sequence=100,
+        loop_code="LEGACY-WRONG-LOOP",
+    )
+
+    route = next(
+        route
+        for route in _convert(payload).process_routes
+        if route.process_code == process_code
+    )
+
+    assert route.process_code == process_code
+    assert route.process_name == process_name
+    assert route.loop_code == expected_loop_code
+    assert route.loop_name == expected_loop_name
+
+
+def test_snapshot_allows_omitted_external_route_loop_fields():
+    payload = _payload()
+    for route in payload["process_routes"]:
+        route.pop("loop_code")
+        route.pop("loop_name")
+
+    routes = _convert(payload).process_routes
+
+    assert [(route.loop_code, route.loop_name) for route in routes] == [
+        ("LOOP2", "二循环"),
+        ("LOOP2", "二循环"),
+    ]
+
+
+def test_snapshot_preserves_nonconsecutive_backend_sequences():
+    payload = _payload()
+    payload["process_routes"][0]["sequence"] = 100
+    payload["process_routes"][1]["sequence"] = 200
+    _append_process_route(
+        payload,
+        process_code="PROC-03",
+        sequence=300,
+        process_name="退火",
+        loop_code="LOOP3",
+    )
+
+    sequence_by_code = {
+        route.process_code: route.sequence
+        for route in _convert(payload).process_routes
+    }
+
+    assert sequence_by_code == {
+        "PROC-01": 100,
+        "PROC-02": 200,
+        "PROC-03": 300,
+    }
+
+
+def test_snapshot_reports_process_code_raw_name_and_reason_for_unknown_name():
+    payload = _payload()
+    payload["process_routes"][0]["process_name"] = " 未知工序 "
+
+    with pytest.raises(
+        snapshot_adapter_module.SnapshotConversionError
+    ) as exc_info:
+        _convert(payload)
+
+    message = str(exc_info.value)
+    assert "PROC-01" in message
+    assert " 未知工序 " in message
+    assert "cannot be mapped to an internal loop" in message
+
+
+def test_snapshot_rejects_duplicate_process_code_in_same_workshop_even_with_different_external_loops():
+    payload = _payload()
+    _append_process_route(
+        payload,
+        process_code="PROC-01",
+        process_name="退火",
+        sequence=3,
+        loop_code="LEGACY-LOOP3",
+    )
+
+    _assert_conversion_error(
+        payload,
+        r"S1.*PROC-01.*duplicate process route",
+    )
+
+
+def test_snapshot_allows_same_process_code_in_different_workshops():
+    payload = _payload()
+    _append_process_route(
+        payload,
+        process_code="SHARED-PROCESS",
+        sequence=3,
+        workshop_code="S1",
+    )
+    _append_process_route(
+        payload,
+        process_code="SHARED-PROCESS",
+        sequence=3,
+        workshop_code="S2",
+    )
+
+    shared_routes = [
+        route
+        for route in _convert(payload).process_routes
+        if route.process_code == "SHARED-PROCESS"
+    ]
+
+    assert {route.workshop_code for route in shared_routes} == {"S1", "S2"}
 
 
 def test_snapshot_time_is_used_as_current_time():
@@ -404,7 +542,7 @@ def test_runtime_machine_process_cannot_belong_to_multiple_workshops():
     )
 
 
-def test_runtime_machine_process_may_repeat_in_same_workshop_across_loops():
+def test_runtime_machine_process_cannot_repeat_in_same_workshop_across_loops():
     payload = _payload()
     _append_process_route(
         payload,
@@ -414,9 +552,10 @@ def test_runtime_machine_process_may_repeat_in_same_workshop_across_loops():
         loop_code="LOOP-2",
     )
 
-    snapshot = _convert(payload)
-
-    assert snapshot.machine_masters[0].process_code == "PROC-01"
+    _assert_conversion_error(
+        payload,
+        r"S1.*PROC-01.*duplicate process route",
+    )
 
 
 def test_unused_static_machine_does_not_require_route_in_current_snapshot():
@@ -702,7 +841,7 @@ def test_same_main_with_different_workshops_is_isolated():
         loop_code="LOOP-2",
         process_prefix="S2-",
     )
-    payload["buffer_master"][1]["loop_code"] = "LOOP-2"
+    payload["buffer_master"][1]["loop_code"] = "LOOP2"
     payload["buffer_master"][1]["served_process_codes"] = s2_process_codes
     payload["buffer_master"][1]["served_process_names"] = s2_process_codes
 
@@ -718,6 +857,7 @@ def test_same_main_with_different_upstream_processes_is_isolated():
     _append_process_route(
         payload,
         process_code="PROC-00",
+        process_name="硼扩",
         sequence=1,
     )
     payload["buffer_master"][1]["served_process_codes"] = [
@@ -737,6 +877,7 @@ def test_same_main_with_different_downstream_processes_is_isolated():
     _append_process_route(
         payload,
         process_code="PROC-03",
+        process_name="硼扩",
         sequence=2,
     )
     payload["buffer_master"][1]["served_process_codes"] = [
@@ -751,14 +892,10 @@ def test_same_main_with_different_downstream_processes_is_isolated():
     _assert_aggregation_issue(payload, "service_process_conflict")
 
 
-def test_same_main_with_different_loop_codes_keeps_physical_key_definition():
+def test_wrong_external_route_loop_keeps_physical_key_definition():
     payload = _payload()
-    _copy_process_pair_to_context(
-        payload,
-        workshop_code="S1",
-        loop_code="LOOP-2",
-    )
-    payload["buffer_master"][1]["loop_code"] = "LOOP-2"
+    payload["process_routes"][0]["loop_code"] = "LEGACY-WRONG-LOOP"
+    payload["process_routes"][0]["loop_name"] = "旧循环"
 
     snapshot = _convert(payload)
     group = next(iter(snapshot.main_buffer_batch.groups_by_group_key.values()))
@@ -775,7 +912,7 @@ def test_same_main_with_different_loop_codes_keeps_physical_key_definition():
 
 def test_buffer_served_code_and_name_lengths_must_match():
     payload = _payload()
-    payload["buffer_master"][0]["served_process_names"] = ["工序一"]
+    payload["buffer_master"][0]["served_process_names"] = ["制绒"]
 
     _assert_conversion_error(payload, "BUF-001.*length")
 
@@ -783,7 +920,7 @@ def test_buffer_served_code_and_name_lengths_must_match():
 def test_buffer_must_serve_exactly_two_processes():
     payload = _payload()
     payload["buffer_master"][0]["served_process_codes"] = ["PROC-01"]
-    payload["buffer_master"][0]["served_process_names"] = ["工序一"]
+    payload["buffer_master"][0]["served_process_names"] = ["制绒"]
 
     _assert_conversion_error(payload, "BUF-001.*exactly two")
 
@@ -803,19 +940,30 @@ def test_buffer_processes_must_be_in_same_workshop():
     _assert_conversion_error(payload, "BUF-001.*workshop")
 
 
-def test_buffer_processes_must_be_in_buffer_loop():
+def test_snapshot_ignores_wrong_external_loop_for_oxidation():
     payload = _payload()
-    payload["process_routes"][1]["loop_code"] = "OTHER-LOOP"
+    payload["process_routes"][1]["loop_code"] = "S2-LOOP01"
+    payload["process_routes"][1]["loop_name"] = "旧循环"
 
-    _assert_conversion_error(payload, "BUF-001.*LOOP-1")
+    route = _convert(payload).process_routes[1]
+
+    assert route.process_name == "氧化"
+    assert route.loop_code == "LOOP2"
+    assert route.loop_name == "二循环"
+    assert route.sequence == 2
+    assert route.upstream_process_code == "PROC-01"
+    assert route.upstream_process_name == "制绒"
 
 
-def test_buffer_upstream_sequence_must_precede_downstream():
+def test_buffer_relation_is_ordered_by_route_sequence_not_served_input_order():
     payload = _payload()
     payload["process_routes"][0]["sequence"] = 2
     payload["process_routes"][1]["sequence"] = 1
 
-    _assert_conversion_error(payload, "BUF-001.*sequence")
+    relation = _convert(payload).buffer_process_relations[0]
+
+    assert relation.upstream_process_code == "PROC-02"
+    assert relation.downstream_process_code == "PROC-01"
 
 
 def test_buffer_consecutive_process_sequences_convert_relation():
@@ -836,17 +984,58 @@ def test_buffer_non_consecutive_process_sequences_convert_relation():
     assert relation.downstream_process_code == "PROC-02"
 
 
-def test_buffer_processes_must_be_adjacent_in_sorted_route():
+def test_buffer_intermediate_process_does_not_invalidate_relation():
     payload = _payload()
     payload["process_routes"][0]["sequence"] = 10
     payload["process_routes"][1]["sequence"] = 30
     _append_process_route(
         payload,
         process_code="PROC-MID",
+        process_name="硼扩",
         sequence=20,
     )
 
-    _assert_conversion_error(payload, "BUF-001.*adjacent")
+    relation = _convert(payload).buffer_process_relations[0]
+
+    assert relation.upstream_process_code == "PROC-01"
+    assert relation.downstream_process_code == "PROC-02"
+
+
+def test_cross_loop_reversed_served_codes_use_backend_sequence_direction():
+    payload = _payload()
+    payload["process_routes"][1]["sequence"] = 40
+    _append_process_route(
+        payload,
+        process_code="PROC-ALKALI-POLISH",
+        process_name="碱抛",
+        sequence=50,
+        loop_code="LEGACY-LOOP3",
+    )
+    for buffer_master in payload["buffer_master"]:
+        buffer_master["served_process_codes"] = [
+            "PROC-ALKALI-POLISH",
+            "PROC-02",
+        ]
+        buffer_master["served_process_names"] = ["碱抛", "氧化"]
+
+    snapshot = _convert(payload)
+    relation = next(
+        relation
+        for relation in snapshot.buffer_process_relations
+        if relation.buffer_code == "BUF-001"
+    )
+    group = next(iter(snapshot.main_buffer_batch.groups))
+
+    assert relation.upstream_process_code == "PROC-02"
+    assert relation.downstream_process_code == "PROC-ALKALI-POLISH"
+    assert group.physical_buffer_key.ordered_service_process_codes == (
+        "PROC-02",
+        "PROC-ALKALI-POLISH",
+    )
+    assert not any(
+        issue.code == "service_process_conflict"
+        for issue in snapshot.main_buffer_batch.issues
+    )
 
 
 def test_buffer_inventory_over_capacity_still_converts():
@@ -1273,7 +1462,7 @@ def test_process_route_requires_known_workshop_and_unique_key():
     payload = _payload()
     payload["process_routes"].append(deepcopy(payload["process_routes"][0]))
 
-    _assert_conversion_error(payload, "S1.*LOOP-1.*PROC-01.*duplicate")
+    _assert_conversion_error(payload, "S1.*PROC-01.*duplicate")
 
 
 def test_process_route_sequence_must_start_at_one():
@@ -1500,7 +1689,7 @@ def _append_s2_process_interval(payload: dict) -> None:
         route.update(
             {
                 "process_code": process_code,
-                "process_name": process_code,
+                "process_name": ("制绒", "氧化")[index],
                 "workshop_code": "S2",
                 "workshop_name": "二车间",
                 "loop_code": "S2-LOOP",
@@ -1548,8 +1737,8 @@ def test_active_warning_buffer_workshop_must_match_event_workshop():
             "buffer_code": "BUF-S2",
             "served_process_codes": ["S2-PROC-01", "S2-PROC-02"],
             "served_process_names": ["S2-PROC-01", "S2-PROC-02"],
-            "loop_code": "S2-LOOP",
-            "loop_name": "S2循环",
+            "loop_code": "LOOP2",
+            "loop_name": "二循环",
         }
     )
     payload["buffer_master"].append(warning_buffer)

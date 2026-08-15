@@ -1,6 +1,9 @@
 from dataclasses import replace
 
 from app.core.buffer_aggregation.models import MainBufferAggregationIssue
+from app.core.candidate_machine.stockout_candidate_finder import (
+    StockoutCandidateFinder,
+)
 from tests.fixtures.v3_full_route_factory import (
     SUPPORT_BUFFER_CODE,
     TARGET_BUFFER_CODE,
@@ -24,9 +27,12 @@ def test_v3_stockout_auto_generates_pending_plan_without_future_mixing():
     payload = build_stockout_auto_payload()
 
     response = evaluate(payload)
+    algorithm_snapshot = snapshot(payload)
+    internal = CutlinePipeline().evaluate_algorithm(algorithm_snapshot)
 
     assert len(response.stockout_warnings) == 1
     warning = response.stockout_warnings[0]
+    assert warning.warning_type == "stockout"
     assert warning.buffer_code == TARGET_BUFFER_CODE
     assert warning.order_code == "ORD-S2-001"
     assert warning.net_consumption_rate == 400
@@ -34,6 +40,7 @@ def test_v3_stockout_auto_generates_pending_plan_without_future_mixing():
     assert response.overflow_warnings == []
 
     decision = response.cutline_decisions[0]
+    assert decision.warning_id == warning.warning_id
     assert "manual_intervention" not in decision.model_dump()
     plan = decision.plan
     assert plan is not None
@@ -47,13 +54,32 @@ def test_v3_stockout_auto_generates_pending_plan_without_future_mixing():
     assert selected.source_buffer_code == SUPPORT_BUFFER_CODE
     assert selected.target_buffer_code == TARGET_BUFFER_CODE
 
-    internal_plan = _internal_result(payload).cutline_decisions[0].plan
+    internal_warning = internal.stockout_warnings[0]
+    assert internal_warning.warning_type == "stockout"
+    assert internal_warning.group_key is not None
+    candidate_result = StockoutCandidateFinder().find_algorithm(
+        algorithm_snapshot,
+        internal.stockout_warnings,
+    )[0]
+    assert candidate_result.warning_type == "stockout"
+    assert candidate_result.receiver_group_key == internal_warning.group_key
+    assert [
+        item.machine_code for item in candidate_result.candidates
+    ] == ["EA004"]
+
+    internal_plan = internal.cutline_decisions[0].plan
     assert internal_plan is not None
+    assert internal_plan.warning_type == "stockout"
     assert internal_plan.risk_resolved is True
     internal_selected = internal_plan.selected_machines[0]
     assert internal_selected.donor_group_key is not None
     assert internal_selected.receiver_group_key is not None
     assert internal_selected.donor_group_key != internal_selected.receiver_group_key
+
+    pending = response.persistence_state.pending_cutline_plans
+    assert len(pending) == 1
+    assert pending[0].plan_id == plan.plan_id
+    assert pending[0].candidate_machine_codes == ["EA004"]
 
     assert response.new_active_cutline_events == []
     assert response.mixing_trace_records == []

@@ -10,6 +10,7 @@ from app.adapters.backend_request_validator import (
     BackendRequestCompletenessValidator,
     BackendRequestValidationResult,
 )
+from app.core.workshop.process_loop_catalog import resolve_process_loop
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -152,8 +153,9 @@ def test_missing_references_are_reported(
     )
 
 
-def test_process_route_sequence_is_unique_within_workshop_and_loop():
+def test_route_sequence_must_be_unique_within_workshop_not_loop():
     payload = sample_payload()
+    payload["process_routes"][1]["loop_code"] = "LEGACY-OTHER-LOOP"
     payload["process_routes"][1]["sequence"] = 1
 
     result = validate_payload(payload)
@@ -162,6 +164,48 @@ def test_process_route_sequence_is_unique_within_workshop_and_loop():
         issue.code == "duplicate_sequence"
         and issue.dataset == "process_routes"
         and issue.field == "sequence"
+        for issue in result.issues
+    )
+
+
+def test_validator_reports_unknown_process_name_with_existing_issue_shape():
+    payload = sample_payload()
+    route = payload["process_routes"][3]
+    original_process_code = route["process_code"]
+    route["process_name"] = "未知工序"
+
+    result = validate_payload(payload)
+
+    matching_issues = [
+        issue
+        for issue in result.issues
+        if issue.code == "unknown_process_name"
+    ]
+    assert result.valid is False
+    assert len(matching_issues) == 1
+    issue = matching_issues[0]
+    assert issue.dataset == "process_routes"
+    assert issue.field == "process_name"
+    assert issue.record_key == original_process_code
+    assert f"process_code={original_process_code!r}" in issue.message
+    assert "process_name='未知工序'" in issue.message
+    assert "cannot be mapped to an internal loop" in issue.message
+
+
+@pytest.mark.parametrize("loop_code", [None, "", "WRONG-LEGACY-LOOP"])
+def test_validator_ignores_empty_or_wrong_process_route_loop_code(
+    loop_code: str | None,
+):
+    payload = sample_payload()
+    payload["process_routes"][0]["loop_code"] = loop_code
+
+    result = validate_payload(payload)
+
+    assert result.valid is True
+    assert not any(
+        issue.code == "empty_code"
+        and issue.dataset == "process_routes"
+        and issue.field == "loop_code"
         for issue in result.issues
     )
 
@@ -240,6 +284,29 @@ def test_silk_screen_process_must_have_maximum_sequence():
     )
 
 
+def test_one_to_four_loops_do_not_each_require_silk_screen():
+    payload = sample_payload()
+    silk_route = next(
+        route for route in payload["process_routes"]
+        if route["process_name"] == "丝网"
+    )
+    silk_route["process_name"] = " 丝网 "
+    previous_route = next(
+        route for route in payload["process_routes"]
+        if route["downstream_process_code"] == silk_route["process_code"]
+    )
+    previous_route["downstream_process_name"] = " 丝网 "
+    for route in payload["process_routes"]:
+        assignment = resolve_process_loop(route["process_name"])
+        route["loop_code"] = assignment.loop_code
+        route["loop_name"] = assignment.loop_name
+
+    result = validate_payload(payload)
+
+    assert result.valid is True
+    assert result.issues == []
+
+
 def test_non_consecutive_unique_route_sequences_are_allowed():
     payload = sample_payload()
     for index, route in enumerate(payload["process_routes"], start=1):
@@ -247,6 +314,60 @@ def test_non_consecutive_unique_route_sequences_are_allowed():
 
     result = validate_payload(payload)
 
+    assert result.valid is True
+    assert result.issues == []
+
+
+def test_cross_loop_route_edges_are_valid_within_one_workshop():
+    payload = sample_payload()
+    process_names = (
+        "发料机",
+        "制绒",
+        "硼扩",
+        "氧化",
+        "碱抛",
+        "POLY",
+        "退火",
+        "RCA",
+        "ALD",
+        "正膜",
+        "背膜",
+        "丝网",
+    )
+    routes = payload["process_routes"]
+    for index, (route, process_name) in enumerate(
+        zip(routes, process_names, strict=True),
+    ):
+        previous = process_names[index - 1] if index else None
+        following = (
+            process_names[index + 1]
+            if index + 1 < len(process_names)
+            else None
+        )
+        assignment = resolve_process_loop(process_name)
+        route.update(
+            {
+                "process_name": process_name,
+                "sequence": (index + 1) * 10,
+                "loop_code": assignment.loop_code,
+                "loop_name": assignment.loop_name,
+                "upstream_process_name": previous,
+                "downstream_process_name": following,
+            }
+        )
+
+    result = validate_payload(payload)
+
+    assert any(
+        route["process_name"] == "氧化"
+        and route["downstream_process_name"] == "碱抛"
+        for route in routes
+    )
+    assert any(
+        route["process_name"] == "RCA"
+        and route["downstream_process_name"] == "ALD"
+        for route in routes
+    )
     assert result.valid is True
     assert result.issues == []
 
@@ -316,7 +437,7 @@ def test_last_silk_screen_downstream_fields_must_be_empty():
     } == {"downstream_process_code", "downstream_process_name"}
 
 
-def test_route_validation_keeps_workshop_and_loop_groups_isolated():
+def test_route_validation_keeps_workshop_groups_isolated():
     payload = sample_payload()
     second_group = deepcopy(payload["process_routes"])
     for route in second_group:
@@ -377,7 +498,7 @@ def test_non_edge_route_null_and_unknown_neighbors_are_reported():
     )
 
 
-def test_served_process_code_must_exist_in_same_loop():
+def test_served_process_code_must_exist_globally():
     payload = sample_payload()
     payload["buffer_master"][0]["served_process_codes"][1] = "P-UNKNOWN"
 
@@ -387,6 +508,21 @@ def test_served_process_code_must_exist_in_same_loop():
         issue.code == "missing_reference"
         and issue.dataset == "buffer_master"
         and issue.field == "served_process_codes[1]"
+        for issue in result.issues
+    )
+
+
+def test_buffer_served_process_reference_does_not_depend_on_buffer_loop():
+    payload = sample_payload()
+    payload["buffer_master"][0]["loop_code"] = "WRONG-LEGACY-LOOP"
+
+    result = validate_payload(payload)
+
+    assert result.valid is True
+    assert not any(
+        issue.code == "missing_reference"
+        and issue.dataset == "buffer_master"
+        and issue.field.startswith("served_process_codes[")
         for issue in result.issues
     )
 

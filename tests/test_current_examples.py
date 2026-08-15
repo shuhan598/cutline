@@ -80,8 +80,8 @@ def test_request_example_is_current_and_converts_to_algorithm_snapshot():
     assert len(snapshot.workshops) == 1
     assert snapshot.lines == []
     assert snapshot.machine_lines == []
-    assert len(snapshot.machine_runtimes) == 24
-    assert len(snapshot.buffer_masters) == 10
+    assert len(snapshot.machine_runtimes) == 26
+    assert len(snapshot.buffer_masters) == 11
     assert [item.process_code for item in snapshot.process_routes] == list(
         PROCESS_CODES
     )

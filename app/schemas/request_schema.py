@@ -164,8 +164,14 @@ class ProcessRouteRequest(RequestModel):
         ),
     )
     workshop_name: str = Field(..., description="工艺路线所属车间名称")
-    loop_code: str = Field(..., description="工艺路线所属循环编码")
-    loop_name: str = Field(..., description="工艺路线所属循环名称")
+    loop_code: str | None = Field(
+        default=None,
+        description="兼容字段；内部循环由 process_name 重新生成",
+    )
+    loop_name: str | None = Field(
+        default=None,
+        description="兼容字段；内部循环由 process_name 重新生成",
+    )
     upstream_process_code: str | None = Field(..., description="上游工序编码，首工序时为 null")
     upstream_process_name: str | None = Field(..., description="上游工序名称，首工序时为 null")
     downstream_process_code: str | None = Field(..., description="下游工序编码，末工序时为 null")

@@ -1,3 +1,6 @@
+from app.core.candidate_machine.overflow_candidate_finder import (
+    OverflowCandidateFinder,
+)
 from app.service.cutline_pipeline import CutlinePipeline
 from tests.fixtures.v3_full_route_factory import (
     SUPPORT_BUFFER_CODE,
@@ -54,14 +57,18 @@ def test_v3_overflow_risk_does_not_aggregate_across_group_keys():
 def test_v3_overflow_group_selects_distinct_target_and_creates_plan():
     payload = _group_overflow_payload()
     response = evaluate(payload)
+    algorithm_snapshot = snapshot(payload)
+    internal = CutlinePipeline().evaluate_algorithm(algorithm_snapshot)
 
     warning = response.overflow_warnings[0]
+    assert warning.warning_type == "overflow"
     assert warning.buffer_code == SUPPORT_BUFFER_CODE
     assert warning.total_inventory == 850
     assert warning.remaining_capacity == 150
     assert warning.buffer_growth_rate == 400
     assert warning.overflow_minutes == 22.5
     decision = response.cutline_decisions[0]
+    assert decision.warning_id == warning.warning_id
     assert "manual_intervention" not in decision.model_dump()
     plan = decision.plan
     assert plan is not None
@@ -70,8 +77,41 @@ def test_v3_overflow_group_selects_distinct_target_and_creates_plan():
     selected = plan.selected_machines[0]
     assert selected.source_buffer_code == SUPPORT_BUFFER_CODE
     assert selected.target_buffer_code == TARGET_BUFFER_CODE
+
+    internal_warning = internal.overflow_warnings[0]
+    assert internal_warning.warning_type == "overflow"
+    assert internal_warning.group_key is not None
+    candidate_result = OverflowCandidateFinder().find_algorithm(
+        algorithm_snapshot,
+        internal.overflow_warnings,
+        internal.net_rate_results,
+    )[0]
+    assert candidate_result.warning_type == "overflow"
+    assert candidate_result.source_group_key == internal_warning.group_key
+    assert [
+        item.machine_code for item in candidate_result.candidates
+    ] == ["EA004"]
+    assert [
+        option.target_buffer_code
+        for option in candidate_result.candidates[0].target_options
+    ] == [TARGET_BUFFER_CODE]
+
+    internal_plan = internal.cutline_decisions[0].plan
+    assert internal_plan is not None
+    assert internal_plan.warning_type == "overflow"
+    assert internal_plan.risk_resolved is True
+    assert internal_plan.total_reduced_capacity == 600
+    assert internal_plan.remaining_growth_rate == -200
+
+    pending = response.persistence_state.pending_cutline_plans
+    assert len(pending) == 1
+    assert pending[0].plan_id == plan.plan_id
+    assert pending[0].candidate_machine_codes == ["EA004"]
     assert response.new_active_cutline_events == []
     assert response.mixing_trace_records == []
+    assert response.persistence_state.active_cutline_events == []
+    assert response.persistence_state.new_mixing_trace_records == []
+    assert response.persistence_state.mixed_cutline_event_ids == []
     assert response.errors == []
 
 

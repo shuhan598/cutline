@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
@@ -257,6 +258,52 @@ def test_route_edge_fields_require_presence_and_accept_null():
     with pytest.raises(ValidationError) as error:
         BackendAlgorithmRequest.model_validate(payload)
 
+    assert error.value.errors()[0]["type"] == "missing"
+
+
+def test_backend_process_route_allows_omitted_compatibility_loop_fields():
+    payload = deepcopy(sample_payload())
+    route = payload["process_routes"][0]
+    del route["loop_code"]
+    del route["loop_name"]
+
+    request = BackendAlgorithmRequest.model_validate(payload)
+
+    assert request.process_routes[0].loop_code is None
+    assert request.process_routes[0].loop_name is None
+
+
+@pytest.mark.parametrize(
+    ("loop_code", "loop_name"),
+    [
+        (None, None),
+        ("LEGACY-WRONG-LOOP", "legacy incorrect loop"),
+    ],
+)
+def test_backend_process_route_compatibility_loop_fields_allow_null_and_legacy_values(
+    loop_code: str | None,
+    loop_name: str | None,
+):
+    payload = deepcopy(sample_payload())
+    route = payload["process_routes"][0]
+    route["loop_code"] = loop_code
+    route["loop_name"] = loop_name
+
+    request = BackendAlgorithmRequest.model_validate(payload)
+
+    assert request.process_routes[0].loop_code == loop_code
+    assert request.process_routes[0].loop_name == loop_name
+
+
+@pytest.mark.parametrize("field", ["loop_code", "loop_name"])
+def test_backend_buffer_loop_fields_remain_required(field: str):
+    payload = deepcopy(sample_payload())
+    del payload["buffer_master"][0][field]
+
+    with pytest.raises(ValidationError) as error:
+        BackendAlgorithmRequest.model_validate(payload)
+
+    assert error.value.errors()[0]["loc"] == ("buffer_master", 0, field)
     assert error.value.errors()[0]["type"] == "missing"
 
 

@@ -17,6 +17,11 @@ from app.core.workshop.buffer_process_resolver import (
     BufferProcessResolutionError,
     BufferProcessResolver,
 )
+from app.core.workshop.process_loop_catalog import (
+    UnknownProcessNameError,
+    normalize_process_name,
+    resolve_process_loop,
+)
 from app.schemas.backend_request_schema import (
     BackendAlgorithmRequest,
     BackendBufferMaster,
@@ -311,6 +316,8 @@ class BackendRequestCompletenessValidator:
                 continue
             for index, record in enumerate(records):
                 for field, value in record.model_dump().items():
+                    if dataset == "process_routes" and field == "loop_code":
+                        continue
                     if (
                         field.endswith("_code")
                         and isinstance(value, str)
@@ -857,11 +864,27 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
-        grouped: dict[tuple[str, str], list[tuple[int, Any]]] = defaultdict(list)
+        grouped: dict[str, list[tuple[int, Any]]] = defaultdict(list)
         for index, route in enumerate(request.process_routes):
-            grouped[(route.workshop_code, route.loop_code)].append((index, route))
+            try:
+                resolve_process_loop(route.process_name)
+            except UnknownProcessNameError:
+                issues.append(
+                    self._issue(
+                        code="unknown_process_name",
+                        dataset="process_routes",
+                        field="process_name",
+                        record_key=route.process_code,
+                        message=(
+                            f"process_code={route.process_code!r}, "
+                            f"process_name={route.process_name!r} cannot be "
+                            "mapped to an internal loop"
+                        ),
+                    )
+                )
+            grouped[route.workshop_code].append((index, route))
 
-        for (workshop_code, loop_code), indexed_routes in grouped.items():
+        for workshop_code, indexed_routes in grouped.items():
             by_sequence: dict[int, list[Any]] = defaultdict(list)
             for _, route in indexed_routes:
                 by_sequence[route.sequence].append(route)
@@ -876,11 +899,11 @@ class BackendRequestCompletenessValidator:
                             dataset="process_routes",
                             field="sequence",
                             record_key=(
-                                f"{workshop_code}|{loop_code}|sequence:{sequence}"
+                                f"{workshop_code}|sequence:{sequence}"
                             ),
                             message=(
                                 "process_routes.sequence must be unique within "
-                                f"({workshop_code}, {loop_code})"
+                                f"workshop {workshop_code!r}"
                             ),
                         )
                     )
@@ -893,7 +916,6 @@ class BackendRequestCompletenessValidator:
             )
             self._validate_silk_screen_route(
                 workshop_code=workshop_code,
-                loop_code=loop_code,
                 indexed_routes=ordered_routes,
                 max_sequence=max_sequence,
                 issues=issues,
@@ -901,7 +923,6 @@ class BackendRequestCompletenessValidator:
             if not has_duplicate_sequence:
                 self._validate_route_adjacency(
                     workshop_code=workshop_code,
-                    loop_code=loop_code,
                     indexed_routes=ordered_routes,
                     issues=issues,
                 )
@@ -945,7 +966,7 @@ class BackendRequestCompletenessValidator:
                                 ),
                                 message=(
                                     f"process_routes.{field}={value!r} was not "
-                                    "found in the same workshop and loop"
+                                    "found in the same workshop"
                                 ),
                             )
                         )
@@ -954,16 +975,15 @@ class BackendRequestCompletenessValidator:
         self,
         *,
         workshop_code: str,
-        loop_code: str,
         indexed_routes: list[tuple[int, Any]],
         max_sequence: int,
         issues: list[BackendValidationIssue],
     ) -> None:
-        route_key = f"{workshop_code}|{loop_code}"
+        route_key = workshop_code
         silk_routes = [
             (index, route)
             for index, route in indexed_routes
-            if route.process_name == "丝网"
+            if normalize_process_name(route.process_name) == "丝网"
         ]
         if not silk_routes:
             issues.append(
@@ -973,7 +993,7 @@ class BackendRequestCompletenessValidator:
                     field="process_name",
                     record_key=route_key,
                     message=(
-                        f"process route ({workshop_code}, {loop_code}) must "
+                        f"process route workshop {workshop_code!r} must "
                         'contain exactly one process_name="丝网"'
                     ),
                 )
@@ -981,7 +1001,7 @@ class BackendRequestCompletenessValidator:
             return
         if len(silk_routes) > 1:
             locations = [
-                self._route_record_key(workshop_code, loop_code, route)
+                self._route_record_key(workshop_code, route)
                 for _, route in silk_routes
             ]
             issues.append(
@@ -991,7 +1011,7 @@ class BackendRequestCompletenessValidator:
                     field="process_name",
                     record_key="|".join(locations),
                     message=(
-                        f"process route ({workshop_code}, {loop_code}) has "
+                        f"process route workshop {workshop_code!r} has "
                         f"multiple process_name=\"丝网\": {locations}"
                     ),
                 )
@@ -1007,12 +1027,11 @@ class BackendRequestCompletenessValidator:
                     field="sequence",
                     record_key=self._route_record_key(
                         workshop_code,
-                        loop_code,
                         silk_route,
                     ),
                     message=(
                         f'process_name="丝网" must be the maximum sequence '
-                        f"in route ({workshop_code}, {loop_code}); got "
+                        f"in workshop {workshop_code!r}; got "
                         f"sequence={silk_route.sequence}, max={max_sequence}"
                     ),
                 )
@@ -1022,7 +1041,6 @@ class BackendRequestCompletenessValidator:
         self,
         *,
         workshop_code: str,
-        loop_code: str,
         indexed_routes: list[tuple[int, Any]],
         issues: list[BackendValidationIssue],
     ) -> None:
@@ -1071,11 +1089,10 @@ class BackendRequestCompletenessValidator:
                         field=field,
                         record_key=self._route_record_key(
                             workshop_code,
-                            loop_code,
                             route,
                         ),
                         message=(
-                            f"process route ({workshop_code}, {loop_code}) "
+                            f"process route workshop {workshop_code!r} "
                             f"process_code={route.process_code!r}, "
                             f"process_name={route.process_name!r}, "
                             f"sequence={route.sequence} requires {field}="
@@ -1087,11 +1104,10 @@ class BackendRequestCompletenessValidator:
     @staticmethod
     def _route_record_key(
         workshop_code: str,
-        loop_code: str,
         route: Any,
     ) -> str:
         return (
-            f"{workshop_code}|{loop_code}|process:{route.process_code}|"
+            f"{workshop_code}|process:{route.process_code}|"
             f"name:{route.process_name}|sequence:{route.sequence}"
         )
 
@@ -1124,15 +1140,15 @@ class BackendRequestCompletenessValidator:
         issues: list[BackendValidationIssue],
     ) -> None:
         route_codes = {
-            (route.loop_code, route.process_code)
+            route.process_code
             for route in request.process_routes
-            if route.loop_code != "" and route.process_code != ""
+            if route.process_code != ""
         }
         for index, buffer in enumerate(request.buffer_master):
             for code_index, process_code in enumerate(buffer.served_process_codes):
                 if process_code == "":
                     continue
-                if (buffer.loop_code, process_code) not in route_codes:
+                if process_code not in route_codes:
                     field = f"served_process_codes[{code_index}]"
                     issues.append(
                         self._issue(
@@ -1146,7 +1162,7 @@ class BackendRequestCompletenessValidator:
                             ),
                             message=(
                                 f"buffer_master.{field}={process_code!r} was not "
-                                f"found in loop {buffer.loop_code!r}"
+                                "found in process_routes"
                             ),
                         )
                     )

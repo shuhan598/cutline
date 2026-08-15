@@ -70,12 +70,14 @@ def relation(
     buffer_code: str,
     *,
     workshop: str = "S1",
+    upstream: str = "P1",
+    downstream: str = "P2",
 ) -> BufferRelation:
     return BufferRelation(
         buffer_code=buffer_code,
         workshop_code=workshop,
-        upstream_process_code="P1",
-        downstream_process_code="P2",
+        upstream_process_code=upstream,
+        downstream_process_code=downstream,
     )
 
 
@@ -138,6 +140,31 @@ def test_one_main_sums_unique_layer_inventory_and_capacity():
         "BUF-1": group.group_key,
         "BUF-2": group.group_key,
     }
+
+
+def test_same_main_uses_relation_direction_when_master_order_is_reversed():
+    batch = aggregate(
+        [realtime("BUF-1", 10), realtime("BUF-2", 20)],
+        [
+            master("BUF-1", 100, processes=["P1", "P2"]),
+            master("BUF-2", 200, processes=["P2", "P1"]),
+        ],
+        [relation("BUF-1"), relation("BUF-2")],
+    )
+
+    group = only_group(batch)
+    assert len(batch.groups) == 1
+    assert group.physical_buffer_key.ordered_service_process_codes == (
+        "P1",
+        "P2",
+    )
+    assert group.buffer_codes == ("BUF-1", "BUF-2")
+    assert group.total_inventory == 30
+    assert group.total_capacity == 300
+    assert group.remaining_capacity == 270
+    assert not any(
+        issue.code == "service_process_conflict" for issue in batch.issues
+    )
 
 
 def test_representative_code_is_stable_sorted_real_layer():
@@ -251,10 +278,13 @@ def test_same_main_with_multiple_orders_is_isolated():
             "workshop_conflict",
         ),
         (
-            [relation("BUF-1"), relation("BUF-2")],
             [
-                master("BUF-1", 100, processes=["P1", "P2"]),
-                master("BUF-2", 100, processes=["P2", "P1"]),
+                relation("BUF-1"),
+                relation("BUF-2", upstream="P2", downstream="P1"),
+            ],
+            [
+                master("BUF-1", 100),
+                master("BUF-2", 100),
             ],
             "service_process_conflict",
         ),
@@ -380,10 +410,13 @@ def test_process_order_is_part_of_physical_buffer_key():
             realtime("BUF-2", 20, main_id="MAIN-2"),
         ],
         [
-            master("BUF-1", 100, processes=["P1", "P2"]),
-            master("BUF-2", 100, processes=["P2", "P1"]),
+            master("BUF-1", 100),
+            master("BUF-2", 100),
         ],
-        [relation("BUF-1"), relation("BUF-2")],
+        [
+            relation("BUF-1"),
+            relation("BUF-2", upstream="P2", downstream="P1"),
+        ],
     )
 
     groups = list(batch.groups_by_group_key.values())

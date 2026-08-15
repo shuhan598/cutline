@@ -28,6 +28,32 @@ HTTP 接口：`POST /cutline/evaluate` 返回增强的 `CutlineEvaluateResponse`
 `mixed_cutline_event_ids`、`return_suggested_event_ids` 回传。算法服务是无状态的，
 不使用进程内缓存或本地文件保存这些跨轮状态。
 
+`process_routes[].loop_code` 和 `loop_name` 是可选兼容字段。旧请求继续传入原值、旧值
+或错误值都可解析，但这些值不作为内部权威；Snapshot 始终根据 trim 后的
+`process_name` 重新生成循环。`process_code` 继续作为关联主键，`process_name` 只负责
+识别所属循环。中央目录严格为：
+
+| 工序名称 | 内部循环 |
+| --- | --- |
+| 发料机 | `LOOP1` / 一循环 |
+| 制绒、硼扩、氧化 | `LOOP2` / 二循环 |
+| 碱抛、`POLY`、退火 | `LOOP3` / 三循环 |
+| `RCA` | `LOOP4` / 四循环 |
+| `ALD`、正膜、背膜、丝网 | `LOOP5` / 五循环 |
+
+中文名称只在 trim 后精确匹配；仅 `POLY`、`RCA`、`ALD` 兼容大小写。未知名称会携带
+`process_code` 和原始 `process_name` 明确报错，不提供别名或模糊匹配。`sequence`
+完全采用后端输入，每项仍须为正整数且在同一 workshop 内唯一；不写死顺序，
+车间最小值不必等于 1，也不要求连续。
+完整工艺路线、上下游引用和唯一末序丝网均按 workshop 校验，上下游可跨内部循环。
+
+Buffer 仍要求 `served_process_codes` 恰好包含两个可解析工序；两个工序必须能在同一
+workshop 完整路线中形成唯一配对，并按 route `sequence` 规范化为上游到下游，既不
+依赖数组排列，也不要求同循环或固定相邻。`buffer_master[].loop_code` 和 `loop_name`
+仅作兼容/描述，不参与合法性、方向或断料/溢满区间判断。仍使用上述 12 个可识别名称且满足
+workshop 内唯一性的旧 Request 可继续携带 route loop 字段；非目录名称现会按设计
+明确拒绝。正式 Response 字段和层级不变。
+
 首轮预警返回原有预警、候选方案，并在 `persistence_state.pending_cutline_plans`
 返回完整 Pending；不创建活动事件或混料记录。后端保存该状态并在下一轮回传后，算法在
 `(created_at, expire_at]` 内比较预警时基线与 AGV 绑定历史。只有确认某台标准机台
@@ -87,13 +113,15 @@ python examples/run_cutline_algorithm.py
 正式示例和完整流程测试统一使用 `S2` / `S2车间`，机台编码从 `EA001` 开始。
 共享测试工厂仍保留 `S2-SW1A`、`S2-SW1B`、`S2-SW2A`、`S2-SW2B`
 完整产线数据，用于验证旧请求兼容；提交的场景 JSON 使用空的可选产线数组验证核心
-算法解耦。工艺路线固定为：
+算法解耦。当前 fixture 的 12 工序后端输入顺序为（仅用于样例，不是生产固定
+`sequence`）：
 
 ```text
-发料机 -> 制绒 -> 碱抛 -> 背膜 -> 硼扩 -> POLY -> RCA -> 退火 -> 氧化 -> 正膜 -> 丝网
+发料机 -> 制绒 -> 碱抛 -> 背膜 -> 硼扩 -> POLY -> RCA -> 退火 -> 氧化 -> ALD -> 正膜 -> 丝网
 ```
 
-相邻工序使用数字字符串 Buffer `310110301` 至 `310110310`。统一工厂入口位于
+该 fixture 使用数字字符串 Buffer `310110301` 至 `310110311` 覆盖测试区间；该编号
+布局仅属于测试数据，不构成生产约束。统一工厂入口位于
 `tests/fixtures/v3_full_route_factory.py`，场景 JSON 可确定性重新生成：
 
 ```powershell

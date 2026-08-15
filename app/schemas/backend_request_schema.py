@@ -111,8 +111,14 @@ class BackendProcessRoute(_BackendRequestModel):
     cache_type: str
     workshop_code: str
     workshop_name: str
-    loop_code: str
-    loop_name: str
+    loop_code: str | None = Field(
+        default=None,
+        description="兼容字段；内部循环由 process_name 重新生成",
+    )
+    loop_name: str | None = Field(
+        default=None,
+        description="兼容字段；内部循环由 process_name 重新生成",
+    )
     upstream_process_code: str | None
     upstream_process_name: str | None
     downstream_process_code: str | None

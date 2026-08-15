@@ -178,9 +178,10 @@ def _product(code):
 
 
 def _process_route(code, sequence, upstream, downstream):
+    process_names = {"P01": "制绒", "P02": "氧化", "SW": "丝网"}
     return {
         "process_code": code,
-        "process_name": code,
+        "process_name": process_names[code],
         "sequence": sequence,
         "cache_type": "BUFFER",
         "workshop_code": "S1",
@@ -188,9 +189,13 @@ def _process_route(code, sequence, upstream, downstream):
         "loop_code": "LOOP1",
         "loop_name": "Loop",
         "upstream_process_code": upstream,
-        "upstream_process_name": upstream,
+        "upstream_process_name": (
+            process_names[upstream] if upstream is not None else None
+        ),
         "downstream_process_code": downstream,
-        "downstream_process_name": downstream,
+        "downstream_process_name": (
+            process_names[downstream] if downstream is not None else None
+        ),
     }
 
 

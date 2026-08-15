@@ -5,9 +5,9 @@
 | 项目 | 当前值 |
 | --- | --- |
 | 文档名称 | 切线算法输入输出接口规范 |
-| 适用分支 | `V4` |
-| 生成基线 | Git HEAD `dcb335e58be3c18ad0af12c74a537d9b9eddf263` |
-| 生成日期 | 2026-08-03 |
+| 适用分支 | `V5` |
+| 生成基线 | Git HEAD `1c0f8ab99783a4fdfa0990783bfff545896735eb` 加当前工作区改动 |
+| 生成日期 | 2026-08-15 |
 | 正式接口 | `POST /cutline/evaluate` |
 | Content-Type | `application/json` |
 | 请求和响应编码 | UTF-8 JSON |
@@ -17,7 +17,7 @@
 
 本规范以当前磁盘中的 `CutlineAlgorithmRequest`、`CutlineEvaluateResponse`、Loader、完整性校验器、SnapshotAdapter、ResponseMapper 和通过测试的 V3 场景为准。请求和响应模型均禁止未知字段。
 
-标准输入中的人员可读业务值使用中文，例如 `trigger_type="手动触发"`、`cache_type="工序缓存"`、`buffer_type="工序"`、`process_name="多晶硅沉积"`。机台、订单、产品、车间、Buffer 编码，硅片规格以及 `PENDING`、`stockout` 等程序枚举保持真实契约值，不做中文翻译。
+标准输入中的人员可读业务值可使用中文，例如 `trigger_type="手动触发"`、`cache_type="工序缓存"`、`buffer_type="工序"`。工序名称必须使用第 4.2 节的 12 个规范名称，例如 `process_name="POLY"`；机台、订单、产品、车间、Buffer 编码，硅片规格以及 `PENDING`、`stockout` 等程序枚举保持真实契约值，不做中文翻译。
 
 > 当前工作区包含正式接口完整性校验的未提交改动；本规范描述的是该工作区实际执行的 `/cutline/evaluate`，而不是仅描述上述 Git HEAD 的历史快照。
 
@@ -54,9 +54,9 @@
 | `machine_lines` | array | 否，默认 `[]` | 是 | 兼容机台-产线关系；核心算法不依赖 |
 | `orders` | array | 是 | 否 | 生产订单 |
 | `products` | array | 是 | 否 | 产品目录 |
-| `process_routes` | array | 是 | 否 | 按车间和循环组织的工艺路线 |
+| `process_routes` | array | 是 | 否 | 按车间组织的完整工艺路线；内部循环由名称生成 |
 | `buffer_realtime` | array | 是 | 否 | Buffer 实时库存 |
-| `buffer_master` | array | 是 | 否 | Buffer 容量、服务工序和循环 |
+| `buffer_master` | array | 是 | 否 | Buffer 容量、服务工序及兼容循环描述 |
 | `agv_relations` | array | 是 | 取决于运行机台 | AGV 当前/历史定线绑定 |
 | `pending_cutline_plans` | array | 否，默认 `[]` | 是 | 后端持久化的待确认方案 |
 | `active_cutline_events` | array | 否，默认 `[]` | 是 | 后端持久化的活动切线事件 |
@@ -133,13 +133,13 @@
 | `products[].material_code` | string | 是 | - | 物料编码 |
 | `products[].material_name` | string | 是 | - | 物料名称 |
 | `process_routes[].process_code` | string | 是 | - | 工序编码 |
-| `process_routes[].process_name` | string | 是 | - | 工序名称；精确值 `丝网` 有末工序规则 |
-| `process_routes[].sequence` | integer | 是 | - | 路线顺序；同一路线唯一，可不连续 |
+| `process_routes[].process_name` | string | 是 | - | 用于识别内部循环；只接受下方 12 个规范名称 |
+| `process_routes[].sequence` | integer >= 1 | 是 | - | 后端权威路线顺序；同 workshop 唯一，车间最小值不必等于 1，也不要求连续 |
 | `process_routes[].cache_type` | string | 是 | - | 下料缓存类型 |
 | `process_routes[].workshop_code` | string | 是 | - | 路线车间，也是机台车间的权威来源 |
 | `process_routes[].workshop_name` | string | 是 | - | 路线车间名称 |
-| `process_routes[].loop_code` | string | 是 | - | 工艺循环编码 |
-| `process_routes[].loop_name` | string | 是 | - | 工艺循环名称 |
+| `process_routes[].loop_code` | string/null | 否 | `null` | 可选兼容字段；即使传旧值或错误值也会被忽略 |
+| `process_routes[].loop_name` | string/null | 否 | `null` | 可选兼容字段；内部值与 `loop_code` 一同按名称重建 |
 | `process_routes[].upstream_process_code` | string/null | 是 | 首工序为 `null` | 上游编码 |
 | `process_routes[].upstream_process_name` | string/null | 是 | 首工序为 `null` | 上游名称 |
 | `process_routes[].downstream_process_code` | string/null | 是 | 末工序为 `null` | 下游编码 |
@@ -155,10 +155,24 @@
 | `buffer_master[].buffer_type_title` | string | 是 | - | Buffer 类型名称 |
 | `buffer_master[].max_capacity` | number > 0 | 是 | - | 最大容量 |
 | `buffer_master[].safety_low` | number >= 0 | 是 | - | 安全下限 |
-| `buffer_master[].served_process_codes` | string array | 是 | Schema 允许空；可解析时必须正好两个相邻工序 | 顺序为上游、下游 |
-| `buffer_master[].served_process_names` | string array | 是 | 可空数组 | 服务工序名称 |
-| `buffer_master[].loop_code` | string | 是 | - | 所属循环编码 |
-| `buffer_master[].loop_name` | string | 是 | - | 所属循环名称 |
+| `buffer_master[].served_process_codes` | string array | 是 | Loader Schema 至少 1 项；算法运行时必须正好 2 个可解析工序 | 数组顺序不代表上下游；按 route sequence 定向 |
+| `buffer_master[].served_process_names` | string array | 是 | Loader Schema 至少 1 项；须与 codes 等长 | 服务工序名称，不参与区间方向判断 |
+| `buffer_master[].loop_code` | string | 是 | - | 兼容/描述字段，不参与服务工序判断或区间定向 |
+| `buffer_master[].loop_name` | string | 是 | - | 兼容/描述字段，不参与服务工序判断或区间定向 |
+
+`process_name` 内部映射严格如下；目录不包含 `sequence`：
+
+| 规范工序名称 | 内部 `loop_code` | 内部 `loop_name` |
+| --- | --- | --- |
+| 发料机 | `LOOP1` | 一循环 |
+| 制绒、硼扩、氧化 | `LOOP2` | 二循环 |
+| 碱抛、`POLY`、退火 | `LOOP3` | 三循环 |
+| `RCA` | `LOOP4` | 四循环 |
+| `ALD`、正膜、背膜、丝网 | `LOOP5` | 五循环 |
+
+名称统一先 trim。中文只做精确匹配；仅 `POLY`、`RCA`、`ALD` 大小写兼容。未知名称
+按现有错误体系报告 `process_code`、原始 `process_name` 和无法识别所属循环的原因，不
+提供其他别名或模糊匹配。`process_code` 始终是工序关联主键。
 
 ### 4.3 AGV 原始字段与 Loader 映射
 
@@ -247,21 +261,21 @@
 | `buffer_realtime.buffer_code` | 匹配 `buffer_master.buffer_code` |
 | `buffer_realtime.bound_source_name` | 精确匹配唯一当前订单的 `product_name`，并通过该订单得到库存的 `order_code` |
 | 机台所属车间 | 由 `machine_master.process_code` 在工艺路线中解析；产线和机台产线关系不是权威来源 |
-| Buffer 上下游 | `buffer_master.served_process_codes` 按顺序解析为同一循环、同一车间、相邻的上游/下游工序 |
+| Buffer 上下游 | `buffer_master.served_process_codes` 的两个编码在同一 workshop 完整路线中唯一解析，并按 route `sequence` 规范化为上游/下游；输入数组顺序不具权威性 |
 | Pending/Active | 所有机台、订单、产品、车间、Buffer、工序引用都必须存在且在相同业务范围；已确认 Pending 必须有匹配 Active 事件 |
 
 产品兼容性中，`wafer_size` 来自产品目录，`wafer_spec` 来自 AGV 当前绑定；二者不是同一字段。规格默认要求相等；当前仅在 `S2`、非精确名称 `丝网` 工序时允许 `R` 与 `P` 互换。片源等级当前仅识别 `A-`、`A`，且当前等级不得低于目标等级。
 
 ### 5.2 工艺路线完整性规则
 
-路线按 `(workshop_code, loop_code)` 分组，正式接口执行下列规则：
+路线按 `workshop_code` 分组，正式接口执行下列规则：
 
-1. `sequence` 在组内唯一、可排序；不要求连续。
+1. `sequence` 完全采用后端输入，每项为正整数且在 workshop 内唯一、可排序；不写死顺序，车间最小值不必等于 1，也不要求连续。
 2. 严格按 `sequence` 串行。首工序的上游编码和名称必须为 `null`；末工序的下游编码和名称必须为 `null`。
-3. 任意相邻两道工序必须双向衔接：前一道的下游代码/名称等于后一道的 `process_code`/`process_name`，后一道的上游字段反向相等。
-4. 每组必须且只能存在一个精确 `process_name == "丝网"` 的工序；`丝网01`、`丝网印刷` 不等价。
-5. 该唯一 `丝网` 的 `sequence` 必须是本组最大值，即为最后一道工序。
-6. Buffer 的两个服务工序还必须为该循环内同车间的相邻节点；中间存在任何 sequence 的节点即不相邻。
+3. 任意相邻两道路线节点必须双向衔接：前一道的下游代码/名称等于后一道的 `process_code`/`process_name`，后一道的上游字段反向相等；这些引用可以跨内部循环。
+4. 每个 workshop 的完整路线必须且只能存在一个 trim 后精确 `process_name == "丝网"` 的工序；不会对每个循环分别要求丝网，`丝网01`、`丝网印刷` 也不等价。
+5. 该唯一 `丝网` 的 `sequence` 必须是 workshop 内最大值，即为完整车间路线的最后一道工序。
+6. Buffer 的两个服务工序只要求能在同一 workshop 路线中唯一解析且 sequence 不同；可跨循环、可存在中间路线节点。解析器按 sequence 判断方向，不读取 Buffer loop，也不信任 served code 数组顺序。
 
 典型问题代码包括 `duplicate_sequence`、`missing_silk_screen_process`、`duplicate_silk_screen_process`、`silk_screen_not_last`、`broken_process_route`、`invalid_last_process_downstream`。
 
@@ -305,6 +319,11 @@
 ## 7. 成功响应总体结构
 
 `POST /cutline/evaluate` 的 HTTP 200 响应为 `CutlineEvaluateResponse`：
+
+工序循环内部化同时调整了 Request route loop 的兼容解释、workshop 级路线与丝网校验、
+跨 loop 上下游引用、Buffer 按 route sequence 定向，以及 Aggregator 使用该已解析方向构造
+物理键。这些调整都位于 Request/Snapshot 与区间识别边界；本节及第 8、9、10 节的
+正式 Response 字段、层级、展示口径和持久化结构均不变化。
 
 | 字段 | 类型 | 业务含义 | 后端保存 | 下一轮回传 | 甲方展示 |
 | --- | --- | --- | :---: | :---: | :---: |
@@ -522,4 +541,8 @@
 
 除第 6.2 节所述非空 `return_suggested_event_ids`/`mixed_cutline_event_ids` 在正式接口触发 500 的冲突外，未发现本次新增样例的字段名、JSON 语法、Loader、完整性校验、Snapshot、成功响应 Schema 或 422 包络与当前代码不一致。
 
-本次未修改断料公式、溢满公式、候选机台、逐台选择、切线方案、Pending 确认、Active、混料、切回、丝网兼容判断、请求/响应 Schema、API 字段、数据库或前端代码。
+本次工序循环内部化包括：ProcessRoute loop Optional 与按名称重建、workshop 级路线/丝网、
+跨 loop 引用、Buffer 按 route sequence 解析方向，以及 Aggregator 物理键使用该规范方向。
+未修改正式 Response Schema、断料公式、溢满公式、候选机台、逐台选择、
+切线方案生成核心业务逻辑、Pending 确认、Active、混料、切回、丝网输出、API 响应字段、
+数据库或前端代码。

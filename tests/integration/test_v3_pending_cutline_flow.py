@@ -146,6 +146,85 @@ def test_first_round_plan_is_pending_without_future_mixing_record():
     assert response.mixing_trace_records == []
 
 
+def test_real_pending_roundtrip_confirms_active_event_and_mixes_once():
+    round_one_payload = build_return_round_1_payload()
+    round_one = evaluate(round_one_payload)
+
+    assert len(round_one.persistence_state.pending_cutline_plans) == 1
+    pending = round_one.persistence_state.pending_cutline_plans[0]
+    assert pending.status.value == "PENDING"
+    assert len(pending.candidate_machines) == 1
+    assert round_one.mixing_trace_records == []
+    assert round_one.persistence_state.new_mixing_trace_records == []
+    assert round_one.persistence_state.mixed_cutline_event_ids == []
+    candidate = pending.candidate_machines[0]
+
+    round_two_payload = deepcopy(round_one_payload)
+    round_two_payload["snapshot_meta"]["snapshot_time"] = (
+        "2026-07-17T08:05:00+08:00"
+    )
+    round_two_payload["pending_cutline_plans"] = [
+        item.model_dump(mode="json")
+        for item in round_one.persistence_state.pending_cutline_plans
+    ]
+    _append_binding(
+        round_two_payload,
+        machine_code=candidate.machine_code,
+        order_code=candidate.expected_target_order_code,
+        previous_order_code=candidate.baseline_order_code,
+        binding_time="2026-07-17 08:03:00",
+        wafer_spec=candidate.expected_target_wafer_spec,
+    )
+
+    round_two = evaluate(round_two_payload)
+
+    persisted_pending = next(
+        item
+        for item in round_two.persistence_state.pending_cutline_plans
+        if item.plan_id == pending.plan_id
+    )
+    assert persisted_pending.status.value == "CONFIRMED"
+    assert persisted_pending.confirmed_machine_codes == [
+        candidate.machine_code
+    ]
+    assert round_two.persistence_state.completed_pending_plan_ids == [
+        pending.plan_id
+    ]
+
+    assert len(round_two.new_active_cutline_events) == 1
+    new_event = round_two.new_active_cutline_events[0]
+    assert new_event.event_id == (
+        f"CUT-{pending.plan_id}-{candidate.machine_code}"
+    )
+    assert new_event.machine_code == candidate.machine_code
+    assert new_event.source_order_code == candidate.baseline_order_code
+    assert new_event.target_order_code == (
+        candidate.expected_target_order_code
+    )
+
+    assert len(round_two.persistence_state.active_cutline_events) == 1
+    persisted_event = round_two.persistence_state.active_cutline_events[0]
+    assert persisted_event.event_id == new_event.event_id
+    assert persisted_event.plan_id == pending.plan_id
+    assert persisted_event.warning_id == pending.warning_id
+    assert persisted_event.machine_code == candidate.machine_code
+    assert persisted_event.target_order_code == (
+        candidate.expected_target_order_code
+    )
+    assert persisted_event.is_recommended_candidate is True
+
+    assert len(round_two.mixing_trace_records) == 1
+    mixing_record = round_two.mixing_trace_records[0]
+    assert mixing_record.plan_id == pending.plan_id
+    assert mixing_record.cutline_event_id == new_event.event_id
+    assert round_two.persistence_state.new_mixing_trace_records == [
+        mixing_record
+    ]
+    assert round_two.persistence_state.mixed_cutline_event_ids == [
+        new_event.event_id
+    ]
+
+
 def test_naive_snapshot_time_is_normalized_before_pending_creation():
     payload = build_return_round_1_payload()
     payload["snapshot_meta"]["snapshot_time"] = "2026-07-17 08:00:00"

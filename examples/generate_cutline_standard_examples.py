@@ -21,78 +21,31 @@ from app.main import create_app
 EXAMPLES = ROOT / "examples"
 SCENARIOS = EXAMPLES / "scenarios"
 
-_PROCESS_DISPLAY_NAMES = {
-    "POLY": "多晶硅沉积",
-    "RCA": "RCA清洗",
-}
-
-
-def _machine_display_name(value: str) -> str:
-    return value.replace("POLY机", "多晶硅沉积机").replace(
-        "RCA机",
-        "RCA清洗机",
-    )
-
-
 def localize_standard_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Translate human-facing example values without changing identifiers."""
+    """Translate approved human-facing values without renaming processes."""
 
     localized = deepcopy(payload)
     localized["snapshot_meta"]["trigger_type"] = "手动触发"
 
-    for machine in localized["machine_master"]:
-        machine["machine_name"] = _machine_display_name(
-            machine["machine_name"]
-        )
-        machine["process_name"] = _PROCESS_DISPLAY_NAMES.get(
-            machine["process_name"],
-            machine["process_name"],
-        )
-    for capacity in localized["machine_process_times"]:
-        capacity["machine_name"] = _machine_display_name(
-            capacity["machine_name"]
-        )
-    for relation in localized["machine_lines"]:
-        relation["machine_name"] = _machine_display_name(
-            relation["machine_name"]
-        )
-    for relation in localized["agv_relations"]:
-        name_field = (
-            "equipmentname"
-            if "equipmentname" in relation
-            else "machine_name"
-        )
-        relation[name_field] = _machine_display_name(relation[name_field])
-
     for route in localized["process_routes"]:
-        route["process_name"] = _PROCESS_DISPLAY_NAMES.get(
-            route["process_name"],
-            route["process_name"],
-        )
-        for field in (
-            "upstream_process_name",
-            "downstream_process_name",
-        ):
-            if route[field] is not None:
-                route[field] = _PROCESS_DISPLAY_NAMES.get(
-                    route[field],
-                    route[field],
-                )
         route["cache_type"] = "工序缓存"
 
     for buffer in localized["buffer_master"]:
-        buffer["buffer_name"] = (
-            buffer["buffer_name"]
-            .replace("POLY", "多晶硅沉积")
-            .replace("RCA", "RCA清洗")
-            .replace("Buffer", "缓存区")
+        buffer["buffer_name"] = buffer["buffer_name"].replace(
+            "Buffer", "缓存区"
         )
         buffer["buffer_type"] = "工序"
-        buffer["served_process_names"] = [
-            _PROCESS_DISPLAY_NAMES.get(name, name)
-            for name in buffer["served_process_names"]
-        ]
     return localized
+
+
+def _without_route_loop_compatibility(
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    result = deepcopy(payload)
+    for route in result["process_routes"]:
+        route.pop("loop_code", None)
+        route.pop("loop_name", None)
+    return result
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -124,7 +77,9 @@ def _post(client: TestClient, payload: dict[str, Any], status: int) -> dict:
 
 
 def _first_round_input() -> dict[str, Any]:
-    payload = _scenario("v3_stockout_auto")
+    payload = _without_route_loop_compatibility(
+        _scenario("v3_stockout_auto")
+    )
     payload["pending_cutline_plans"] = []
     payload["active_cutline_events"] = []
     payload["return_suggested_event_ids"] = []
@@ -132,10 +87,18 @@ def _first_round_input() -> dict[str, Any]:
     return payload
 
 
-def _next_round_input() -> dict[str, Any]:
-    """Use the real second-round Pending confirmation request."""
+def _next_round_input(persistence_state: dict[str, Any]) -> dict[str, Any]:
+    """Replay the first-round persistence state into a confirmation request."""
 
-    return _scenario("v3_return_round_2")
+    payload = _scenario("v3_return_round_2")
+    for field in (
+        "pending_cutline_plans",
+        "active_cutline_events",
+        "return_suggested_event_ids",
+        "mixed_cutline_event_ids",
+    ):
+        payload[field] = deepcopy(persistence_state[field])
+    return payload
 
 
 def generate() -> list[Path]:
@@ -143,7 +106,9 @@ def generate() -> list[Path]:
 
     first_round = _first_round_input()
     stockout_output = _post(client, first_round, 200)
-    confirmation_input = _next_round_input()
+    confirmation_input = _next_round_input(
+        stockout_output["persistence_state"]
+    )
     confirmation_output = _post(client, confirmation_input, 200)
     next_round = deepcopy(confirmation_input)
     _post(client, next_round, 200)

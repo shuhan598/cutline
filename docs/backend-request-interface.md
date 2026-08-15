@@ -1,6 +1,6 @@
 # 切线算法输入接口文档
 
-> 更新时间：2026-08-02
+> 更新时间：2026-08-15
 >
 > 本文档描述后端传给算法服务的请求 JSON。主闭环路由为
 > `POST /cutline/evaluate`，兼容业务路由为 `POST /stub/algo/run`；预校验路由为
@@ -41,7 +41,8 @@ CutlineEvaluateResponse
 
 `POST /stub/algo/run` 仍按原 `CutlineAlgorithmResponse` 输出，不包含
 `persistence_state`，用于兼容只消费业务字段的调用方。需要 Pending、Active、混料和
-切回跨轮闭环时必须使用 `/cutline/evaluate`。
+切回跨轮闭环时必须使用 `/cutline/evaluate`。工序循环内部化只调整 Request 的解释：
+正式 Response 的字段、层级和业务语义均不变化。
 
 当前可参考输入样例：
 
@@ -279,12 +280,10 @@ CutlineEvaluateResponse
 {
   "process_code": "P-ZR",
   "process_name": "制绒",
-  "sequence": 1,
+  "sequence": 100,
   "cache_type": "BUFFER",
   "workshop_code": "WS-S1",
   "workshop_name": "S1测试车间",
-  "loop_code": "LOOP-ZR-PK",
-  "loop_name": "制绒到硼扩测试循环",
   "upstream_process_code": null,
   "upstream_process_name": null,
   "downstream_process_code": "P-PK",
@@ -294,17 +293,37 @@ CutlineEvaluateResponse
 
 规则：
 
-- 同一 `(workshop_code, loop_code, process_code)` 不允许重复。
+- 同一 `(workshop_code, process_code)` 不允许重复；外部 loop 不能用于绕过该唯一性。
 - 机台所属车间通过
   `machine_master.process_code -> process_routes.process_code
   -> process_routes.workshop_code` 解析。
-- 同一 `process_code` 可因不同 `loop_code` 出现多次，但所有记录必须属于同一个
-  `workshop_code`；跨车间时明确报错，不按输入顺序选择。
+- `process_code` 继续作为路线、机台和 Buffer 的关联主键；`process_name` 只用于识别
+  内部所属循环。
 - 本次快照中 `machine_realtime` 引用的机台，其 `machine_master.process_code`
   必须能在工艺路线中找到；缺失时明确报错，不回退 `lines.workshop_code`。
 - 未被本次 runtime 引用的静态机台不因缺少本次路线而被无条件拒绝。
-- `sequence` 从 1 开始。
-- Buffer 服务的两个工序必须能在同一 `loop_code` 下找到，并且相邻。
+- `sequence` 完全采用后端输入，每项仍须为正整数，在同一 `workshop_code` 内唯一并可排序；
+  不写死顺序，车间最小值不必等于 1，也不要求连续。
+- 完整路线按 `workshop_code` 校验。首尾和相邻节点仍须形成完整串行链，但其
+  `upstream_process_code` / `downstream_process_code` 可以跨内部循环。
+- 每个 workshop 的完整路线必须且只能有一个 trim 后精确名称为 `丝网` 的工序，且其
+  `sequence` 为该 workshop 最大值；不会对 `LOOP1` 至 `LOOP4` 分别要求丝网。
+- `loop_code`、`loop_name` 均可省略或传 `null`。旧请求传入旧值或错误值仍兼容，
+  Snapshot 会忽略它们并按 `process_name` 重新生成内部 loop。
+
+内部循环目录只有下列 12 个规范名称：
+
+| `process_name` | 内部 `loop_code` / `loop_name` |
+|---|---|
+| 发料机 | `LOOP1` / 一循环 |
+| 制绒、硼扩、氧化 | `LOOP2` / 二循环 |
+| 碱抛、`POLY`、退火 | `LOOP3` / 三循环 |
+| `RCA` | `LOOP4` / 四循环 |
+| `ALD`、正膜、背膜、丝网 | `LOOP5` / 五循环 |
+
+所有名称先 trim；中文随后精确匹配，只有 `POLY`、`RCA`、`ALD` 兼容大小写。未知
+`process_name` 会按现有错误体系报告对应 `process_code`、原始名称和无法识别循环的原因，
+不增加别名或模糊匹配。
 
 ## 11. Buffer 主数据和实时库存
 
@@ -328,7 +347,13 @@ CutlineEvaluateResponse
 规则：
 
 - `served_process_codes` 和 `served_process_names` 长度必须一致。
-- 当前算法要求每个 Buffer 正好服务两个相邻工序。
+- 当前算法要求 `served_process_codes` 恰好包含两个工序编码；编码在同一 workshop
+  完整路线中解析，并按后端 route `sequence` 确定上游和下游，不依赖数组排列顺序。
+- 两个服务工序可以跨内部循环，也不要求固定相邻；无法在同一 workshop 唯一解析、
+  两者 sequence 相同或引用不存在时会明确报错。
+- `served_process_names` 保留现有基础结构校验，但不用于决定区间方向。
+- Buffer 的 `loop_code` / `loop_name` 继续作为兼容/描述字段保留，不用于限制服务工序、
+  判断上下游、禁止跨循环或决定断料/溢满工序区间。
 - `max_capacity` 用于溢满预测。
 
 ### `buffer_realtime`

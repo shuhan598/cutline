@@ -155,6 +155,22 @@
       "out_time": null
     },
     {
+      "machine_code": "P166-EA025",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 100.0,
+      "output_quantity": 100.0,
+      "out_time": "2026-07-17T07:55:00+08:00"
+    },
+    {
+      "machine_code": "P166-EA026",
+      "status": "异常",
+      "tangent_time": null,
+      "input_quantity": 0.0,
+      "output_quantity": 0.0,
+      "out_time": null
+    },
+    {
       "machine_code": "P166-EA019",
       "status": "运行",
       "tangent_time": null,
@@ -329,6 +345,20 @@
       "machine_name": "EA018氧化机",
       "process_code": "氧化",
       "process_name": "氧化"
+    },
+    {
+      "machine_code": "EA025",
+      "p166_jt_group": "P166-EA025",
+      "machine_name": "EA025ALD机",
+      "process_code": "ALD",
+      "process_name": "ALD"
+    },
+    {
+      "machine_code": "EA026",
+      "p166_jt_group": "P166-EA026",
+      "machine_name": "EA026ALD机",
+      "process_code": "ALD",
+      "process_name": "ALD"
     },
     {
       "machine_code": "EA019",
@@ -951,6 +981,70 @@
       "actual_capacity": 200.0
     },
     {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA025",
+      "machine_name": "EA025ALD机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
+      "product_code": "PROD-S2-N-TARGET",
+      "product_name": "182N至上产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
+      "product_code": "PROD-S2-N-SUPPORT",
+      "product_name": "182N支援产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
+      "product_code": "PROD-S2-R",
+      "product_name": "210R华晟产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
+      "machine_code": "EA026",
+      "machine_name": "EA026ALD机",
+      "product_code": "PROD-S2-P",
+      "product_name": "210P晶澳产品",
+      "proc_seconds": 120.0,
+      "actual_capacity": 200.0
+    },
+    {
       "machine_code": "EA019",
       "machine_name": "EA019正膜机",
       "product_code": "PROD-S2-N-TARGET",
@@ -1363,12 +1457,12 @@
       "loop_name": "S2主工艺循环",
       "upstream_process_code": "退火",
       "upstream_process_name": "退火",
-      "downstream_process_code": "正膜",
-      "downstream_process_name": "正膜"
+      "downstream_process_code": "ALD",
+      "downstream_process_name": "ALD"
     },
     {
-      "process_code": "正膜",
-      "process_name": "正膜",
+      "process_code": "ALD",
+      "process_name": "ALD",
       "sequence": 10,
       "cache_type": "BUFFER",
       "workshop_code": "S2",
@@ -1377,13 +1471,27 @@
       "loop_name": "S2主工艺循环",
       "upstream_process_code": "氧化",
       "upstream_process_name": "氧化",
+      "downstream_process_code": "正膜",
+      "downstream_process_name": "正膜"
+    },
+    {
+      "process_code": "正膜",
+      "process_name": "正膜",
+      "sequence": 11,
+      "cache_type": "BUFFER",
+      "workshop_code": "S2",
+      "workshop_name": "S2车间",
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环",
+      "upstream_process_code": "ALD",
+      "upstream_process_name": "ALD",
       "downstream_process_code": "丝网",
       "downstream_process_name": "丝网"
     },
     {
       "process_code": "丝网",
       "process_name": "丝网",
-      "sequence": 11,
+      "sequence": 12,
       "cache_type": "BUFFER",
       "workshop_code": "S2",
       "workshop_name": "S2车间",
@@ -1462,6 +1570,13 @@
     {
       "main_id": "MAIN-310110310",
       "buffer_code": "310110310",
+      "bound_source_name": "182N至上产品",
+      "current_quantity": 1000.0,
+      "current_utilization_rate": 0.01
+    },
+    {
+      "main_id": "MAIN-310110311",
+      "buffer_code": "310110311",
       "bound_source_name": "182N至上产品",
       "current_quantity": 1000.0,
       "current_utilization_rate": 0.01
@@ -1621,18 +1736,18 @@
     },
     {
       "buffer_code": "310110309",
-      "buffer_name": "氧化-正膜Buffer",
+      "buffer_name": "氧化-ALDBuffer",
       "buffer_type": "PROCESS",
       "buffer_type_title": "工序缓存",
       "max_capacity": 100000.0,
       "safety_low": 100.0,
       "served_process_codes": [
         "氧化",
-        "正膜"
+        "ALD"
       ],
       "served_process_names": [
         "氧化",
-        "正膜"
+        "ALD"
       ],
       "loop_code": "S2-LOOP01",
       "loop_name": "S2主工艺循环"
@@ -1651,6 +1766,24 @@
       "served_process_names": [
         "正膜",
         "丝网"
+      ],
+      "loop_code": "S2-LOOP01",
+      "loop_name": "S2主工艺循环"
+    },
+    {
+      "buffer_code": "310110311",
+      "buffer_name": "ALD-正膜Buffer",
+      "buffer_type": "PROCESS",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 100000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "ALD",
+        "正膜"
+      ],
+      "served_process_names": [
+        "ALD",
+        "正膜"
       ],
       "loop_code": "S2-LOOP01",
       "loop_name": "S2主工艺循环"
@@ -1726,6 +1859,14 @@
     {
       "equipmentid": "EA017",
       "equipmentname": "EA017氧化机",
+      "linename": "182N至上产品",
+      "lastlinename": null,
+      "waferspec": "N",
+      "createtime": "2026-07-17 07:55:00"
+    },
+    {
+      "equipmentid": "EA025",
+      "equipmentname": "EA025ALD机",
       "linename": "182N至上产品",
       "lastlinename": null,
       "waferspec": "N",
