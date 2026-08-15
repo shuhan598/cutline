@@ -18,6 +18,10 @@ from app.core.buffer_aggregation.models import (
     PhysicalBufferKey,
     PhysicalMainBufferState,
 )
+from app.utils.buffer_binding import (
+    is_multi_value_bound_source_name,
+    normalize_bound_source_product_name,
+)
 
 
 class BufferRealtimeView(Protocol):
@@ -90,6 +94,9 @@ class MainBufferAggregator:
         # main_id 是物理 Buffer 的唯一身份，所有实时层先按 main 聚合。
         realtime_by_main: dict[str, list[BufferRealtimeView]] = defaultdict(list)
         for realtime in realtime_buffers:
+            if is_multi_value_bound_source_name(realtime.bound_source_name):
+                # 逗号多值绑定暂不解析，整条记录不进入物理 Buffer 聚合。
+                continue
             realtime_by_main[self._normalize(getattr(realtime, "main_id", None))].append(
                 realtime
             )
@@ -173,7 +180,9 @@ class MainBufferAggregator:
                     if capacity is not None and capacity > 0:
                         capacities[buffer_code] = capacity
 
-            source_name = self._normalize(realtime.bound_source_name)
+            source_name = normalize_bound_source_product_name(
+                self._normalize(realtime.bound_source_name),
+            )
             order_matches = [order for order in orders_by_name.get(source_name, []) if _is_current_order(order)]
             if len(order_matches) != 1:
                 fatal = True

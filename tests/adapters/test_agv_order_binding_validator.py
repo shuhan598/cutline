@@ -381,6 +381,37 @@ def test_validator_defers_unknown_buffer_product_name_to_main_aggregator():
     )
 
 
+def test_validator_ignores_multi_value_buffer_bound_source_record():
+    source = payload()
+    add_valid_buffer(source)
+    source["buffer_realtime"][0]["bound_source_name"] = (
+        "111510111,111510112,111510211"
+    )
+
+    result = validate(source)
+
+    assert not any(
+        issue.dataset == "buffer_realtime"
+        and issue.field == "bound_source_name"
+        for issue in result.issues
+    )
+
+
+def test_validator_skips_all_checks_for_multi_value_buffer_record():
+    source = payload()
+    add_valid_buffer(source)
+    source["buffer_realtime"][0].update(
+        buffer_code="",
+        bound_source_name="111510111,111510112",
+    )
+
+    result = validate(source)
+
+    assert not any(
+        issue.dataset == "buffer_realtime" for issue in result.issues
+    )
+
+
 def test_validator_defers_buffer_order_workshop_conflict_to_main_aggregator():
     source = payload()
     add_valid_buffer(source)

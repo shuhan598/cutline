@@ -788,6 +788,40 @@ def test_blank_buffer_bound_source_name_is_isolated():
     _assert_aggregation_issue(payload, "order_mapping_not_found")
 
 
+def test_multi_value_buffer_bound_source_record_is_ignored_completely():
+    payload = _payload()
+    payload["buffer_realtime"][0]["bound_source_name"] = "Product A,Product B"
+
+    snapshot = _convert(payload)
+
+    assert not any(
+        item.buffer_code == "BUF-001"
+        and item.order_code == "ORD-001"
+        and item.current_quantity == 1200
+        for item in snapshot.buffer_order_inventories
+    )
+    physical = snapshot.main_buffer_batch.main_buffers_by_main_id["MAIN-001"]
+    assert physical.total_inventory == 900
+    assert snapshot.main_buffer_batch.issues == ()
+
+
+def test_buffer_bound_source_suffix_maps_to_current_order_product():
+    payload = _payload()
+    product_name = payload["orders"][0]["product_name"]
+    payload["buffer_realtime"][0]["bound_source_name"] = (
+        f"{product_name}-背膜下-AUTO"
+    )
+
+    snapshot = _convert(payload)
+
+    assert any(
+        item.buffer_code == "BUF-001"
+        and item.order_code == "ORD-001"
+        and item.current_quantity == 1200
+        for item in snapshot.buffer_order_inventories
+    )
+
+
 def test_buffer_product_order_workshop_conflict_is_isolated():
     payload = _payload()
     payload["orders"][0]["workshop_code"] = "S2"

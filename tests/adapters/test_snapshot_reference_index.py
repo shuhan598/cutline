@@ -52,6 +52,20 @@ def test_current_order_index_maps_only_the_unique_active_order(
     assert index.by_code["O-INACTIVE"].order_status == "WAITING"
 
 
+def test_current_order_index_keeps_hyphenated_agv_product_name_exact():
+    product = _product().model_copy(
+        update={"product_name": "PROD-SOURCE"}
+    )
+    order = _order("O-ACTIVE", "RUNNING").model_copy(
+        update={"product_name": "PROD-SOURCE"}
+    )
+    index = CurrentOrderIndex([order], ProductCatalogIndex([product]))
+
+    resolved = index.resolve_product_name("PROD-SOURCE", source="AGV M1")
+
+    assert resolved.order_code == "O-ACTIVE"
+
+
 def test_current_order_index_keeps_multiple_active_candidates_but_strict_resolution_rejects(
 ) -> None:
     index = CurrentOrderIndex(

@@ -142,6 +142,78 @@ def test_one_main_sums_unique_layer_inventory_and_capacity():
     }
 
 
+def test_multi_value_bound_source_record_is_ignored_completely():
+    batch = aggregate(
+        [
+            realtime("BUF-1", 100),
+            realtime(
+                "BUF-2",
+                900,
+                main_id="MAIN-IGNORED",
+                product_name="Product A,Product B",
+            ),
+        ],
+        [master("BUF-1", 1000), master("BUF-2", 2000)],
+        [relation("BUF-1"), relation("BUF-2")],
+    )
+
+    assert set(batch.main_buffers_by_main_id) == {"MAIN-1"}
+    assert batch.main_buffers_by_main_id["MAIN-1"].total_inventory == 100
+    assert batch.issues == ()
+
+
+def test_bound_source_suffix_matches_current_order_product_prefix():
+    batch = aggregate(
+        [realtime("BUF-1", 320, product_name="Product A-背膜下-AUTO")],
+        [master("BUF-1", 1000)],
+        [relation("BUF-1")],
+    )
+
+    group = only_group(batch)
+    assert group.group_key.order_code == "ORDER-A"
+    assert group.total_inventory == 320
+    assert batch.issues == ()
+
+
+def test_bound_source_always_uses_text_before_first_hyphen():
+    orders = [
+        *ORDERS,
+        Order(
+            order_code="ORDER-A-SPECIAL",
+            product_code="PRODUCT-A-SPECIAL",
+            product_name="Product A-Special",
+            workshop_code="S1",
+        ),
+    ]
+    batch = MainBufferAggregator().aggregate(
+        realtime_buffers=[
+            realtime(
+                "BUF-1",
+                480,
+                product_name="Product A-Special-AUTO",
+            )
+        ],
+        buffer_masters=[master("BUF-1", 1000)],
+        buffer_relations=[relation("BUF-1")],
+        orders=orders,
+    )
+
+    group = only_group(batch)
+    assert group.group_key.order_code == "ORDER-A"
+    assert group.total_inventory == 480
+    assert batch.issues == ()
+
+
+def test_bound_source_similar_text_without_hyphen_boundary_is_not_matched():
+    batch = aggregate(
+        [realtime("BUF-1", 100, product_name="Product AExtra-AUTO")],
+        [master("BUF-1", 1000)],
+        [relation("BUF-1")],
+    )
+
+    assert any(issue.code == "order_mapping_not_found" for issue in batch.issues)
+
+
 def test_same_main_uses_relation_direction_when_master_order_is_reversed():
     batch = aggregate(
         [realtime("BUF-1", 10), realtime("BUF-2", 20)],

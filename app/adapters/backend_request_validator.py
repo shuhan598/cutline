@@ -43,6 +43,7 @@ from app.schemas.pending_cutline_schema import (
     PendingCutlinePlan,
     PendingCutlinePlanStatus,
 )
+from app.utils.buffer_binding import is_multi_value_bound_source_name
 
 
 class BackendValidationIssue(BaseModel):
@@ -127,38 +128,50 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
     ) -> BackendRequestValidationResult:
         issues: list[BackendValidationIssue] = []
+        # 多值绑定记录仅保留“数据集已提供”的事实，其余完整性检查全部跳过。
+        filtered_request = request.model_copy(
+            update={
+                "buffer_realtime": [
+                    record
+                    for record in request.buffer_realtime
+                    if not is_multi_value_bound_source_name(
+                        record.bound_source_name
+                    )
+                ]
+            }
+        )
         normalized_agv_relations = [
             AgvRelationRequest.model_validate(record)
             for record in BackendRequestLoader().normalize_agv_relations(
                 [
                     relation.model_dump(mode="python")
-                    for relation in request.agv_relations
+                    for relation in filtered_request.agv_relations
                 ]
             )
         ]
         selected_agv_relations = select_latest_effective_bindings(
             normalized_agv_relations,
-            request.snapshot_meta.snapshot_time,
+            filtered_request.snapshot_meta.snapshot_time,
         )
         self._validate_empty_datasets(request, issues)
-        self._validate_required_nullable_fields(request, issues)
-        self._validate_empty_codes(request, issues)
+        self._validate_required_nullable_fields(filtered_request, issues)
+        self._validate_empty_codes(filtered_request, issues)
         self._validate_pending_plans(
-            request.pending_cutline_plans,
-            snapshot_time=request.snapshot_meta.snapshot_time,
+            filtered_request.pending_cutline_plans,
+            snapshot_time=filtered_request.snapshot_meta.snapshot_time,
             issues=issues,
         )
-        self._validate_unique_reference_fields(request, issues)
-        self._validate_references(request, issues)
-        self._validate_order_products(request, issues)
+        self._validate_unique_reference_fields(filtered_request, issues)
+        self._validate_references(filtered_request, issues)
+        self._validate_order_products(filtered_request, issues)
         self._validate_agv_bindings(
-            request,
+            filtered_request,
             selected_agv_relations,
             issues,
         )
-        self._validate_routes(request, issues)
-        self._validate_served_processes(request, issues)
-        self._validate_capacity(request, issues)
+        self._validate_routes(filtered_request, issues)
+        self._validate_served_processes(filtered_request, issues)
+        self._validate_capacity(filtered_request, issues)
         return BackendRequestValidationResult(valid=not issues, issues=issues)
 
     def _validate_pending_plans(
@@ -501,6 +514,9 @@ class BackendRequestCompletenessValidator:
 
         for index, realtime in enumerate(request.buffer_realtime):
             record_key = self._record_key("buffer_realtime", realtime, index)
+            if is_multi_value_bound_source_name(realtime.bound_source_name):
+                # 多值绑定暂不参与校验，整条实时 Buffer 记录由后续环节忽略。
+                continue
             product_name = realtime.bound_source_name.strip()
             if not product_name:
                 issues.append(

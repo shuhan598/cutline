@@ -1,0 +1,240 @@
+{
+  "snapshot_meta": {
+    "run_id": "RUN-V6-BACKEND-DOCUMENT-001",
+    "trigger_type": "scheduled",
+    "workshop_id": "WS-DEMO",
+    "snapshot_time": "2026-08-15T08:00:00+08:00",
+    "params_version": 6,
+    "catalog_version": "CUTLINE-CATALOG-V6",
+    "catalog_loaded_at": "2026-08-15T07:55:00+08:00",
+    "degraded_flags": []
+  },
+  "machine_realtime": [
+    {
+      "machine_code": "P166-M001",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 40.0,
+      "output_quantity": 39.5,
+      "out_time": null
+    },
+    {
+      "machine_code": "P166-M002",
+      "status": "运行",
+      "tangent_time": null,
+      "input_quantity": 30.0,
+      "output_quantity": 29.5,
+      "out_time": null
+    }
+  ],
+  "machine_master": [
+    {
+      "machine_code": "M001",
+      "p166_jt_group": "P166-M001",
+      "machine_name": "发料机一号",
+      "process_code": "PROC-FEED",
+      "process_name": "发料机"
+    },
+    {
+      "machine_code": "M002",
+      "p166_jt_group": "P166-M002",
+      "machine_name": "丝网机一号",
+      "process_code": "PROC-SCREEN",
+      "process_name": "丝网"
+    }
+  ],
+  "machine_process_times": [
+    {
+      "machine_code": "M001",
+      "machine_name": "发料机一号",
+      "product_code": "PROD-A",
+      "product_name": "产品A",
+      "proc_seconds": 90.0,
+      "actual_capacity": 600.0
+    },
+    {
+      "machine_code": "M001",
+      "machine_name": "发料机一号",
+      "product_code": "PROD-B",
+      "product_name": "产品B",
+      "proc_seconds": 100.0,
+      "actual_capacity": 540.0
+    },
+    {
+      "machine_code": "M002",
+      "machine_name": "丝网机一号",
+      "product_code": "PROD-A",
+      "product_name": "产品A",
+      "proc_seconds": 120.0,
+      "actual_capacity": 450.0
+    },
+    {
+      "machine_code": "M002",
+      "machine_name": "丝网机一号",
+      "product_code": "PROD-B",
+      "product_name": "产品B",
+      "proc_seconds": 125.0,
+      "actual_capacity": 432.0
+    }
+  ],
+  "workshops": [
+    {
+      "workshop_code": "WS-DEMO",
+      "workshop_name": "示例车间"
+    }
+  ],
+  "lines": [],
+  "machine_lines": [],
+  "orders": [
+    {
+      "order_code": "ORDER-A",
+      "order_status": "生产中",
+      "total_quantity": 10000.0,
+      "piece_source": "A",
+      "estimated_yield": "98.5%",
+      "product_code": "PROD-A",
+      "product_name": "产品A",
+      "workshop_code": "WS-DEMO",
+      "workshop_name": "示例车间",
+      "produced_quantity": 2500.0,
+      "remaining_quantity": 7500.0
+    },
+    {
+      "order_code": "ORDER-B",
+      "order_status": "生产中",
+      "total_quantity": 8000.0,
+      "piece_source": "A",
+      "estimated_yield": "98.0%",
+      "product_code": "PROD-B",
+      "product_name": "产品B",
+      "workshop_code": "WS-DEMO",
+      "workshop_name": "示例车间",
+      "produced_quantity": 1800.0,
+      "remaining_quantity": 6200.0
+    }
+  ],
+  "products": [
+    {
+      "product_code": "PROD-A",
+      "product_name": "产品A",
+      "wafer_size": "182",
+      "source_grade": "A",
+      "material_code": "MAT-A",
+      "material_name": "产品A硅片"
+    },
+    {
+      "product_code": "PROD-B",
+      "product_name": "产品B",
+      "wafer_size": "182",
+      "source_grade": "A",
+      "material_code": "MAT-B",
+      "material_name": "产品B硅片"
+    }
+  ],
+  "process_routes": [
+    {
+      "process_code": "PROC-FEED",
+      "process_name": "发料机",
+      "sequence": 1,
+      "cache_type": "BUFFER",
+      "workshop_code": "WS-DEMO",
+      "workshop_name": "示例车间",
+      "loop_code": "LOOP1",
+      "loop_name": "一循环",
+      "upstream_process_code": null,
+      "upstream_process_name": null,
+      "downstream_process_code": "PROC-SCREEN",
+      "downstream_process_name": "丝网"
+    },
+    {
+      "process_code": "PROC-SCREEN",
+      "process_name": "丝网",
+      "sequence": 2,
+      "cache_type": "BUFFER",
+      "workshop_code": "WS-DEMO",
+      "workshop_name": "示例车间",
+      "loop_code": "LOOP5",
+      "loop_name": "五循环",
+      "upstream_process_code": "PROC-FEED",
+      "upstream_process_name": "发料机",
+      "downstream_process_code": null,
+      "downstream_process_name": null
+    }
+  ],
+  "buffer_realtime": [
+    {
+      "main_id": "MAIN-001",
+      "buffer_code": "BUF-001",
+      "bound_source_name": "产品A",
+      "current_quantity": 420.0,
+      "current_utilization_rate": 0.42
+    },
+    {
+      "main_id": "MAIN-001",
+      "buffer_code": "BUF-002",
+      "bound_source_name": "产品B",
+      "current_quantity": 280.0,
+      "current_utilization_rate": 0.28
+    }
+  ],
+  "buffer_master": [
+    {
+      "buffer_code": "BUF-001",
+      "buffer_name": "发料机-丝网Buffer-A",
+      "buffer_type": "PROCESS",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 1000.0,
+      "safety_low": 100.0,
+      "served_process_codes": [
+        "PROC-FEED",
+        "PROC-SCREEN"
+      ],
+      "served_process_names": [
+        "发料机",
+        "丝网"
+      ],
+      "loop_code": "LOOP1",
+      "loop_name": "一循环"
+    },
+    {
+      "buffer_code": "BUF-002",
+      "buffer_name": "发料机-丝网Buffer-B",
+      "buffer_type": "PROCESS",
+      "buffer_type_title": "工序缓存",
+      "max_capacity": 800.0,
+      "safety_low": 80.0,
+      "served_process_codes": [
+        "PROC-FEED",
+        "PROC-SCREEN"
+      ],
+      "served_process_names": [
+        "发料机",
+        "丝网"
+      ],
+      "loop_code": "LOOP1",
+      "loop_name": "一循环"
+    }
+  ],
+  "agv_relations": [
+    {
+      "equipmentid": "M001",
+      "equipmentname": "发料机一号",
+      "linename": "产品A",
+      "lastlinename": null,
+      "waferspec": "A",
+      "createtime": "2026-08-15 07:58:00"
+    },
+    {
+      "equipmentid": "M002",
+      "equipmentname": "丝网机一号",
+      "linename": "产品B",
+      "lastlinename": null,
+      "waferspec": "B",
+      "createtime": "2026-08-15 07:58:00"
+    }
+  ],
+  "pending_cutline_plans": [],
+  "active_cutline_events": [],
+  "return_suggested_event_ids": [],
+  "mixed_cutline_event_ids": []
+}
