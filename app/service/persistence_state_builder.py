@@ -1,3 +1,5 @@
+"""根据本轮算法结果构建下一轮请求需要持久化的状态。"""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -18,11 +20,11 @@ from app.schemas.result_schema import (
 
 
 class PersistenceStateBuildError(ValueError):
-    """One evaluation cycle contains conflicting persistence identities."""
+    """同一轮评估出现互相冲突的持久化对象标识。"""
 
 
 class PersistenceStateBuilder:
-    """Build the complete stateless backend persistence payload for one cycle."""
+    """构建一轮无状态调用结束后需要由后端完整保存的数据。"""
 
     def build(
         self,

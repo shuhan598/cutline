@@ -1,3 +1,5 @@
+"""根据物理 main Buffer 溢满时间生成溢满预警。"""
+
 from app.core.warning.errors import WarningEvaluationError
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (

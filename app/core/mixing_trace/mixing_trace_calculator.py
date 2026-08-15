@@ -1,3 +1,5 @@
+"""根据活动切线事件和实时数据计算机台混料组成。"""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta

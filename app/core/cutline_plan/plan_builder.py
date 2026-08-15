@@ -1,4 +1,4 @@
-# Algorithm cutline decision builder.
+"""把机台选择结果构建为自动计划或人工干预决策。"""
 
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (
@@ -14,7 +14,7 @@ from app.schemas.result_schema import (
 
 
 class CutlinePlanBuilder:
-    """Algorithm cutline decision builder."""
+    """根据风险是否完全解除构建自动计划或人工干预结果。"""
 
     def build_stockout_decision(
         self,

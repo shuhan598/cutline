@@ -1,3 +1,5 @@
+"""混料追溯计算阶段使用的领域异常。"""
+
 class MixingTraceCalculationError(ValueError):
     """单台机台混料追溯计算中可隔离的业务错误。"""
 

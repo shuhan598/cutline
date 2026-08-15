@@ -1,3 +1,5 @@
+"""加载后端原始载荷，并转换为可校验的后端请求模型。"""
+
 from __future__ import annotations
 
 import json
@@ -25,11 +27,11 @@ _DATETIME_ADAPTER = TypeAdapter(datetime)
 
 
 class BackendRequestLoadError(ValueError):
-    """Backend request JSON could not be read or parsed."""
+    """后端请求 JSON 无法读取或解析。"""
 
 
 class BackendRequestLoader:
-    """Load backend request payloads into the strict external request model."""
+    """把后端请求载荷加载为严格的外部请求模型。"""
 
     @staticmethod
     def _is_raw_agv_record(record: dict[str, Any]) -> bool:
@@ -85,7 +87,7 @@ class BackendRequestLoader:
         )
 
     def normalize_agv_relations(self, records: Any) -> Any:
-        """Map raw AGV records while preserving non-list schema errors."""
+        """映射原始 AGV 记录，同时保留非列表结构的 schema 错误。"""
         if not isinstance(records, list):
             return records
         return [
@@ -96,7 +98,7 @@ class BackendRequestLoader:
         ]
 
     def normalize_payload(self, payload: Any) -> Any:
-        """Deep-copy a request and map only its AGV input collection."""
+        """深复制请求，并且只映射其中的 AGV 输入集合。"""
         normalized = deepcopy(payload)
         if isinstance(normalized, dict) and "agv_relations" in normalized:
             normalized["agv_relations"] = self.normalize_agv_relations(

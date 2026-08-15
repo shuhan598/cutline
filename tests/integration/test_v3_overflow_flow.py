@@ -6,6 +6,7 @@ from tests.fixtures.v3_full_route_factory import (
     SUPPORT_BUFFER_CODE,
     SUPPORT_ORDER_CODE,
     TARGET_BUFFER_CODE,
+    TARGET_ORDER_CODE,
     _set_runtime,
     build_overflow_manual_payload,
     build_overflow_warning_payload,
@@ -19,6 +20,11 @@ def _internal_result(payload):
 
 def _group_overflow_payload():
     payload = build_overflow_manual_payload()
+    source_main_id = next(
+        item["main_id"]
+        for item in payload["buffer_realtime"]
+        if item["buffer_code"] == SUPPORT_BUFFER_CODE
+    )
     source_inventory = next(
         item
         for item in payload["buffer_realtime"]
@@ -31,8 +37,12 @@ def _group_overflow_payload():
         for item in payload["buffer_realtime"]
         if item["buffer_code"] == TARGET_BUFFER_CODE
     )
+    target_inventory["main_id"] = source_main_id
     target_inventory["current_quantity"] = 200.0
     target_inventory["current_utilization_rate"] = 0.2
+    for item in payload["buffer_master"]:
+        if item["buffer_code"] in {SUPPORT_BUFFER_CODE, TARGET_BUFFER_CODE}:
+            item["max_capacity"] = 550.0
     return payload
 
 
@@ -63,16 +73,17 @@ def test_v3_overflow_group_selects_distinct_target_and_creates_plan():
     warning = response.overflow_warnings[0]
     assert warning.warning_type == "overflow"
     assert warning.buffer_code == SUPPORT_BUFFER_CODE
-    assert warning.total_inventory == 850
-    assert warning.remaining_capacity == 150
-    assert warning.buffer_growth_rate == 400
-    assert warning.overflow_minutes == 22.5
+    assert warning.total_inventory == 1050
+    assert warning.remaining_capacity == 50
+    assert warning.buffer_growth_rate == 200
+    assert warning.overflow_minutes == 15
     decision = response.cutline_decisions[0]
     assert decision.warning_id == warning.warning_id
     assert "manual_intervention" not in decision.model_dump()
     plan = decision.plan
     assert plan is not None
     assert plan.source_order_code == SUPPORT_ORDER_CODE
+    assert plan.initial_growth_rate == warning.buffer_growth_rate
     assert [item.machine_code for item in plan.selected_machines] == ["EA004"]
     selected = plan.selected_machines[0]
     assert selected.source_buffer_code == SUPPORT_BUFFER_CODE
@@ -89,12 +100,21 @@ def test_v3_overflow_group_selects_distinct_target_and_creates_plan():
     assert candidate_result.warning_type == "overflow"
     assert candidate_result.source_group_key == internal_warning.group_key
     assert [
-        item.machine_code for item in candidate_result.candidates
-    ] == ["EA004"]
-    assert [
-        option.target_buffer_code
-        for option in candidate_result.candidates[0].target_options
-    ] == [TARGET_BUFFER_CODE]
+        (item.machine_code, item.current_order_code)
+        for item in candidate_result.candidates
+    ] == [
+        ("EA003", TARGET_ORDER_CODE),
+        ("EA004", SUPPORT_ORDER_CODE),
+    ]
+    assert {
+        item.machine_code: [
+            option.target_buffer_code for option in item.target_options
+        ]
+        for item in candidate_result.candidates
+    } == {
+        "EA003": [SUPPORT_BUFFER_CODE],
+        "EA004": [TARGET_BUFFER_CODE],
+    }
 
     internal_plan = internal.cutline_decisions[0].plan
     assert internal_plan is not None
@@ -138,7 +158,7 @@ def test_v3_overflow_response_preserves_input_numeric_buffer_codes():
     assert all(code in input_codes and code.isdigit() for code in output_codes)
 
 
-def test_v3_overflow_partial_improvement_stays_manual_without_pending():
+def test_v3_overflow_over_capacity_stays_manual_without_pending():
     payload = build_overflow_manual_payload()
     _set_runtime(
         payload,
@@ -153,15 +173,24 @@ def test_v3_overflow_partial_improvement_stays_manual_without_pending():
         for item in payload["buffer_realtime"]
         if item["buffer_code"] == SUPPORT_BUFFER_CODE
     )
-    source_inventory["current_quantity"] = 950.0
-    source_inventory["current_utilization_rate"] = 0.95
+    source_inventory["current_quantity"] = 600.0
+    source_inventory["current_utilization_rate"] = 0.6
     target_inventory = next(
         item
         for item in payload["buffer_realtime"]
         if item["buffer_code"] == TARGET_BUFFER_CODE
     )
-    target_inventory["current_quantity"] = 700.0
-    target_inventory["current_utilization_rate"] = 0.7
+    target_inventory["current_quantity"] = 600.0
+    target_inventory["current_utilization_rate"] = 0.6
+    source_main_id = next(
+        item["main_id"]
+        for item in payload["buffer_realtime"]
+        if item["buffer_code"] == SUPPORT_BUFFER_CODE
+    )
+    target_inventory["main_id"] = source_main_id
+    for item in payload["buffer_master"]:
+        if item["buffer_code"] in {SUPPORT_BUFFER_CODE, TARGET_BUFFER_CODE}:
+            item["max_capacity"] = 550.0
 
     result = _internal_result(payload)
 
@@ -169,6 +198,5 @@ def test_v3_overflow_partial_improvement_stays_manual_without_pending():
     decision = result.cutline_decisions[0]
     assert decision.plan is None
     assert decision.manual_intervention is not None
-    assert decision.manual_intervention.reason == "insufficient_reduced_capacity"
-    assert decision.manual_intervention.passed_candidate_count == 1
+    assert decision.manual_intervention.reason == "current_buffer_already_over_capacity"
     assert result.persistence_state.pending_cutline_plans == []

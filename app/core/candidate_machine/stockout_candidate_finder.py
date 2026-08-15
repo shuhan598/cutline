@@ -1,4 +1,4 @@
-# 断料候选机台组件：输入 AlgorithmSnapshot 与 AlgorithmStockoutWarningResult 列表，输出 AlgorithmStockoutCandidateResult 列表
+"""根据断料预警寻找能够补充目标订单产能的候选机台。"""
 
 from app.core.candidate_machine.candidate_context import CandidateContext
 from app.core.candidate_machine.errors import CandidateMachineCalculationError

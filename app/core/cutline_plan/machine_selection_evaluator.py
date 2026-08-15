@@ -1,10 +1,16 @@
+"""通过虚拟切线评估候选机台，选择满足库存安全约束的组合。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isclose, isfinite
 
 from app.core.cutline_plan.errors import MachineSelectionEvaluationError
-from app.core.buffer_aggregation.models import GroupKey, MainBufferGroup
+from app.core.buffer_aggregation.models import (
+    GroupKey,
+    MainBufferGroup,
+    PhysicalMainBufferState,
+)
 from app.schemas.request_schema import AlgorithmSnapshot
 from app.schemas.result_schema import (
     AlgorithmBufferOverflowTimeResult,
@@ -37,13 +43,15 @@ class VirtualCutlineState:
 
 @dataclass
 class VirtualGroupState:
+    """记录同一轮虚拟评估中单个订单子状态的最新速率与库存。"""
+
     inventory_change_rate: float
     total_inventory: float
     total_capacity: float | None
 
 
 class MachineSelectionEvaluator:
-    """保持候选顺序，逐台模拟双侧影响并累计选择安全机台。"""
+    """动态重排来源和目标订单，逐台模拟并累计安全机台组合。"""
 
     def select_stockout_machines(
         self,
@@ -348,6 +356,8 @@ class MachineSelectionEvaluator:
                 failure_reason="target_capacity_unavailable",
             )
 
+        # 一次 overflow 评估共享同一份 virtual state；每轮都从这里读取
+        # 所有订单的最新速率，而不是回到原始 snapshot。
         virtual_groups: dict[GroupKey, VirtualGroupState] = {
             receiver.group_key: VirtualGroupState(
                 inventory_change_rate=initial_rate,
@@ -995,19 +1005,20 @@ class MachineSelectionEvaluator:
             source_key = batch.group_key_by_buffer_code.get(
                 warning.buffer_code
             )
-        source_group = batch.groups_by_group_key.get(source_key)
-        if source_group is None:
+        warning_source_group = batch.groups_by_group_key.get(source_key)
+        if warning_source_group is None:
             raise MachineSelectionEvaluationError(
                 "overflow source group cannot be located"
             )
         if (
             candidate_result.source_group_key is not None
-            and candidate_result.source_group_key != source_group.group_key
+            and candidate_result.source_group_key
+            != warning_source_group.group_key
         ):
             raise MachineSelectionEvaluationError(
                 "candidate source group does not match warning"
             )
-        if candidate_result.source_order_code != source_group.order_code:
+        if candidate_result.source_order_code != warning_source_group.order_code:
             raise MachineSelectionEvaluationError(
                 "candidate source order does not match overflow source group"
             )
@@ -1017,36 +1028,143 @@ class MachineSelectionEvaluator:
             for result in interval_results
             if result.group_key is not None
         }
-        source_rate_result = rates_by_key.get(source_group.group_key)
-        if source_rate_result is None:
+        warning_source_rate_result = rates_by_key.get(
+            warning_source_group.group_key
+        )
+        if warning_source_rate_result is None:
             raise MachineSelectionEvaluationError(
                 "overflow source group rate cannot be located"
             )
-        initial_rate = self._inventory_change_rate(source_rate_result)
-        if not isfinite(initial_rate):
+        warning_source_rate = self._inventory_change_rate(
+            warning_source_rate_result
+        )
+        if not isfinite(warning_source_rate):
             raise MachineSelectionEvaluationError(
                 "overflow source group rate must be finite"
             )
         virtual_groups: dict[GroupKey, VirtualGroupState] = {
-            source_group.group_key: VirtualGroupState(
-                inventory_change_rate=initial_rate,
-                total_inventory=source_group.total_inventory,
-                total_capacity=source_group.total_capacity,
+            group.group_key: VirtualGroupState(
+                inventory_change_rate=self._inventory_change_rate(rates_by_key[group.group_key]),
+                total_inventory=group.total_inventory,
+                total_capacity=group.total_capacity,
             )
+            for group in batch.groups_by_main_id.get(
+                warning_source_group.main_id, ()
+            )
+            if group.order_code and group.group_key in rates_by_key
         }
+        old_main_rate = sum(state.inventory_change_rate for state in virtual_groups.values())
+        initial_main_rate = old_main_rate
         selected_machine_codes: set[str] = set()
         selected: list[AlgorithmSelectedMachineEvaluation] = []
         rejected: list[AlgorithmRejectedMachineEvaluation] = []
         total_reduced_capacity = 0.0
-        risk_resolved = self._overflow_group_resolved(
-            source_group,
-            virtual_groups[source_group.group_key],
-            snapshot.config.overflow_warning_lead_minutes,
+        risk_resolved = self._physical_main_resolved(
+            snapshot, warning_source_group.main_id, virtual_groups, batch,
         )
 
-        for candidate in candidate_result.candidates:
-            if risk_resolved:
+        remaining_candidates = list(enumerate(candidate_result.candidates))
+        deferred_candidates = []
+        deferred_rejections = []
+        # 每成功选择一台机后重新进入循环，从全部订单中动态选 SourceOrder。
+        while not risk_resolved and (
+            remaining_candidates or deferred_candidates
+        ):
+            # 只有当前 virtual rate 为正的订单可以作为 source，并按大到小排序。
+            source_keys = [
+                key
+                for key, state in sorted(
+                    virtual_groups.items(),
+                    key=lambda item: (
+                        -item[1].inventory_change_rate,
+                        item[0].order_code,
+                    ),
+                )
+                if state.inventory_change_rate > 0
+            ]
+            source_rank = {key: index for index, key in enumerate(source_keys)}
+            available = [
+                (position, candidate)
+                for position, candidate in remaining_candidates
+                if candidate.source_group_key in source_rank
+            ]
+            if not available:
+                rejected.extend(deferred_rejections)
                 break
+            def candidate_priority(item):
+                # 优先级依次为 source 排名、最新 target rate、稳定订单编码、
+                # 物理改善量和原候选位置；machine 自身既有排序仍作为稳定输入。
+                position, candidate = item
+                options = sorted(
+                    candidate.target_options,
+                    key=lambda option: (
+                        virtual_groups.get(option.target_group_key).inventory_change_rate
+                        if option.target_group_key in virtual_groups
+                        else float("inf"),
+                        option.target_order_code,
+                    ),
+                )
+                if options:
+                    option = options[0]
+                    target_state = virtual_groups.get(option.target_group_key)
+                    target_rate = (
+                        target_state.inventory_change_rate
+                        if target_state is not None
+                        else float("inf")
+                    )
+                    target_effect = self._target_effect_capacity(
+                        snapshot,
+                        candidate.machine_code,
+                        option.target_product_code,
+                        candidate.reduced_capacity,
+                    )
+                    improvement = candidate.reduced_capacity - target_effect
+                    target_order_code = option.target_order_code
+                else:
+                    target_rate = float("inf")
+                    target_order_code = ""
+                    improvement = float("-inf")
+                return (
+                    source_rank[candidate.source_group_key],
+                    target_rate,
+                    target_order_code,
+                    -improvement,
+                    position,
+                )
+
+            candidate_position, candidate = min(
+                available,
+                key=candidate_priority,
+            )
+            remaining_candidates = [
+                item for item in remaining_candidates
+                if item[0] != candidate_position
+            ]
+            source_group = batch.groups_by_group_key.get(
+                candidate.source_group_key
+            )
+            if source_group is None:
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="source_group_not_found",
+                        message="candidate source group cannot be located",
+                    )
+                )
+                continue
+            source_rate_result = rates_by_key.get(source_group.group_key)
+            if source_rate_result is None:
+                rejected.append(
+                    self._overflow_rejected(
+                        candidate,
+                        None,
+                        reason="source_group_not_found",
+                        message="candidate source rate cannot be located",
+                    )
+                )
+                continue
+            # 同一物理机台在整轮 virtual selection 中最多只能被采用一次。
             if candidate.machine_code in selected_machine_codes:
                 rejected.append(
                     self._overflow_rejected(
@@ -1149,12 +1267,15 @@ class MachineSelectionEvaluator:
                 source_group.total_inventory,
                 source_after,
             )
+            # 切走 source 机台不能制造新的断料风险；边界等于 lead 也属于风险。
             if (
                 source_depletion is not None
                 and source_depletion
                 <= snapshot.config.stockout_warning_lead_minutes
             ):
-                rejected.append(
+                # 该拒绝可能随其他虚拟动作而改变，因此暂存到状态更新后重试。
+                deferred_candidates.append((candidate_position, candidate))
+                deferred_rejections.append(
                     self._overflow_rejected(
                         candidate,
                         None,
@@ -1163,7 +1284,9 @@ class MachineSelectionEvaluator:
                         source_before=-source_before,
                         source_after=-source_after,
                         source_depletion=source_depletion,
-                        message="borrowing the machine creates source stockout risk",
+                        message=(
+                            "borrowing the machine creates source stockout risk"
+                        ),
                     )
                 )
                 continue
@@ -1186,7 +1309,17 @@ class MachineSelectionEvaluator:
                 AlgorithmRejectedMachineEvaluation
             ] = []
             selected_option = False
-            for option in candidate.target_options:
+            # TargetOrder 按当前 virtual rate 从小到大重排，订单编码只负责稳定 tie-break。
+            options = sorted(
+                candidate.target_options,
+                key=lambda option: (
+                    virtual_groups.get(option.target_group_key).inventory_change_rate
+                    if option.target_group_key in virtual_groups
+                    else float("inf"),
+                    option.target_order_code,
+                ),
+            )
+            for option in options:
                 target_group = batch.groups_by_group_key.get(
                     option.target_group_key
                 )
@@ -1198,10 +1331,8 @@ class MachineSelectionEvaluator:
                     or target_rate_result is None
                     or not target_group.auto_receive_eligible
                     or target_group.group_key == source_group.group_key
-                    or target_group.main_id == source_group.main_id
+                    or target_group.main_id != source_group.main_id
                     or target_group.order_code == source_group.order_code
-                    or target_group.physical_buffer_key
-                    != source_group.physical_buffer_key
                     or target_group.order_code
                     != option.target_order_code
                     or target_group.product_code
@@ -1265,8 +1396,14 @@ class MachineSelectionEvaluator:
                         total_capacity=target_group.total_capacity,
                     )
                 target_before = target_state.inventory_change_rate
-                target_after = target_before + reduction
-                if max(0.0, -target_after) >= max(0.0, -target_before):
+                target_effect = self._target_effect_capacity(
+                    snapshot,
+                    candidate.machine_code,
+                    target_group.product_code,
+                    reduction,
+                )
+                target_after = target_before + target_effect
+                if target_before < 0 and target_after <= target_before:
                     option_rejections.append(
                         self._overflow_rejected(
                             candidate,
@@ -1283,20 +1420,14 @@ class MachineSelectionEvaluator:
                         )
                     )
                     continue
-                target_overflow = self._group_overflow_minutes(
-                    target_group,
-                    target_after,
-                )
-                if (
-                    target_overflow is not None
-                    and target_overflow
-                    <= snapshot.config.overflow_warning_lead_minutes
-                ):
+                # source 减少量与 target 新增量共同决定物理 main 的真实变化。
+                projected_main_rate = old_main_rate - reduction + target_effect
+                if projected_main_rate >= old_main_rate:
                     option_rejections.append(
                         self._overflow_rejected(
                             candidate,
                             option,
-                            reason="target_buffer_overflow_risk",
+                            reason="main_rate_not_improved",
                             source_interval=source_rate_result,
                             target_interval=target_rate_result,
                             source_before=-source_before,
@@ -1304,12 +1435,27 @@ class MachineSelectionEvaluator:
                             source_depletion=source_depletion,
                             target_before=-target_before,
                             target_after=-target_after,
-                            target_overflow=target_overflow,
-                            message="switching in creates target buffer overflow risk",
+                            message="candidate does not strictly reduce physical main growth",
                         )
                     )
                     continue
+                projected_states = dict(virtual_groups)
+                projected_states[source_group.group_key] = VirtualGroupState(
+                    inventory_change_rate=source_after,
+                    total_inventory=source_state.total_inventory,
+                    total_capacity=source_state.total_capacity,
+                )
+                projected_states[target_group.group_key] = VirtualGroupState(
+                    inventory_change_rate=target_after,
+                    total_inventory=target_state.total_inventory,
+                    total_capacity=target_state.total_capacity,
+                )
+                target_overflow = self._physical_overflow_minutes(
+                    self._physical_state(batch, source_group.main_id),
+                    sum(state.inventory_change_rate for state in projected_states.values()),
+                )
 
+                # 只有通过全部安全检查后才提交 virtual state，失败分支不会污染后续轮次。
                 source_state.inventory_change_rate = source_after
                 target_state.inventory_change_rate = target_after
                 virtual_groups[target_group.group_key] = target_state
@@ -1345,21 +1491,23 @@ class MachineSelectionEvaluator:
                         target_group_key=target_group.group_key,
                     )
                 )
+                # 状态已经变化，重新放回此前因 source stockout 暂缓的候选。
+                remaining_candidates.extend(deferred_candidates)
+                deferred_candidates.clear()
+                deferred_rejections.clear()
                 selected_option = True
-                risk_resolved = self._overflow_group_resolved(
-                    source_group,
-                    source_state,
-                    snapshot.config.overflow_warning_lead_minutes,
+                old_main_rate = projected_main_rate
+                risk_resolved = self._physical_main_resolved(
+                    snapshot, source_group.main_id, virtual_groups, batch,
                 )
                 break
 
             if not selected_option:
                 rejected.extend(option_rejections)
 
-        source_state = virtual_groups[source_group.group_key]
-        remaining_rate = source_state.inventory_change_rate
-        updated_overflow_minutes = self._group_overflow_minutes(
-            source_group,
+        remaining_rate = sum(state.inventory_change_rate for state in virtual_groups.values())
+        updated_overflow_minutes = self._physical_overflow_minutes(
+            self._physical_state(batch, warning_source_group.main_id),
             remaining_rate,
         )
         failure_reason = self._overflow_failure_reason(
@@ -1370,14 +1518,14 @@ class MachineSelectionEvaluator:
             risk_resolved=risk_resolved,
         )
         return AlgorithmOverflowSelectionResult(
-            workshop_code=source_group.workshop_code,
-            buffer_code=source_group.representative_buffer_code or "",
+            workshop_code=warning_source_group.workshop_code,
+            buffer_code=warning_source_group.representative_buffer_code or "",
             upstream_process_code=warning.upstream_process_code,
             downstream_process_code=warning.downstream_process_code,
-            source_order_code=source_group.order_code,
+            source_order_code=warning_source_group.order_code,
             source_wafer_size=candidate_result.source_wafer_size,
-            source_wafer_spec=source_rate_result.wafer_spec,
-            initial_growth_rate=initial_rate,
+            source_wafer_spec=warning_source_rate_result.wafer_spec,
+            initial_growth_rate=initial_main_rate,
             total_reduced_capacity=total_reduced_capacity,
             remaining_growth_rate=remaining_rate,
             updated_overflow_minutes=updated_overflow_minutes,
@@ -1402,6 +1550,63 @@ class MachineSelectionEvaluator:
         return (
             overflow_minutes is not None
             and overflow_minutes > lead_minutes
+        )
+
+    def _physical_overflow_minutes(self, physical, growth_rate: float):
+        if physical is None or physical.total_capacity is None:
+            return None
+        if physical.total_inventory >= physical.total_capacity:
+            return 0.0
+        if growth_rate <= 0:
+            return None
+        return (physical.total_capacity - physical.total_inventory) / growth_rate * 60
+
+    def _physical_main_resolved(self, snapshot, main_id, virtual_groups, batch):
+        total_rate = sum(state.inventory_change_rate for state in virtual_groups.values())
+        minutes = self._physical_overflow_minutes(
+            self._physical_state(batch, main_id), total_rate,
+        )
+        return total_rate <= 0 or (
+            minutes is not None
+            and minutes > snapshot.config.overflow_warning_lead_minutes
+        )
+
+    @staticmethod
+    def _target_effect_capacity(snapshot, machine_code, product_code, fallback):
+        matches = [
+            item.actual_capacity
+            for item in snapshot.machine_product_capacities
+            if item.machine_code == machine_code and item.product_code == product_code
+        ]
+        return matches[0] if matches else fallback
+
+    @staticmethod
+    def _physical_state(batch, main_id):
+        state = batch.physical_main_buffers_by_main_id.get(main_id)
+        if state is not None:
+            return state
+        groups = batch.groups_by_main_id.get(main_id, ())
+        if not groups:
+            return None
+        first = groups[0]
+        inventory = sum(group.total_inventory for group in groups)
+        return PhysicalMainBufferState(
+            main_id=main_id,
+            workshop_code=first.workshop_code,
+            ordered_service_process_codes=first.ordered_service_process_codes,
+            physical_buffer_key=first.physical_buffer_key,
+            buffer_codes=tuple(sorted({code for group in groups for code in group.buffer_codes})),
+            total_inventory=inventory,
+            total_capacity=first.total_capacity,
+            remaining_capacity=(first.total_capacity - inventory if first.total_capacity is not None else None),
+            representative_buffer_code=first.representative_buffer_code,
+            order_codes=tuple(group.order_code for group in groups if group.order_code),
+            stockout_eligible=first.stockout_eligible,
+            overflow_eligible=first.overflow_eligible,
+            stockout_warning_eligible=first.stockout_warning_eligible,
+            overflow_warning_eligible=first.overflow_warning_eligible,
+            auto_receive_eligible=first.auto_receive_eligible,
+            auto_donate_eligible=first.auto_donate_eligible,
         )
 
     def _maximum_growth_detail(

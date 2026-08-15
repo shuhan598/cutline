@@ -1,4 +1,4 @@
-"""Resolve a machine's authoritative workshop from its process routes."""
+"""依据工艺路线解析机台的权威车间，不依赖 line 关系。"""
 
 from __future__ import annotations
 
@@ -12,11 +12,11 @@ from app.schemas.common_schema import (
 
 
 class MachineWorkshopResolutionError(ValueError):
-    """A machine process cannot be mapped to exactly one workshop."""
+    """机台工序无法映射到唯一车间。"""
 
 
 class MachineWorkshopResolver:
-    """Resolve process and machine workshops using process-route authority."""
+    """以工艺路线为权威来源解析工序和机台所属车间。"""
 
     def __init__(self, process_routes: Iterable[AlgorithmProcessRoute]):
         workshops_by_process: dict[str, set[str]] = defaultdict(set)
@@ -30,7 +30,7 @@ class MachineWorkshopResolver:
         }
 
     def resolve_by_process_code(self, process_code: str) -> str:
-        """Return the unique workshop for a process code."""
+        """返回指定工序编码唯一对应的车间。"""
         workshop_codes = self._workshops_by_process.get(process_code)
         if not workshop_codes:
             raise MachineWorkshopResolutionError(
@@ -47,7 +47,7 @@ class MachineWorkshopResolver:
         self,
         machine: AlgorithmMachineMaster,
     ) -> str:
-        """Return a machine's workshop with machine-aware diagnostics."""
+        """返回机台所属车间，并在失败时提供机台维度诊断。"""
         workshop_codes = self._workshops_by_process.get(
             machine.process_code
         )

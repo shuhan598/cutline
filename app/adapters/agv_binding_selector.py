@@ -1,3 +1,5 @@
+"""从 AGV 绑定历史中选择指定时刻已经生效的最新记录。"""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -11,7 +13,7 @@ def select_latest_effective_bindings(
     relations: Iterable[Any],
     snapshot_time: datetime,
 ) -> dict[str, tuple[datetime, list[Any]]]:
-    """Return every record tied at each machine's latest effective time."""
+    """返回每台机台在最新生效时刻并列的全部记录。"""
     comparable_snapshot_time = normalize_local_time(snapshot_time)
     candidates_by_machine: dict[str, list[tuple[datetime, Any]]] = defaultdict(
         list

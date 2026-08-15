@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 import pytest
@@ -37,6 +38,7 @@ from .helpers import (
     WORKSHOP,
     make_active_event,
     make_agv_binding,
+    make_candidate,
     make_interval_result,
     make_overflow_plan,
     make_snapshot,
@@ -113,6 +115,55 @@ def _pending_batch(*, map_warning_layer: bool) -> MainBufferAggregationBatch:
         },
         group_keys_by_physical_buffer_key={
             physical_key: tuple(group.group_key for group in groups)
+        },
+    )
+
+
+def _cross_main_pending_batch() -> MainBufferAggregationBatch:
+    batch = _pending_batch(map_warning_layer=True)
+    warning_group = next(
+        group for group in batch.groups if group.order_code == MONITORED_ORDER
+    )
+    target_key = GroupKey(
+        warning_group.physical_buffer_key,
+        warning_group.main_id,
+        ALTERNATE_ORDER,
+    )
+    target_group = replace(
+        warning_group,
+        group_key=target_key,
+        order_code=ALTERNATE_ORDER,
+        product_code="P-ALT",
+        buffer_codes=(ALTERNATE_BUFFER,),
+        representative_buffer_code=ALTERNATE_BUFFER,
+    )
+    groups = (*batch.groups, target_group)
+    return replace(
+        batch,
+        groups=groups,
+        groups_by_group_key={group.group_key: group for group in groups},
+        group_keys_by_main_id={
+            warning_group.main_id: (warning_group.group_key, target_group.group_key),
+            "MAIN-SOURCE": (
+                next(
+                    group.group_key
+                    for group in groups
+                    if group.order_code == SOURCE_ORDER
+                ),
+            ),
+        },
+        group_key_by_buffer_code={
+            **batch.group_key_by_buffer_code,
+            ALTERNATE_BUFFER: target_group.group_key,
+        },
+        group_key_by_representative_buffer_code={
+            **batch.group_key_by_representative_buffer_code,
+            ALTERNATE_BUFFER: target_group.group_key,
+        },
+        group_keys_by_physical_buffer_key={
+            warning_group.physical_buffer_key: tuple(
+                group.group_key for group in groups
+            )
         },
     )
 
@@ -279,6 +330,91 @@ def test_recommended_overflow_binding_uses_target_interval() -> None:
     assert result.plan_evaluations[0].status == "CONFIRMED"
 
 
+def test_dynamic_source_overflow_confirms_each_candidate_against_its_baseline() -> None:
+    plan = make_overflow_plan(
+        baseline_orders=(("M1", MONITORED_ORDER), ("M2", SOURCE_ORDER)),
+        candidate_machine_codes=("M1",),
+        before_machine_codes=("M1", "M2"),
+        expected_machine_count=0,
+        source_order_code=None,
+        source_product_code=None,
+    )
+    second_candidate = make_candidate(
+        "M2",
+        SOURCE_ORDER,
+        ALTERNATE_ORDER,
+        source_buffer_code=SOURCE_BUFFER,
+        target_buffer_code=ALTERNATE_BUFFER,
+    )
+    plan = plan.model_copy(
+        update={
+            "candidate_machines": [plan.candidate_machines[0], second_candidate],
+            "candidate_machine_codes": ["M1", "M2"],
+        }
+    )
+    first_time = CREATED_AT + timedelta(minutes=3)
+    second_time = CREATED_AT + timedelta(minutes=4)
+
+    result = PendingCutlineDetector().detect(
+        snapshot=make_snapshot(
+            pending_plans=[plan],
+            history=[
+                make_agv_binding(
+                    "M1",
+                    ALTERNATE_ORDER,
+                    first_time,
+                    previous_product_name=MONITORED_PRODUCT_NAME,
+                ),
+                make_agv_binding(
+                    "M2",
+                    ALTERNATE_ORDER,
+                    second_time,
+                    previous_product_name=SOURCE_PRODUCT_NAME,
+                ),
+            ],
+            current_orders={"M1": ALTERNATE_ORDER, "M2": ALTERNATE_ORDER},
+        ),
+        interval_results=[make_interval_result(ALTERNATE_ORDER, ALTERNATE_BUFFER)],
+    )
+
+    assert [item.source_order_code for item in result.transitions] == [
+        MONITORED_ORDER,
+        SOURCE_ORDER,
+    ]
+    assert result.plan_evaluations[0].status == "CONFIRMED"
+    assert result.plan_evaluations[0].confirmed_machine_codes == ["M1", "M2"]
+
+
+def test_dynamic_source_overflow_rejects_cross_main_candidate_buffers() -> None:
+    plan = make_overflow_plan(
+        baseline_orders=(("M1", SOURCE_ORDER),),
+        candidate_machine_codes=("M1",),
+        before_machine_codes=("M1",),
+        expected_machine_count=0,
+        source_order_code=SOURCE_ORDER,
+        source_product_code="P-SOURCE",
+    )
+    changed = make_agv_binding(
+        "M1",
+        ALTERNATE_ORDER,
+        CREATED_AT + timedelta(minutes=3),
+        previous_product_name=SOURCE_PRODUCT_NAME,
+    )
+    current_snapshot = make_snapshot(
+        pending_plans=[plan],
+        history=[changed],
+        current_orders={"M1": ALTERNATE_ORDER},
+    ).model_copy(update={"main_buffer_batch": _cross_main_pending_batch()})
+
+    with pytest.raises(PendingCutlineDetectionError, match="same physical main"):
+        PendingCutlineDetector().detect(
+            snapshot=current_snapshot,
+            interval_results=[
+                make_interval_result(ALTERNATE_ORDER, ALTERNATE_BUFFER)
+            ],
+        )
+
+
 def test_recommended_machine_overflow_can_confirm_other_legal_target() -> None:
     plan = make_overflow_plan()
     changed = make_agv_binding(
@@ -374,6 +510,36 @@ def test_nonrecommended_overflow_machine_reuses_compatible_target_interval() -> 
     assert transition.target_upstream_process_code == CUT_PROCESS
     assert transition.target_downstream_process_code == DOWNSTREAM_PROCESS
     assert transition.is_recommended_candidate is False
+
+
+def test_overflow_machine_outside_before_set_cannot_confirm_plan() -> None:
+    plan = make_overflow_plan(
+        baseline_orders=(("M1", MONITORED_ORDER), ("M2", MONITORED_ORDER)),
+        candidate_machine_codes=("M1",),
+        before_machine_codes=("M1",),
+        expected_machine_count=0,
+    )
+    changed = make_agv_binding(
+        "M2",
+        ALTERNATE_ORDER,
+        NOW,
+        previous_product_name=MONITORED_PRODUCT_NAME,
+    )
+
+    result = PendingCutlineDetector().detect(
+        snapshot=make_snapshot(
+            pending_plans=[plan],
+            history=[changed],
+            current_orders={"M1": MONITORED_ORDER, "M2": ALTERNATE_ORDER},
+        ),
+        interval_results=[make_interval_result(ALTERNATE_ORDER, ALTERNATE_BUFFER)],
+    )
+
+    assert result.transitions == []
+    evaluation = result.plan_evaluations[0]
+    assert evaluation.status == "PENDING"
+    assert evaluation.current_machine_count == 1
+    assert evaluation.expected_machine_count == 0
 
 
 def test_count_neutral_one_in_one_out_still_confirms_physical_switch() -> None:

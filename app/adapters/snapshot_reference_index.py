@@ -1,4 +1,4 @@
-"""Validated reference indexes used while building an algorithm snapshot."""
+"""构建算法快照时使用的、经过完整性校验的引用索引。"""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ from app.schemas.request_schema import MachineMasterRequest
 
 
 class SnapshotReferenceIndexError(ValueError):
-    """Snapshot reference data is blank, duplicated, or inconsistent."""
+    """快照引用数据为空、重复或互相不一致。"""
 
 
 class MachineMasterIndex:
-    """Map both external machine identifiers to one standard machine."""
+    """把两种外部机台标识映射到同一台标准机台。"""
 
     def __init__(self, records: Iterable[MachineMasterRequest]):
         self._machine_masters: list[AlgorithmMachineMaster] = []
@@ -102,7 +102,7 @@ class MachineMasterIndex:
 
 
 class ProductCatalogIndex:
-    """Validate and index the product catalog by code and exact name."""
+    """校验产品目录，并按编码和精确名称建立索引。"""
 
     def __init__(self, products: Iterable[AlgorithmProduct]):
         self._products: list[AlgorithmProduct] = []
@@ -188,7 +188,7 @@ def is_current_order_status(status: str) -> bool:
 
 
 class CurrentOrderIndex:
-    """Validate all orders and index active orders by exact product name."""
+    """校验全部订单，并按产品精确名称索引当前有效订单。"""
 
     def __init__(
         self,
@@ -198,6 +198,7 @@ class CurrentOrderIndex:
         self._orders: list[AlgorithmOrder] = []
         self._by_code: dict[str, AlgorithmOrder] = {}
         self._by_product_name: dict[str, AlgorithmOrder] = {}
+        self._by_product_name_candidates: dict[str, list[AlgorithmOrder]] = {}
 
         for index, order in enumerate(orders):
             order_code = order.order_code.strip()
@@ -232,14 +233,13 @@ class CurrentOrderIndex:
             self._orders.append(normalized_order)
             self._by_code[order_code] = normalized_order
             if is_current_order_status(order.order_status):
-                existing = self._by_product_name.get(product_name)
-                if existing is not None:
-                    raise SnapshotReferenceIndexError(
-                        f"product_name {product_name!r} maps to multiple "
-                        "current orders among active statuses: "
-                        f"{existing.order_code!r}, {order_code!r}"
-                    )
-                self._by_product_name[product_name] = normalized_order
+                self._by_product_name_candidates.setdefault(product_name, []).append(
+                    normalized_order
+                )
+                if len(self._by_product_name_candidates[product_name]) == 1:
+                    self._by_product_name[product_name] = normalized_order
+                else:
+                    self._by_product_name.pop(product_name, None)
 
     @property
     def orders(self) -> list[AlgorithmOrder]:
@@ -260,10 +260,22 @@ class CurrentOrderIndex:
             raise SnapshotReferenceIndexError(
                 f"{source} product_name must not be blank"
             )
-        order = self._by_product_name.get(normalized)
-        if order is None:
+        candidates = self._by_product_name_candidates.get(normalized, [])
+        if not candidates:
             raise SnapshotReferenceIndexError(
                 f"{source} product_name {product_name!r} did not match a "
                 "current order; no current active order exists"
             )
-        return order
+        if len(candidates) > 1:
+            raise SnapshotReferenceIndexError(
+                f"{source} product_name {product_name!r} maps to multiple "
+                "current orders: "
+                + ", ".join(order.order_code for order in candidates)
+            )
+        return candidates[0]
+
+    def resolve_product_name_candidates(
+        self,
+        product_name: str,
+    ) -> list[AlgorithmOrder]:
+        return list(self._by_product_name_candidates.get(product_name.strip(), ()))

@@ -1,3 +1,5 @@
+"""预测丝网订单完工顺序并生成清台准备提示。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

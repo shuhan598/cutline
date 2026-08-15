@@ -1,4 +1,4 @@
-# 算法管道：净速率→Pending确认/活动事件→切回→本轮预警/方案→丝网/混料
+"""编排净速率、Pending 确认、切回、预警、方案、丝网和混料计算。"""
 
 import re
 from datetime import datetime

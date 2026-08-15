@@ -1,4 +1,4 @@
-"""Map complete internal algorithm results to the compact public contract."""
+"""把完整内部算法结果映射为精简且稳定的正式响应契约。"""
 
 from app.schemas.common_schema import AlgorithmActiveCutlineEvent
 from app.schemas.response_schema import (

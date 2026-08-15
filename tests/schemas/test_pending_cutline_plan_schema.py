@@ -298,24 +298,20 @@ def test_stockout_confirmed_machine_baseline_must_differ_from_monitored_order():
     assert "ORD-TARGET" in message
 
 
-def test_overflow_confirmed_machine_baseline_must_equal_monitored_order():
-    with pytest.raises(ValidationError) as error:
-        PendingCutlinePlan.model_validate(
-            pending_plan_payload(
-                warning_type="overflow",
-                expected_delta_direction="decrease",
-                expected_machine_count=0,
-                    status="CONFIRMED",
-                confirmed_machine_codes=["MC-01"],
-            )
+def test_overflow_confirmed_machine_may_use_dynamic_nonmonitored_source():
+    plan = PendingCutlinePlan.model_validate(
+        pending_plan_payload(
+            warning_type="overflow",
+            expected_delta_direction="decrease",
+            expected_machine_count=0,
+            status="CONFIRMED",
+            confirmed_machine_codes=["MC-01"],
         )
+    )
 
-    message = str(error.value)
-    assert "PLAN-01" in message
-    assert "overflow" in message
-    assert "MC-01" in message
-    assert "ORD-BASE" in message
-    assert "ORD-TARGET" in message
+    assert plan.monitored_order_code == "ORD-TARGET"
+    assert plan.baseline_machine_bindings[0].order_code == "ORD-BASE"
+    assert plan.confirmed_machine_codes == ["MC-01"]
 
 
 def test_valid_non_candidate_machine_may_be_partially_confirmed():

@@ -1,4 +1,4 @@
-"""Convert backend snapshot requests into algorithm-owned snapshot models."""
+"""把后端快照请求转换为算法内部拥有的标准快照模型。"""
 
 from __future__ import annotations
 
@@ -69,12 +69,12 @@ ModelT = TypeVar("ModelT")
 
 
 class SnapshotAdapter:
-    """Convert the backend request format into an algorithm snapshot."""
+    """把后端请求格式转换为算法快照。"""
 
     def to_algorithm_snapshot(
         self, request: CutlineAlgorithmRequest
     ) -> AlgorithmSnapshot:
-        """Convert a validated backend request into a complete algorithm snapshot."""
+        """把已校验的后端请求转换为完整算法快照。"""
         try:
             config = AlgorithmConfig()
             snapshot_time = normalize_local_time(
@@ -997,7 +997,7 @@ class SnapshotAdapter:
     def _index_unambiguous(
         self, items: Iterable[ModelT], field: str, label: str
     ) -> dict[str, ModelT]:
-        """Index only uniquely mapped records for strict downstream lookup."""
+        """只索引唯一映射记录，供下游进行严格查询。"""
         grouped: dict[str, list[ModelT]] = {}
         for item in items:
             grouped.setdefault(getattr(item, field), []).append(item)

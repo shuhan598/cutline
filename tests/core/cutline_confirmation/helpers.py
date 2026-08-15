@@ -233,12 +233,19 @@ def make_overflow_plan(
         make_baseline(machine_code, order_code)
         for machine_code, order_code in baseline_orders
     ]
+    baseline_by_machine = {
+        binding.machine_code: binding for binding in baseline
+    }
     candidates = [
         make_candidate(
             machine_code,
-            MONITORED_ORDER,
+            baseline_by_machine[machine_code].order_code,
             ALTERNATE_ORDER,
-            source_buffer_code=WARNING_BUFFER,
+            source_buffer_code=(
+                WARNING_BUFFER
+                if baseline_by_machine[machine_code].order_code == MONITORED_ORDER
+                else SOURCE_BUFFER
+            ),
             target_buffer_code=ALTERNATE_BUFFER,
         )
         for machine_code in candidate_machine_codes

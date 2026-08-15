@@ -1,4 +1,4 @@
-"""Internal data structures for one shared main Buffer aggregation batch."""
+"""定义一次 main Buffer 聚合批次使用的内部数据结构和索引。"""
 
 from __future__ import annotations
 
@@ -57,6 +57,7 @@ class MainBufferGroup:
     overflow_warning_eligible: bool
     auto_receive_eligible: bool
     auto_donate_eligible: bool
+    product_name: str = ""
 
     @property
     def all_capabilities_enabled(self) -> bool:
@@ -65,6 +66,42 @@ class MainBufferGroup:
     @property
     def no_capabilities_enabled(self) -> bool:
         return not any(getattr(self, name) for name in CAPABILITY_NAMES)
+
+
+@dataclass(frozen=True)
+class OrderBufferState:
+    """一个物理 main Buffer 内的订单粒度库存状态。"""
+
+    main_id: str
+    order_code: str
+    product_code: str
+    product_name: str
+    buffer_codes: tuple[str, ...]
+    total_inventory: float
+    inventory_change_rate: float | None = None
+
+
+@dataclass(frozen=True)
+class PhysicalMainBufferState:
+    """权威物理状态；``main_id`` 是唯一物理身份。"""
+
+    main_id: str
+    workshop_code: str
+    ordered_service_process_codes: tuple[str, ...]
+    physical_buffer_key: PhysicalBufferKey
+    buffer_codes: tuple[str, ...]
+    total_inventory: float
+    total_capacity: float | None
+    remaining_capacity: float | None
+    representative_buffer_code: str | None
+    order_codes: tuple[str, ...] = ()
+    inventory_change_rate: float | None = None
+    stockout_eligible: bool = False
+    overflow_eligible: bool = False
+    stockout_warning_eligible: bool = False
+    overflow_warning_eligible: bool = False
+    auto_receive_eligible: bool = False
+    auto_donate_eligible: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,6 +120,12 @@ class MainBufferAggregationBatch:
     )
     group_keys_by_physical_buffer_key: dict[
         PhysicalBufferKey, tuple[GroupKey, ...]
+    ] = field(default_factory=dict)
+    physical_main_buffers_by_main_id: dict[str, PhysicalMainBufferState] = field(
+        default_factory=dict
+    )
+    order_states_by_main_and_order: dict[
+        tuple[str, str], OrderBufferState
     ] = field(default_factory=dict)
 
     @classmethod
@@ -119,6 +162,22 @@ class MainBufferAggregationBatch:
         self,
     ) -> dict[PhysicalBufferKey, tuple[str, ...]]:
         return {
-            physical_key: tuple(key.main_id for key in keys)
+            physical_key: tuple(sorted({key.main_id for key in keys}))
             for physical_key, keys in self.group_keys_by_physical_buffer_key.items()
+        }
+
+    @property
+    def main_buffers_by_main_id(self) -> dict[str, PhysicalMainBufferState]:
+        """为权威物理 main 索引保留的兼容别名。"""
+
+        return dict(self.physical_main_buffers_by_main_id)
+
+    @property
+    def order_states_by_main_id(self) -> dict[str, tuple[OrderBufferState, ...]]:
+        result: dict[str, list[OrderBufferState]] = {}
+        for (main_id, _), state in self.order_states_by_main_and_order.items():
+            result.setdefault(main_id, []).append(state)
+        return {
+            main_id: tuple(sorted(states, key=lambda item: item.order_code))
+            for main_id, states in result.items()
         }

@@ -1,3 +1,5 @@
+"""计算机台运行负载、空闲度和小时产出。"""
+
 def calculate_runtime_load(
     *,
     input_quantity_30m: float,

@@ -1,4 +1,4 @@
-# 断料预警组件：输入 AlgorithmSnapshot 与 AlgorithmDepletionTimeResult 列表，输出 AlgorithmStockoutWarningResult 列表
+"""根据 main 与订单粒度的断料时间生成断料预警。"""
 
 from app.core.warning.errors import WarningEvaluationError
 from app.schemas.request_schema import AlgorithmSnapshot

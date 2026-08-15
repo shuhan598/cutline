@@ -1,3 +1,5 @@
+"""定义跨轮持久化的 Pending 切线计划及其一致性约束。"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -257,16 +259,6 @@ class PendingCutlinePlan(_PendingCutlineModel):
                     f"machine_code={machine_code} baseline order="
                     f"{baseline_order_code!r} must differ from monitored "
                     f"order={self.monitored_order_code!r}"
-                )
-            if (
-                self.warning_type == "overflow"
-                and baseline_order_code != self.monitored_order_code
-            ):
-                raise ValueError(
-                    f"plan_id={self.plan_id}: overflow confirmed "
-                    f"machine_code={machine_code} baseline order="
-                    f"{baseline_order_code!r} must equal monitored order="
-                    f"{self.monitored_order_code!r}"
                 )
         return self
 

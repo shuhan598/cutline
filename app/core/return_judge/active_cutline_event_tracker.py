@@ -1,3 +1,5 @@
+"""维护活动切线事件的创建、稳定、到期和关闭状态。"""
+
 from collections.abc import Callable
 from datetime import datetime
 from typing import Literal

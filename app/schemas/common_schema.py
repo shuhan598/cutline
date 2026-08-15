@@ -1,4 +1,4 @@
-# 通用基础对象
+"""定义算法快照和各阶段共享的基础领域模型。"""
 
 from __future__ import annotations
 

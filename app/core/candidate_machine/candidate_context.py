@@ -1,3 +1,5 @@
+"""预构建候选机台筛选所需的快照索引和业务查询上下文。"""
+
 from __future__ import annotations
 
 from typing import Iterable, TypeVar

@@ -1,3 +1,5 @@
+"""定义后端原始请求的数据结构，不在此层推导算法业务语义。"""
+
 from __future__ import annotations
 
 from datetime import datetime

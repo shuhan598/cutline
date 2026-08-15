@@ -1,4 +1,4 @@
-"""Create the first persisted Pending plan from an automatic decision."""
+"""把自动切线决策转换为首轮可持久化的 Pending 计划。"""
 
 from __future__ import annotations
 
@@ -36,11 +36,11 @@ from app.schemas.result_schema import (
 
 
 class PendingCutlinePlanCreationError(ValueError):
-    """The automatic plan cannot be projected to complete Pending state."""
+    """自动计划无法投影为完整的 Pending 状态。"""
 
 
 class PendingCutlinePlanFactory:
-    """Capture deterministic current-snapshot state for later confirmation."""
+    """记录确定性的当前快照状态，供后续轮次确认切线。"""
 
     def create(
         self,
@@ -100,6 +100,7 @@ class PendingCutlinePlanFactory:
             workshop_code=workshop_code,
             process_code=process_code,
         )
+        # 保存计划窗口开始时的机台订单基线，后续确认只比较真实绑定变化。
         baselines, runtime_by_machine = self._capture_baselines(
             snapshot,
             scope_masters=scope_masters,
@@ -129,11 +130,19 @@ class PendingCutlinePlanFactory:
                 f"duplicate standard machine_code {duplicate!r}"
             )
 
+        if isinstance(plan, AlgorithmStockoutCutlinePlan):
+            before_order_codes = {monitored_order_code}
+        else:
+            # 动态 source overflow 中，每台候选机可能来自不同订单，
+            # 因此 before scope 必须使用各候选自己的 baseline。
+            before_order_codes = {
+                item.baseline_order_code for item in candidates
+            }
         before_codes = sorted(
             machine_code
             for machine_code, runtime in runtime_by_machine.items()
             if runtime.status == "running"
-            and runtime.current_order_code == monitored_order_code
+            and runtime.current_order_code in before_order_codes
         )
         before_count = len(before_codes)
         candidate_count = len(candidate_codes)
@@ -143,6 +152,8 @@ class PendingCutlinePlanFactory:
             before_codes=before_codes,
             monitored_order_code=monitored_order_code,
         )
+        # stockout 预期目标机台数增加，overflow 预期来源机台数减少；
+        # 状态机本身仍沿用 Pending -> Confirmed -> Active。
         if isinstance(plan, AlgorithmStockoutCutlinePlan):
             expected_count = before_count + candidate_count
             direction = "increase"
@@ -582,15 +593,13 @@ class PendingCutlinePlanFactory:
             else:
                 is_valid = (
                     candidate.machine_code in before_set
-                    and candidate.baseline_order_code == monitored_order_code
                     and candidate.expected_target_order_code
-                    != monitored_order_code
+                    != candidate.baseline_order_code
                 )
                 direction = "overflow"
                 requirement = (
-                    "machine must be in before_machine_codes, source/baseline "
-                    "must equal monitored order, and target must differ from "
-                    "monitored order"
+                    "machine must be in before_machine_codes and target must "
+                    "differ from its source/baseline order"
                 )
             if not is_valid:
                 raise PendingCutlinePlanCreationError(

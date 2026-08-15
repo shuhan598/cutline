@@ -1,4 +1,4 @@
-"""Validate backend-persisted Pending cutline plans against snapshot masters."""
+"""依据当前快照主数据校验并转换后端持久化的 Pending 切线计划。"""
 
 from __future__ import annotations
 
@@ -31,11 +31,11 @@ from app.schemas.pending_cutline_schema import (
 
 
 class PendingCutlinePlanConversionError(ValueError):
-    """A persisted Pending plan conflicts with current static masters."""
+    """持久化 Pending 计划与当前静态主数据冲突。"""
 
 
 class PendingCutlinePlanAdapter:
-    """Relationally validate and deep-copy typed Pending plans."""
+    """执行关系校验，并深复制类型化的 Pending 计划。"""
 
     def convert(
         self,

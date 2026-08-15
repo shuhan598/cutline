@@ -1,4 +1,4 @@
-"""Public response models returned by the cutline algorithm service."""
+"""定义切线算法服务返回的正式公开响应模型。"""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from app.schemas.pending_cutline_schema import PendingCutlinePlan
 
 
 class ResponseModel(BaseModel):
-    """Strict base model for the public backend response contract."""
+    """正式后端响应契约使用的严格基础模型。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -229,7 +229,7 @@ class MixingTraceErrorResponse(ResponseModel):
 
 
 class CutlineAlgorithmResponse(ResponseModel):
-    """Customer results, backend tracking state, and isolated errors."""
+    """汇总客户业务结果、后端跟踪状态和可隔离错误。"""
 
     calculation_time: datetime
     stockout_warnings: list[StockoutWarningResponse] = Field(

@@ -1,4 +1,4 @@
-"""Detect real cutline execution from AGV binding history."""
+"""从 AGV 绑定历史识别 Pending 计划是否已真实执行。"""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ from app.utils.time_utils import normalize_local_time
 
 
 class PendingCutlineDetectionError(ValueError):
-    """Pending cutline data cannot be evaluated unambiguously."""
+    """Pending 切线数据无法被无歧义地评估。"""
 
 
 @dataclass(frozen=True)
@@ -44,7 +44,7 @@ class _Claim:
 
 
 class PendingCutlineDetector:
-    """Compare saved baselines with AGV history inside each plan window."""
+    """在每个计划窗口内比较已保存基线与 AGV 历史。"""
 
     def detect(
         self,
@@ -61,6 +61,7 @@ class PendingCutlineDetector:
         active_confirmed_by_plan: dict[str, set[str]] = defaultdict(set)
         remaining_slots_by_plan: dict[str, int] = {}
 
+        # 逐计划产生 claim，最后统一仲裁，避免同一次物理切线被多个计划认领。
         plans = sorted(
             snapshot.pending_cutline_plans,
             key=lambda item: item.plan_id,
@@ -80,6 +81,7 @@ class PendingCutlineDetector:
             candidates_by_machine = {
                 item.machine_code: item for item in plan.candidate_machines
             }
+            # 推荐候选优先检查，其余 baseline 机台用于识别允许的非推荐切线。
             machine_codes = [
                 *sorted(candidates_by_machine),
                 *sorted(set(baseline_by_machine) - set(candidates_by_machine)),
@@ -119,6 +121,7 @@ class PendingCutlineDetector:
                     continue
                 claims_by_plan[plan.plan_id].append(claim)
 
+        # 仲裁后才生成状态变化，保证确认数量不超过每个计划的剩余槽位。
         winning_claims = self._arbitrate_claims(
             claims_by_plan,
             remaining_slots_by_plan,
@@ -185,6 +188,7 @@ class PendingCutlineDetector:
         snapshot_time = normalize_local_time(snapshot.current_time)
         for relation in history:
             binding_time = normalize_local_time(relation.binding_time)
+            # 只接受计划创建之后、到期之前且当前快照已经观察到的绑定。
             if not (
                 created_at < binding_time <= expire_at
                 and binding_time <= snapshot_time
@@ -244,6 +248,7 @@ class PendingCutlineDetector:
         relation: AlgorithmAgvRelation,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> ConfirmedCutlineTransition | None:
+        # 先固定机台和 warning Buffer 的业务范围，再判断推荐或非推荐路径。
         self._validate_machine_scope(context, plan, baseline)
         self._validate_persisted_buffer_code(
             context=context,
@@ -330,6 +335,11 @@ class PendingCutlineDetector:
         relation: AlgorithmAgvRelation,
     ) -> ConfirmedCutlineTransition | None:
         if (
+            plan.warning_type == "overflow"
+            and baseline.machine_code not in plan.before_machine_codes
+        ):
+            return None
+        if (
             relation.order_code != candidate.expected_target_order_code
             or relation.product_code != candidate.expected_target_product_code
         ):
@@ -349,6 +359,7 @@ class PendingCutlineDetector:
             expected_order_code=candidate.expected_target_order_code,
             role="target",
         )
+        self._validate_overflow_candidate_main(context, plan, candidate)
         return self._transition(
             plan=plan,
             baseline=baseline,
@@ -392,6 +403,34 @@ class PendingCutlineDetector:
                 "located in the current main Buffer batch"
             )
 
+    def _validate_overflow_candidate_main(
+        self,
+        context: CandidateContext,
+        plan: PendingCutlinePlan,
+        candidate: PendingCandidateMachine,
+    ) -> None:
+        if plan.warning_type != "overflow":
+            return
+        batch = context.main_buffer_batch
+        if not batch.groups_by_group_key:
+            return
+        buffer_codes = (
+            plan.buffer_code,
+            candidate.source_buffer_code,
+            candidate.target_buffer_code,
+        )
+        main_ids = {
+            batch.group_key_by_buffer_code[buffer_code].main_id
+            for buffer_code in buffer_codes
+            if buffer_code is not None
+        }
+        if len(main_ids) != 1 or candidate.source_buffer_code is None:
+            raise PendingCutlineDetectionError(
+                f"plan_id={plan.plan_id}, warning_id={plan.warning_id}, "
+                f"machine_code={candidate.machine_code}: overflow warning, "
+                "source, and target buffers must belong to the same physical main"
+            )
+
     def _nonrecommended_stockout_transition(
         self,
         context: CandidateContext,
@@ -414,6 +453,7 @@ class PendingCutlineDetector:
         if relation.product_code != target_order.product_code:
             return None
         source_buffer_code = self._resolve_source_buffer(
+            context,
             plan,
             baseline,
             interval_results,
@@ -441,8 +481,8 @@ class PendingCutlineDetector:
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> ConfirmedCutlineTransition | None:
         if (
-            baseline.order_code != plan.monitored_order_code
-            or relation.order_code == plan.monitored_order_code
+            baseline.machine_code not in plan.before_machine_codes
+            or relation.order_code == baseline.order_code
         ):
             return None
         target_order, target_product = self._order_product(
@@ -454,6 +494,7 @@ class PendingCutlineDetector:
         if relation.product_code != target_order.product_code:
             return None
         target_interval = self._resolve_overflow_target(
+            context,
             plan,
             relation,
             target_product.wafer_size,
@@ -464,7 +505,17 @@ class PendingCutlineDetector:
             baseline=baseline,
             relation=relation,
             target_order_code=relation.order_code,
-            source_buffer_code=plan.buffer_code,
+            source_buffer_code=(
+                plan.buffer_code
+                if baseline.order_code == plan.monitored_order_code
+                else self._resolve_source_buffer(
+                    context,
+                    plan,
+                    baseline,
+                    interval_results,
+                    required_main_id=self._warning_main_id(context, plan),
+                )
+            ),
             target_buffer_code=target_interval.buffer_code,
             target_upstream_process_code=target_interval.upstream_process_code,
             target_downstream_process_code=(
@@ -492,9 +543,12 @@ class PendingCutlineDetector:
 
     def _resolve_source_buffer(
         self,
+        context: CandidateContext,
         plan: PendingCutlinePlan,
         baseline: BaselineMachineBinding,
         interval_results: list[AlgorithmIntervalNetRateResult],
+        *,
+        required_main_id: str | None = None,
     ) -> str | None:
         matches = [
             item
@@ -504,6 +558,7 @@ class PendingCutlineDetector:
             and item.wafer_spec == baseline.wafer_spec
             and item.workshop_code == plan.workshop_code
             and item.upstream_process_code == plan.upstream_process_code
+            and (required_main_id is None or item.main_id == required_main_id)
         ]
         identities = {
             (
@@ -538,13 +593,29 @@ class PendingCutlineDetector:
             )
         return first.buffer_code
 
+    @staticmethod
+    def _warning_main_id(
+        context: CandidateContext,
+        plan: PendingCutlinePlan,
+    ) -> str | None:
+        warning_key = context.main_buffer_batch.group_key_by_buffer_code.get(
+            plan.buffer_code
+        )
+        return warning_key.main_id if warning_key is not None else None
+
     def _resolve_overflow_target(
         self,
+        context: CandidateContext,
         plan: PendingCutlinePlan,
         relation: AlgorithmAgvRelation,
         target_wafer_size: str,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmIntervalNetRateResult:
+        source_main_id = None
+        batch = context.main_buffer_batch
+        source_key = batch.group_key_by_buffer_code.get(plan.buffer_code)
+        if source_key is not None:
+            source_main_id = source_key.main_id
         matches = [
             item
             for item in interval_results
@@ -553,6 +624,7 @@ class PendingCutlineDetector:
             and item.wafer_spec == relation.wafer_spec
             and item.workshop_code == plan.workshop_code
             and item.upstream_process_code == plan.upstream_process_code
+            and (source_main_id is None or item.main_id == source_main_id)
             and item.buffer_code != plan.buffer_code
             and plan.buffer_code not in item.buffer_codes
         ]
@@ -718,10 +790,7 @@ class PendingCutlineDetector:
                 and event.target_order_code == plan.monitored_order_code
             )
         else:
-            direction_is_valid = (
-                baseline.order_code == plan.monitored_order_code
-                and event.target_order_code != plan.monitored_order_code
-            )
+            direction_is_valid = event.target_order_code != baseline.order_code
         if not direction_is_valid:
             raise PendingCutlineDetectionError(
                 prefix
@@ -1011,12 +1080,25 @@ class PendingCutlineDetector:
         plan: PendingCutlinePlan,
     ) -> list[str]:
         result: list[str] = []
+        baseline_by_machine = {
+            item.machine_code: item for item in plan.baseline_machine_bindings
+        }
         for machine_code, runtime in sorted(
             context.runtime_by_machine_code.items()
         ):
+            baseline = baseline_by_machine.get(machine_code)
+            if plan.warning_type == "overflow":
+                expected_order_code = (
+                    baseline.order_code
+                    if machine_code in plan.before_machine_codes
+                    and baseline is not None
+                    else None
+                )
+            else:
+                expected_order_code = plan.monitored_order_code
             if (
                 runtime.status != "running"
-                or runtime.current_order_code != plan.monitored_order_code
+                or runtime.current_order_code != expected_order_code
             ):
                 continue
             machine = context.machine_by_code[machine_code]

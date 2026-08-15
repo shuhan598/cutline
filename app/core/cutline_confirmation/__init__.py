@@ -1,1 +1,1 @@
-"""Confirm physical cutline execution from persisted pending plans."""
+"""根据持久化 Pending 计划确认真实发生的物理切线。"""

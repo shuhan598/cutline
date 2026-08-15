@@ -1,4 +1,4 @@
-# 断料时间组件：输入 AlgorithmIntervalNetRateResult 列表，输出 AlgorithmDepletionTimeResult 列表
+"""根据订单库存和净消耗速率预测断料时间。"""
 
 from app.schemas.result_schema import (
     AlgorithmDepletionTimeResult,

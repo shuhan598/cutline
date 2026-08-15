@@ -52,16 +52,22 @@ def test_current_order_index_maps_only_the_unique_active_order(
     assert index.by_code["O-INACTIVE"].order_status == "WAITING"
 
 
-def test_current_order_index_rejects_multiple_active_orders_with_both_codes(
+def test_current_order_index_keeps_multiple_active_candidates_but_strict_resolution_rejects(
 ) -> None:
+    index = CurrentOrderIndex(
+        [_order("O-ACTIVE-1", "RUNNING"), _order("O-ACTIVE-2", "OPEN")],
+        ProductCatalogIndex([_product()]),
+    )
+
+    assert [item.order_code for item in index.resolve_product_name_candidates("Product One")] == [
+        "O-ACTIVE-1",
+        "O-ACTIVE-2",
+    ]
     with pytest.raises(
         SnapshotReferenceIndexError,
         match=r"Product One.*O-ACTIVE-1.*O-ACTIVE-2",
     ):
-        CurrentOrderIndex(
-            [_order("O-ACTIVE-1", "RUNNING"), _order("O-ACTIVE-2", "OPEN")],
-            ProductCatalogIndex([_product()]),
-        )
+        index.resolve_product_name("Product One", source="AGV M1")
 
 
 def test_current_order_index_reports_when_only_inactive_orders_exist() -> None:

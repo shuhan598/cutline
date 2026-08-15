@@ -845,7 +845,7 @@ def test_warning_interval_must_match_buffer_process_relation():
         )
 
 
-def test_batch_targets_come_from_physical_groups_not_warning_details():
+def test_batch_targets_never_cross_main_even_when_physical_key_matches():
     physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
     source = _batch_group(
         physical_key=physical_key,
@@ -877,16 +877,58 @@ def test_batch_targets_come_from_physical_groups_not_warning_details():
     assert result.source_order_code == "ORD-SOURCE"
     assert result.source_growth_rate == 3000
     assert result.buffer_code == "BUF-01"
-    assert [
-        option.target_order_code
-        for option in result.candidates[0].target_options
-    ] == ["ORD-TARGET"]
-    option = result.candidates[0].target_options[0]
-    assert option.target_buffer_code == "BUF-TARGET"
-    assert option.capacity_gap == 1800
-    assert option.target_group_key == target.group_key
+    assert result.candidates == []
     assert result.source_group_key == source.group_key
-    assert result.candidates[0].source_group_key == source.group_key
+
+
+def test_batch_candidates_include_machines_for_orders_that_can_become_virtual_sources():
+    physical_key = PhysicalBufferKey("S1", ("P01", "P02"))
+    source = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SOURCE",
+        buffer_code="BUF-01",
+    )
+    second_source = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-SECOND",
+        buffer_code="BUF-SECOND",
+    )
+    target = _batch_group(
+        physical_key=physical_key,
+        main_id="MAIN-SOURCE",
+        order_code="ORD-TARGET",
+        buffer_code="BUF-TARGET",
+    )
+    candidate_snapshot = _with_batch(
+        _candidate_snapshot(), source, second_source, target
+    )
+    _add_machine(
+        candidate_snapshot,
+        machine_code="M-02",
+        order_code="ORD-SECOND",
+        product_name="PROD-SECOND",
+    )
+    warning = _warning().model_copy(update={"group_key": source.group_key})
+
+    result = overflow_module.OverflowCandidateFinder().find_algorithm(
+        candidate_snapshot,
+        [warning],
+        interval_results=[
+            _group_interval(source, 3000),
+            _group_interval(second_source, -500),
+            _group_interval(target, -1800),
+        ],
+    )[0]
+
+    assert {
+        (candidate.machine_code, candidate.current_order_code, candidate.source_group_key)
+        for candidate in result.candidates
+    } == {
+        ("M-01", "ORD-SOURCE", source.group_key),
+        ("M-02", "ORD-SECOND", second_source.group_key),
+    }
 
 
 def test_batch_target_filters_group_identity_and_receive_capability():
@@ -900,7 +942,7 @@ def test_batch_target_filters_group_identity_and_receive_capability():
     )
     valid = _batch_group(
         physical_key=physical_key,
-        main_id="MAIN-TARGET",
+        main_id="MAIN-SOURCE",
         order_code="ORD-TARGET",
         buffer_code="BUF-TARGET",
     )
@@ -973,7 +1015,7 @@ def test_batch_target_filters_group_identity_and_receive_capability():
     assert [
         option.target_order_code
         for option in result.candidates[0].target_options
-    ] == ["ORD-TARGET"]
+    ] == ["ORD-SECOND", "ORD-TARGET"]
 
 
 def test_batch_source_must_be_auto_donate_eligible():
@@ -987,7 +1029,7 @@ def test_batch_source_must_be_auto_donate_eligible():
     )
     target = _batch_group(
         physical_key=physical_key,
-        main_id="MAIN-TARGET",
+        main_id="MAIN-SOURCE",
         order_code="ORD-TARGET",
         buffer_code="BUF-TARGET",
     )
@@ -1016,7 +1058,7 @@ def test_overflow_group_keys_are_internal_only():
     )
     target = _batch_group(
         physical_key=physical_key,
-        main_id="MAIN-TARGET",
+        main_id="MAIN-SOURCE",
         order_code="ORD-TARGET",
         buffer_code="BUF-TARGET",
     )

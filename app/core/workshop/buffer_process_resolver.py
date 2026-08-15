@@ -1,4 +1,4 @@
-"""Resolve a Buffer's authoritative process interval and workshop."""
+"""从 Buffer Master 与工艺路线解析权威工艺区间和车间。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Protocol
 
 
 class BufferProcessResolutionError(ValueError):
-    """A Buffer cannot be mapped to one unambiguous process interval."""
+    """Buffer 无法映射到唯一且无歧义的工艺区间。"""
 
 
 class ProcessRouteView(Protocol):
@@ -30,7 +30,7 @@ class BufferProcessResolution:
 
 
 class BufferProcessResolver:
-    """Apply one workshop/process rule to Adapter conversion and validation."""
+    """在适配转换和校验中统一应用车间与工艺解析规则。"""
 
     def __init__(self, routes: Iterable[ProcessRouteView]):
         self._routes = list(routes)

@@ -192,7 +192,7 @@ def test_v3_response_example_exists_and_matches_public_schema(response_name):
     [
         ("v3_stockout_manual_no_candidate_response.json", "no_candidate_machine"),
         ("v3_stockout_manual_insufficient_response.json", "insufficient_capacity"),
-        ("v3_overflow_manual_response.json", "no_valid_target_order"),
+        ("v3_overflow_manual_response.json", "no_candidate_machine"),
     ],
 )
 def test_manual_examples_only_expose_warning_id_and_reason(response_name, reason):

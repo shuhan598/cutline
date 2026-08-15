@@ -1,3 +1,5 @@
+"""集中导出后端请求、快照和 Pending 数据的适配器。"""
+
 from app.adapters.backend_request_loader import (
     BackendRequestLoadError,
     BackendRequestLoader,

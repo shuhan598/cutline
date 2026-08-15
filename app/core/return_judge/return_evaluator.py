@@ -1,4 +1,4 @@
-# Algorithm return evaluator.
+"""评估活动切线机台是否满足切回原订单的业务条件。"""
 
 from app.schemas.common_schema import AlgorithmActiveCutlineEvent
 from app.schemas.request_schema import AlgorithmSnapshot
@@ -8,7 +8,7 @@ from app.schemas.result_schema import (
 )
 
 class ReturnEvaluationError(ValueError):
-    """Algorithm return evaluator."""
+    """切回评估所需数据缺失或相互冲突。"""
 
     def __init__(self, reason: str, event_id: str) -> None:
         self.reason = reason
@@ -17,7 +17,7 @@ class ReturnEvaluationError(ValueError):
 
 
 class ReturnEvaluator:
-    """Algorithm return evaluator."""
+    """依据目标区间安全状态和稳定窗口评估切回时机。"""
 
     def evaluate_algorithm(
         self,

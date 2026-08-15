@@ -1,4 +1,4 @@
-"""Resolve canonical workshop process names to their production loops."""
+"""把标准工序名称解析为所属车间和生产循环。"""
 
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -6,12 +6,12 @@ from typing import Final, Mapping
 
 
 class UnknownProcessNameError(ValueError):
-    """A process name is not present in the central loop catalog."""
+    """工序名称未登记在中央循环目录中。"""
 
 
 @dataclass(frozen=True, slots=True)
 class ProcessLoopAssignment:
-    """The canonical process name and its assigned production loop."""
+    """标准工序名称及其所属生产循环。"""
 
     process_name: str
     loop_code: str
@@ -41,7 +41,7 @@ _CASE_INSENSITIVE_PROCESS_NAMES = frozenset({"POLY", "RCA", "ALD"})
 
 
 def normalize_process_name(process_name: str) -> str:
-    """Trim a process name and canonicalize supported ASCII acronyms."""
+    """去除工序名称空白，并标准化支持的 ASCII 缩写。"""
     normalized_name = process_name.strip()
     uppercase_name = normalized_name.upper()
     if uppercase_name in _CASE_INSENSITIVE_PROCESS_NAMES:
@@ -50,7 +50,7 @@ def normalize_process_name(process_name: str) -> str:
 
 
 def resolve_process_loop(process_name: str) -> ProcessLoopAssignment:
-    """Return the exact central-catalog loop assignment for a process."""
+    """返回工序在中央目录中的精确循环分配。"""
     normalized_name = normalize_process_name(process_name)
     assignment = _PROCESS_LOOP_CATALOG.get(normalized_name)
     if assignment is None:

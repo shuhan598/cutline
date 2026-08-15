@@ -1,4 +1,4 @@
-"""Calculate AlgorithmSnapshot interval net consumption rates."""
+"""按 main、订单和工艺区间计算快照中的唯一净消耗速率。"""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class _AlgorithmNetRateContext:
 
 
 class NetRateCalculator:
-    """Calculate interval net rates for an algorithm snapshot."""
+    """计算算法快照中各订单工艺区间的净速率。"""
 
     def calculate(
         self,
@@ -54,6 +54,8 @@ class NetRateCalculator:
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmIntervalNetRateResult]:
         context = self._build_machine_context(snapshot)
+        # 新路径直接消费聚合后的 (main_id, order_code) 子状态，避免多
+        # buffer 层重复扫描同一批机台产能。
         if snapshot.main_buffer_batch.groups_by_group_key:
             return [
                 self._calculate_group_net_rate(snapshot, group, context)
@@ -126,6 +128,7 @@ class NetRateCalculator:
             relation,
             context,
         )
+        # 正值表示库存增长，负值表示库存消耗；公开净消耗率使用相反符号。
         inventory_change_rate = upstream_output_rate - downstream_input_rate
         return AlgorithmIntervalNetRateResult(
             main_id=group.main_id,
@@ -160,6 +163,7 @@ class NetRateCalculator:
         main_id_by_buffer: dict[str, str] = {}
         seen_physical_inventory: set[tuple[str, str, str]] = set()
 
+        # 兼容路径将同一 main、订单和工艺区间的库存相加，同时拒绝重复明细。
         for inventory in inventories:
             if not inventory.main_id.strip():
                 raise NetRateCalculationError(

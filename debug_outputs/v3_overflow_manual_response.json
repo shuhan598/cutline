@@ -20,7 +20,7 @@
     {
       "warning_id": "overflow:2026-07-17T08:00:00+08:00:310112802",
       "manual_intervention": {
-        "reason": "no_valid_target_order"
+        "reason": "no_candidate_machine"
       }
     }
   ],

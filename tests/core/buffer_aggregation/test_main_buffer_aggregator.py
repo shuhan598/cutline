@@ -254,7 +254,7 @@ def test_capacity_unavailable_keeps_stockout_and_donor_capabilities_only():
     assert [issue.code for issue in batch.issues] == ["capacity_unavailable"]
 
 
-def test_same_main_with_multiple_orders_is_isolated():
+def test_same_main_with_multiple_orders_builds_children_and_one_physical_state():
     batch = aggregate(
         [
             realtime("BUF-1", 10, product_name="Product A"),
@@ -264,9 +264,17 @@ def test_same_main_with_multiple_orders_is_isolated():
         [relation("BUF-1"), relation("BUF-2")],
     )
 
-    group = only_group(batch)
-    assert group.no_capabilities_enabled
-    assert any(issue.code == "multiple_orders_in_main" for issue in batch.issues)
+    assert set(batch.order_states_by_main_and_order) == {
+        ("MAIN-1", "ORDER-A"),
+        ("MAIN-1", "ORDER-B"),
+    }
+    assert batch.order_states_by_main_and_order[("MAIN-1", "ORDER-A")].total_inventory == 10
+    assert batch.order_states_by_main_and_order[("MAIN-1", "ORDER-B")].total_inventory == 20
+    physical = batch.main_buffers_by_main_id["MAIN-1"]
+    assert physical.total_inventory == 30
+    assert physical.total_capacity == 200
+    assert physical.order_codes == ("ORDER-A", "ORDER-B")
+    assert not any(issue.code == "multiple_orders_in_main" for issue in batch.issues)
 
 
 @pytest.mark.parametrize(
@@ -345,7 +353,7 @@ def test_index_conflict_never_leaves_an_ambiguous_buffer_mapping():
     )
 
 
-def test_same_physical_key_and_order_on_multiple_mains_disables_each_group():
+def test_same_physical_key_on_multiple_mains_keeps_each_main_independent():
     batch = aggregate(
         [
             realtime("BUF-1", 10, main_id="MAIN-1"),
@@ -357,15 +365,10 @@ def test_same_physical_key_and_order_on_multiple_mains_disables_each_group():
 
     groups = list(batch.groups_by_group_key.values())
     assert {group.main_id for group in groups} == {"MAIN-1", "MAIN-2"}
-    assert all(group.no_capabilities_enabled for group in groups)
-    issues = [
-        issue
-        for issue in batch.issues
-        if issue.code == "duplicate_order_across_main_ids"
-    ]
-    assert {issue.main_id for issue in issues} == {"MAIN-1", "MAIN-2"}
-    assert all("MAIN-1" in issue.message for issue in issues)
-    assert all("MAIN-2" in issue.message for issue in issues)
+    assert all(group.all_capabilities_enabled for group in groups)
+    assert not any(
+        issue.code == "duplicate_order_across_main_ids" for issue in batch.issues
+    )
 
 
 def test_inventory_at_capacity_is_overflow_source_but_not_receiver():
@@ -426,3 +429,61 @@ def test_process_order_is_part_of_physical_buffer_key():
         issue.code == "duplicate_order_across_main_ids"
         for issue in batch.issues
     )
+
+
+def test_same_main_supports_multiple_order_children_and_one_physical_state():
+    batch = aggregate(
+        [
+            realtime("BUF-1", 3000, product_name="Product A"),
+            realtime("BUF-2", 2000, product_name="Product A"),
+            realtime("BUF-3", 4000, product_name="Product B"),
+        ],
+        [master("BUF-1", 10000), master("BUF-2", 15000), master("BUF-3", 20000)],
+        [relation("BUF-1"), relation("BUF-2"), relation("BUF-3")],
+    )
+
+    assert set(batch.order_states_by_main_and_order) == {
+        ("MAIN-1", "ORDER-A"),
+        ("MAIN-1", "ORDER-B"),
+    }
+    assert batch.order_states_by_main_and_order[("MAIN-1", "ORDER-A")].total_inventory == 5000
+    assert batch.order_states_by_main_and_order[("MAIN-1", "ORDER-B")].total_inventory == 4000
+    physical = batch.main_buffers_by_main_id["MAIN-1"]
+    assert physical.total_inventory == 9000
+    assert physical.total_capacity == 45000
+    assert not any(issue.code == "multiple_orders_in_main" for issue in batch.issues)
+
+
+def test_same_physical_buffer_key_does_not_merge_distinct_main_ids():
+    batch = aggregate(
+        [realtime("BUF-1", 10, main_id="MAIN-1"), realtime("BUF-2", 20, main_id="MAIN-2")],
+        [master("BUF-1", 100), master("BUF-2", 100)],
+        [relation("BUF-1"), relation("BUF-2")],
+    )
+
+    assert set(batch.main_buffers_by_main_id) == {"MAIN-1", "MAIN-2"}
+    assert not any(issue.code == "duplicate_order_across_main_ids" for issue in batch.issues)
+
+
+def test_ambiguous_product_mapping_isolated_to_its_main():
+    @dataclass(frozen=True)
+    class ActiveOrder(Order):
+        order_status: str = "running"
+
+    orders = [
+        ActiveOrder("ORDER-A1", "PRODUCT-A", "Product A", "S1"),
+        ActiveOrder("ORDER-A2", "PRODUCT-A", "Product A", "S1"),
+        ActiveOrder("ORDER-B", "PRODUCT-B", "Product B", "S1"),
+    ]
+    batch = MainBufferAggregator().aggregate(
+        realtime_buffers=[
+            realtime("BUF-1", 10, main_id="BAD", product_name="Product A"),
+            realtime("BUF-2", 20, main_id="GOOD", product_name="Product B"),
+        ],
+        buffer_masters=[master("BUF-1", 100), master("BUF-2", 100)],
+        buffer_relations=[relation("BUF-1"), relation("BUF-2")],
+        orders=orders,
+    )
+
+    assert any(issue.code == "order_mapping_ambiguous" and issue.main_id == "BAD" for issue in batch.issues)
+    assert batch.main_buffers_by_main_id["GOOD"].overflow_eligible is True

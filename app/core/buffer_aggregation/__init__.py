@@ -1,4 +1,4 @@
-"""Centralized main Buffer aggregation models and service."""
+"""集中导出 main Buffer 聚合模型与聚合服务。"""
 
 from app.core.buffer_aggregation.main_buffer_aggregator import (
     MainBufferAggregator,

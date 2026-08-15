@@ -13,10 +13,12 @@ from app.schemas.request_schema import (
 from app.schemas.response_schema import ActiveCutlineEventPersistenceResponse
 from app.schemas.result_schema import AlgorithmPersistenceState
 from tests.core.cutline_confirmation.helpers import (
+    ALTERNATE_ORDER,
     MONITORED_ORDER,
     NOW,
     SOURCE_ORDER,
     make_active_event,
+    make_overflow_plan,
     make_stockout_plan,
 )
 
@@ -284,6 +286,44 @@ def test_confirmed_pending_requires_matching_active_event(payload, schema_kind):
 
     assert parsed.pending_cutline_plans[0].confirmed_machine_codes == ["M1"]
     assert parsed.active_cutline_events[0].warning_id == plan.warning_id
+
+
+@pytest.mark.parametrize("schema_kind", ["cutline", "backend"])
+def test_confirmed_dynamic_source_overflow_accepts_matching_active_event(
+    payload,
+    schema_kind,
+):
+    plan = make_overflow_plan(
+        baseline_orders=(("M1", SOURCE_ORDER),),
+        candidate_machine_codes=("M1",),
+        confirmed_machine_codes=("M1",),
+        before_machine_codes=("M1",),
+        expected_machine_count=0,
+        status="CONFIRMED",
+        source_order_code=SOURCE_ORDER,
+    )
+    active = make_active_event(
+        plan_id=plan.plan_id,
+        warning_id=plan.warning_id,
+        machine_code="M1",
+        source_order_code=SOURCE_ORDER,
+        target_order_code=ALTERNATE_ORDER,
+        cutline_start_time=NOW,
+    ).model_copy(update={"warning_type": "overflow"})
+    payload["pending_cutline_plans"] = [plan.model_dump(mode="json")]
+    active_payload = active.model_dump(mode="json")
+    payload["active_cutline_events"] = [active_payload]
+    if schema_kind == "backend":
+        request_payload = backend_payload_from_request(payload)
+        request_payload["active_cutline_events"] = [active_payload]
+        request_model = BackendAlgorithmRequest
+    else:
+        request_payload = payload
+        request_model = CutlineAlgorithmRequest
+
+    parsed = request_model.model_validate(request_payload)
+
+    assert parsed.pending_cutline_plans[0].confirmed_machine_codes == ["M1"]
 
 
 def test_backend_request_pending_plan_defaults_are_independent(payload):

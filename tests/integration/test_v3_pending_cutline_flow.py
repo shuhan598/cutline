@@ -421,9 +421,14 @@ def test_overflow_confirmation_reduces_monitored_machine_count_and_routes_out():
     alternate_buffer["buffer_code"] = "310112803"
     alternate_buffer["buffer_name"] = "制绒-碱抛备用Buffer"
     payload["buffer_master"].append(alternate_buffer)
+    warning_main_id = next(
+        item["main_id"]
+        for item in payload["buffer_realtime"]
+        if item["buffer_code"] == TARGET_BUFFER_CODE
+    )
     payload["buffer_realtime"].append(
         {
-            "main_id": "MAIN-310112803",
+            "main_id": warning_main_id,
             "buffer_code": "310112803",
             "bound_source_name": support["product_name"],
             "current_quantity": 1000.0,

@@ -55,7 +55,7 @@ def test_same_product_historical_order_does_not_make_current_order_ambiguous():
     assert result.issues == []
 
 
-def test_same_product_multiple_active_orders_are_reported_as_ambiguous():
+def test_same_product_multiple_active_orders_are_allowed_for_buffer_mapping_but_agv_remains_strict():
     payload = sample_payload()
     second_active_order = deepcopy(payload["orders"][0])
     second_active_order.update(
@@ -69,10 +69,16 @@ def test_same_product_multiple_active_orders_are_reported_as_ambiguous():
     result = validate_payload(payload)
 
     assert result.valid is False
-    assert any(
+    assert not any(
         issue.code == "duplicate_key"
         and issue.dataset == "orders"
         and issue.field == "product_name"
+        for issue in result.issues
+    )
+    assert any(
+        issue.code == "ambiguous_reference"
+        and issue.dataset == "agv_relations"
+        and issue.field == "linename"
         for issue in result.issues
     )
 

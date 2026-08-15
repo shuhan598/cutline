@@ -1,4 +1,4 @@
-# 算法管道四步各自的中间产物对象（内部模型，字段沿用原 dict 契约）
+"""定义算法管道各阶段的内部计算结果，不作为正式响应直接输出。"""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class AlgorithmIntervalNetRateResult(BaseModel):
 
 
 class ConfirmedCutlineTransition(BaseModel):
-    """A physical AGV binding change confirmed from a pending plan."""
+    """从 Pending 计划确认得到的一次真实 AGV 绑定变化。"""
 
     plan_id: str
     warning_id: str
@@ -64,7 +64,7 @@ class ConfirmedCutlineTransition(BaseModel):
 
 
 class PendingCutlinePlanEvaluation(BaseModel):
-    """Current confirmation progress for one persisted pending plan."""
+    """单个持久化 Pending 计划在当前轮次的确认进度。"""
 
     plan_id: str
     warning_id: str
@@ -80,7 +80,7 @@ class PendingCutlinePlanEvaluation(BaseModel):
 
 
 class PendingCutlineDetectionBatchResult(BaseModel):
-    """Confirmed transitions and per-plan state from one snapshot."""
+    """一次快照检测产生的确认变化及逐计划状态。"""
 
     transitions: list[ConfirmedCutlineTransition] = Field(
         default_factory=list
@@ -678,7 +678,7 @@ class AlgorithmPipelineError(BaseModel):
 
 
 class AlgorithmPersistenceState(BaseModel):
-    """The complete backend state to persist after an evaluation cycle."""
+    """一轮评估结束后需要由后端持久化的完整状态。"""
 
     model_config = ConfigDict(extra="forbid")
 

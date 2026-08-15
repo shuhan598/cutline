@@ -1,4 +1,4 @@
-# 后端传给算法服务的请求数据格式
+"""定义正式算法请求、内部快照及跨轮状态覆盖校验。"""
 
 from __future__ import annotations
 
@@ -308,7 +308,7 @@ def validate_confirmed_pending_active_coverage(
         ActiveCutlineEventRequest | AlgorithmActiveCutlineEvent
     ],
 ) -> None:
-    """Require every persisted Pending confirmation to retain its real event."""
+    """要求每个已确认的持久化 Pending 记录都保留对应真实事件。"""
     for plan in pending_plans:
         baseline_by_code = {
             item.machine_code: item
@@ -367,10 +367,7 @@ def _active_event_matches_confirmation(
             and event.target_order_code == plan.monitored_order_code
         )
     else:
-        direction_is_valid = (
-            baseline_order_code == plan.monitored_order_code
-            and event.target_order_code != plan.monitored_order_code
-        )
+        direction_is_valid = event.target_order_code != baseline_order_code
     if not direction_is_valid:
         return False
     observed_at = normalize_local_time(event.cutline_start_time)

@@ -1,4 +1,4 @@
-"""Convert only AGV records relevant to Pending confirmation windows."""
+"""仅转换 Pending 确认时间窗口内相关的 AGV 绑定记录。"""
 
 from __future__ import annotations
 
@@ -25,11 +25,11 @@ from app.schemas.request_schema import AgvRelationRequest
 
 
 class PendingAgvBindingConversionError(ValueError):
-    """A relevant AGV record is ambiguous or conflicts with master data."""
+    """相关 AGV 记录存在歧义，或与主数据冲突。"""
 
 
 class PendingAgvBindingAdapter:
-    """Project relevant raw bindings into deterministic internal history."""
+    """把相关原始绑定投影为确定性的内部历史记录。"""
 
     def convert(
         self,

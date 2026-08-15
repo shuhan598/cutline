@@ -414,7 +414,7 @@ def test_overflow_rejects_stopped_candidate_outside_before_set() -> None:
     assert "overflow direction" in message
 
 
-def test_overflow_rejects_candidate_with_nonmonitored_source_baseline() -> None:
+def test_overflow_accepts_candidate_with_dynamic_nonmonitored_source_baseline() -> None:
     decision = _overflow_decision()
     assert decision.plan is not None
     selected = decision.plan.selected_machines[0].model_copy(
@@ -428,13 +428,14 @@ def test_overflow_rejects_candidate_with_nonmonitored_source_baseline() -> None:
         manual_intervention=None,
     )
 
-    with pytest.raises(PendingCutlinePlanCreationError) as exc_info:
-        PendingCutlinePlanFactory().create(_snapshot(), decision)
+    pending = PendingCutlinePlanFactory().create(_snapshot(), decision)
 
-    message = str(exc_info.value)
-    assert decision.plan.plan_id in message
-    assert "M1" in message
-    assert "overflow direction" in message
+    assert pending is not None
+    assert pending.monitored_order_code == MONITORED_ORDER
+    assert pending.before_machine_codes == ["M1"]
+    assert pending.expected_machine_count == 0
+    assert pending.candidate_machines[0].baseline_order_code == SOURCE_ORDER
+    assert pending.candidate_machines[0].expected_target_order_code == ALTERNATE_ORDER
 
 
 def test_overflow_rejects_candidate_targeting_the_monitored_order() -> None:

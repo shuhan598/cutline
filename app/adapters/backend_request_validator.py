@@ -1,3 +1,5 @@
+"""校验后端请求的引用完整性，并收集结构化数据问题。"""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -110,7 +112,7 @@ CompletenessRequest = BackendAlgorithmRequest | CutlineAlgorithmRequest
 
 
 class BackendRequestCompletenessValidator:
-    """Report backend request completeness issues without mutating inputs."""
+    """在不修改输入的前提下报告后端请求完整性问题。"""
 
     def validate(
         self,
@@ -369,7 +371,6 @@ class BackendRequestCompletenessValidator:
             ("products", "product_code"),
             ("products", "product_name"),
             ("orders", "order_code"),
-            ("orders", "product_name"),
         )
         for dataset, field in specifications:
             grouped: dict[str, list[tuple[int, BaseModel]]] = defaultdict(list)
@@ -509,23 +510,8 @@ class BackendRequestCompletenessValidator:
 
             order_matches = orders_by_product_name.get(product_name, [])
             if len(order_matches) != 1:
-                issues.append(
-                    self._issue(
-                        code=(
-                            "missing_reference"
-                            if not order_matches
-                            else "ambiguous_reference"
-                        ),
-                        dataset="buffer_realtime",
-                        field="bound_source_name",
-                        record_key=record_key,
-                        message=(
-                            "buffer_realtime.bound_source_name="
-                            f"{realtime.bound_source_name!r} did not uniquely "
-                            "match a current orders.product_name"
-                        ),
-                    )
-                )
+                # Buffer 的订单映射由 MainBufferAggregator 按 main 独立解析，
+                # 单个异常 main 不应阻断其他健康 main；AGV 和机台订单引用仍严格校验。
                 continue
 
             buffer_code = realtime.buffer_code.strip()

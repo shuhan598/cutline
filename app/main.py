@@ -1,3 +1,5 @@
+"""创建并装配切线算法 FastAPI 应用。"""
+
 from fastapi import FastAPI
 
 from app.api.cutline_api import router as cutline_router

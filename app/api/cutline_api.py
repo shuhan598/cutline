@@ -1,3 +1,5 @@
+"""提供后端请求校验、算法试算和正式评估的 HTTP 接口。"""
+
 from __future__ import annotations
 
 from typing import Any, NoReturn

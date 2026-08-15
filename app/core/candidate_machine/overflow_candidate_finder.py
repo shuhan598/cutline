@@ -1,4 +1,4 @@
-# 溢满切走候选池：在产工序i、生产预警型号X、存在同尺寸同形状且有缺口的目标型号Y
+"""为物理 main 溢满寻找同 main 订单之间可安全切换的候选机台。"""
 
 from math import isfinite
 
@@ -171,8 +171,8 @@ class OverflowCandidateFinder:
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmOverflowCandidateResult:
         context.validate_warning_relation(warning)
-        source_group = context.warning_group(warning)
-        if source_group is None:
+        warning_source_group = context.warning_group(warning)
+        if warning_source_group is None:
             raise CandidateMachineCalculationError(
                 "overflow source group cannot be located"
             )
@@ -181,33 +181,67 @@ class OverflowCandidateFinder:
             for result in interval_results
             if result.group_key is not None
         }
-        source_interval = intervals_by_group.get(source_group.group_key)
-        if source_interval is None:
+        warning_source_interval = intervals_by_group.get(
+            warning_source_group.group_key
+        )
+        if warning_source_interval is None:
             raise CandidateMachineCalculationError(
                 "overflow source group rate cannot be located"
             )
-        source_rate = self._inventory_change_rate(source_interval)
-        if not isfinite(source_rate):
+        warning_source_rate = self._inventory_change_rate(
+            warning_source_interval
+        )
+        if not isfinite(warning_source_rate):
             raise CandidateMachineCalculationError(
                 "overflow source group rate must be finite"
             )
-        source_order, source_product = context.order_product(
-            source_group.order_code
+        warning_source_order, warning_source_product = context.order_product(
+            warning_source_group.order_code
         )
-        if source_product.wafer_size != source_interval.wafer_size:
+        if warning_source_product.wafer_size != warning_source_interval.wafer_size:
             raise CandidateMachineCalculationError(
-                f"{source_order.order_code} source interval wafer_size "
-                f"{source_interval.wafer_size} does not match source product "
-                f"wafer_size {source_product.wafer_size}"
+                f"{warning_source_order.order_code} source interval wafer_size "
+                f"{warning_source_interval.wafer_size} does not match source product "
+                f"wafer_size {warning_source_product.wafer_size}"
             )
 
-        target_groups = self._batch_target_groups(
-            source_group=source_group,
-            context=context,
-            intervals_by_group=intervals_by_group,
-        )
         candidates: list[AlgorithmOverflowCandidateMachine] = []
-        if source_group.auto_donate_eligible:
+        # 预先为同 main 的所有可借出订单建立候选。某订单当前即使不是正
+        # 增长，也可能在前一台机虚拟切换后成为新的 SourceOrder。
+        source_groups: list[
+            tuple[MainBufferGroup, AlgorithmIntervalNetRateResult, float]
+        ] = []
+        for source_key in context.main_buffer_batch.group_keys_by_main_id.get(
+            warning_source_group.main_id, ()
+        ):
+            source_group = context.main_buffer_batch.groups_by_group_key.get(
+                source_key
+            )
+            source_interval = intervals_by_group.get(source_key)
+            if source_group is None or source_interval is None:
+                continue
+            source_rate = self._inventory_change_rate(source_interval)
+            if isfinite(source_rate):
+                source_groups.append((source_group, source_interval, source_rate))
+
+        source_groups.sort(key=lambda item: (-item[2], item[0].order_code))
+        for source_group, source_interval, _ in source_groups:
+            source_order, source_product = context.order_product(
+                source_group.order_code
+            )
+            if source_product.wafer_size != source_interval.wafer_size:
+                raise CandidateMachineCalculationError(
+                    f"{source_order.order_code} source interval wafer_size "
+                    f"{source_interval.wafer_size} does not match source product "
+                    f"wafer_size {source_product.wafer_size}"
+                )
+            if not source_group.auto_donate_eligible:
+                continue
+            target_groups = self._batch_target_groups(
+                source_group=source_group,
+                context=context,
+                intervals_by_group=intervals_by_group,
+            )
             for runtime in context.runtime_by_machine_code.values():
                 if runtime.status != "running":
                     continue
@@ -221,7 +255,7 @@ class OverflowCandidateFinder:
                 )
                 if machine_workshop_code != source_group.workshop_code:
                     continue
-                if machine.process_code != warning.upstream_process_code:
+                if machine.process_code != source_interval.upstream_process_code:
                     continue
                 if not is_wafer_spec_compatible(
                     current_wafer_spec=candidate_agv.wafer_spec,
@@ -285,19 +319,19 @@ class OverflowCandidateFinder:
         )
         return AlgorithmOverflowCandidateResult(
             warning_type="overflow",
-            workshop_code=source_group.workshop_code,
-            buffer_code=source_group.representative_buffer_code or "",
+            workshop_code=warning_source_group.workshop_code,
+            buffer_code=warning_source_group.representative_buffer_code or "",
             upstream_process_code=warning.upstream_process_code,
             downstream_process_code=warning.downstream_process_code,
-            source_order_code=source_order.order_code,
-            source_product_code=source_product.product_code,
-            source_wafer_size=source_product.wafer_size,
-            source_wafer_spec=source_interval.wafer_spec,
-            source_source_grade=source_product.source_grade,
-            source_growth_rate=source_rate,
-            source_net_consumption_rate=-source_rate,
+            source_order_code=warning_source_order.order_code,
+            source_product_code=warning_source_product.product_code,
+            source_wafer_size=warning_source_product.wafer_size,
+            source_wafer_spec=warning_source_interval.wafer_spec,
+            source_source_grade=warning_source_product.source_grade,
+            source_growth_rate=warning_source_rate,
+            source_net_consumption_rate=-warning_source_rate,
             candidates=candidates,
-            source_group_key=source_group.group_key,
+            source_group_key=warning_source_group.group_key,
         )
 
     def _batch_target_groups(
@@ -309,15 +343,12 @@ class OverflowCandidateFinder:
     ) -> list[tuple[MainBufferGroup, AlgorithmIntervalNetRateResult, float]]:
         result = []
         batch = context.main_buffer_batch
-        for target_key in batch.group_keys_by_physical_buffer_key.get(
-            source_group.physical_buffer_key, ()
-        ):
+        # TargetOrder 只能来自同一物理 main；PhysicalBufferKey 相同也不能跨 main。
+        for target_key in batch.group_keys_by_main_id.get(source_group.main_id, ()):
             target_group = batch.groups_by_group_key.get(target_key)
             if target_group is None:
                 continue
             if target_group.group_key == source_group.group_key:
-                continue
-            if target_group.main_id == source_group.main_id:
                 continue
             if target_group.order_code == source_group.order_code:
                 continue
@@ -329,14 +360,10 @@ class OverflowCandidateFinder:
             target_rate = self._inventory_change_rate(target_interval)
             if not isfinite(target_rate):
                 continue
-            capacity_gap = max(
-                0.0,
-                -target_rate,
-            )
-            if capacity_gap <= 0:
-                continue
+            capacity_gap = max(0.0, -target_rate)
             result.append((target_group, target_interval, capacity_gap))
-        return result
+        # 初始顺序仅作为稳定输入；Evaluator 会按每轮最新 virtual rate 重排。
+        return sorted(result, key=lambda item: (self._inventory_change_rate(item[1]), item[0].order_code))
 
     def _batch_target_options(
         self,
@@ -398,13 +425,6 @@ class OverflowCandidateFinder:
                     target_group_key=target_group.group_key,
                 )
             )
-        options.sort(
-            key=lambda option: (
-                -option.capacity_gap,
-                option.target_order_code,
-                option.target_buffer_code or "",
-            )
-        )
         return options
 
     @staticmethod

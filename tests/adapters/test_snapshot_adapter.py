@@ -247,10 +247,21 @@ def test_snapshot_adapter_builds_main_buffer_batch_exactly_once(monkeypatch):
     assert len(calls) == 1
     assert snapshot.main_buffer_batch.groups_by_group_key
     assert snapshot.main_buffer_batch.issues
-    assert any(
-        issue.code == "multiple_orders_in_main"
-        for issue in snapshot.main_buffer_batch.issues
+    batch = snapshot.main_buffer_batch
+    assert not any(
+        issue.code == "multiple_orders_in_main" for issue in batch.issues
     )
+    assert set(batch.order_states_by_main_and_order) == {
+        ("MAIN-001", "ORD-001"),
+        ("MAIN-001", "ORD-002"),
+    }
+    assert batch.main_buffers_by_main_id["MAIN-001"].order_codes == (
+        "ORD-001",
+        "ORD-002",
+    )
+    assert batch.main_buffers_by_main_id["MAIN-001"].total_inventory == 1300
+    assert batch.main_buffers_by_main_id["MAIN-001"].total_capacity == 2500
+    assert any(issue.code == "duplicate_buffer_id" for issue in batch.issues)
 
 
 def _append_process_route(
@@ -766,7 +777,7 @@ def test_missing_buffer_product_name_match_is_isolated():
     payload = _payload()
     payload["buffer_realtime"][0]["bound_source_name"] = "不存在"
 
-    _, issues = _assert_aggregation_issue(payload, "order_mapping_unresolved")
+    _, issues = _assert_aggregation_issue(payload, "order_mapping_not_found")
     assert "不存在" in issues[0].message
 
 
@@ -774,7 +785,7 @@ def test_blank_buffer_bound_source_name_is_isolated():
     payload = _payload()
     payload["buffer_realtime"][0]["bound_source_name"] = "   "
 
-    _assert_aggregation_issue(payload, "order_mapping_unresolved")
+    _assert_aggregation_issue(payload, "order_mapping_not_found")
 
 
 def test_buffer_product_order_workshop_conflict_is_isolated():

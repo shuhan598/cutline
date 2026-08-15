@@ -1,3 +1,5 @@
+"""丝网订单过渡和清台准备状态计算组件。"""
+
 from app.core.silk_screen.errors import (
     SilkScreenTransitionCalculationError,
 )
