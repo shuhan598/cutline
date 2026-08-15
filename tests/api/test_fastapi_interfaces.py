@@ -192,6 +192,17 @@ def test_backend_validate_accepts_transitional_backend_payload():
     assert response.json() == {"valid": True, "issues": []}
 
 
+def test_backend_validate_accepts_nonempty_persisted_event_id_lists():
+    payload = backend_payload()
+    payload["return_suggested_event_ids"] = ["CUT-RETURN-001"]
+    payload["mixed_cutline_event_ids"] = ["CUT-MIXED-001"]
+
+    response = make_client().post("/backend/validate", json=payload)
+
+    assert response.status_code == 200
+    assert response.json() == {"valid": True, "issues": []}
+
+
 @pytest.mark.parametrize("field", ("completed_quantity", "period_quantity"))
 def test_backend_validate_rejects_removed_runtime_fields(field: str):
     payload = backend_payload()
@@ -309,6 +320,22 @@ def test_cutline_evaluate_delegates_to_cutline_service():
     assert calls[0].machine_master[0].process_code == (
         payload["machine_master"][0]["process_code"]
     )
+
+
+def test_cutline_evaluate_accepts_nonempty_persisted_event_id_lists():
+    payload = build_stockout_auto_payload()
+    payload["return_suggested_event_ids"] = ["CUT-RETURN-001"]
+    payload["mixed_cutline_event_ids"] = ["CUT-MIXED-001"]
+
+    response = make_client().post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["persistence_state"][
+        "return_suggested_event_ids"
+    ] == ["CUT-RETURN-001"]
+    assert response.json()["persistence_state"][
+        "mixed_cutline_event_ids"
+    ] == ["CUT-MIXED-001"]
 
 
 @pytest.mark.parametrize("field", ("completed_quantity", "period_quantity"))

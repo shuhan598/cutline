@@ -38,6 +38,17 @@ def test_closed_sample_is_complete():
     assert result.issues == []
 
 
+def test_validator_accepts_nonempty_persisted_event_id_lists():
+    payload = sample_payload()
+    payload["return_suggested_event_ids"] = ["CUT-RETURN-001"]
+    payload["mixed_cutline_event_ids"] = ["CUT-MIXED-001"]
+
+    result = validate_payload(payload)
+
+    assert result.valid is True
+    assert result.issues == []
+
+
 def test_same_product_historical_order_does_not_make_current_order_ambiguous():
     payload = sample_payload()
     historical_order = deepcopy(payload["orders"][0])

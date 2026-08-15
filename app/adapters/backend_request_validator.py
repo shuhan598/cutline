@@ -338,6 +338,9 @@ class BackendRequestCompletenessValidator:
             if not isinstance(records, list):
                 continue
             for index, record in enumerate(records):
+                # 字符串等基础类型列表由对应 Schema 校验，不参与对象编码字段扫描。
+                if not isinstance(record, BaseModel):
+                    continue
                 for field, value in record.model_dump().items():
                     if dataset == "process_routes" and field == "loop_code":
                         continue
