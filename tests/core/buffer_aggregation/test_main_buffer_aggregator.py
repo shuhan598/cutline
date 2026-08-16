@@ -45,6 +45,15 @@ def realtime(
     main_id: str = "MAIN-1",
     product_name: str = "Product A",
 ) -> RealtimeBuffer:
+    if "," not in product_name:
+        prefix, separator, suffix = product_name.partition("-")
+        aliases = {
+            "Product A": "210N产品A",
+            "Product B": "210N产品B",
+            "UNKNOWN": "210N未知",
+        }
+        prefix = aliases.get(prefix, prefix)
+        product_name = prefix + (separator + suffix if separator else "")
     return RealtimeBuffer(
         main_id=main_id,
         buffer_code=buffer_code,
@@ -85,13 +94,13 @@ ORDERS = [
     Order(
         order_code="ORDER-A",
         product_code="PRODUCT-A",
-        product_name="Product A",
+        product_name="210N产品A",
         workshop_code="S1",
     ),
     Order(
         order_code="ORDER-B",
         product_code="PRODUCT-B",
-        product_name="Product B",
+        product_name="210N产品B",
         workshop_code="S1",
     ),
 ]
@@ -211,7 +220,7 @@ def test_bound_source_similar_text_without_hyphen_boundary_is_not_matched():
         [relation("BUF-1")],
     )
 
-    assert any(issue.code == "order_mapping_not_found" for issue in batch.issues)
+    assert batch.issues == ()
 
 
 def test_same_main_uses_relation_direction_when_master_order_is_reversed():
@@ -543,9 +552,9 @@ def test_ambiguous_product_mapping_isolated_to_its_main():
         order_status: str = "running"
 
     orders = [
-        ActiveOrder("ORDER-A1", "PRODUCT-A", "Product A", "S1"),
-        ActiveOrder("ORDER-A2", "PRODUCT-A", "Product A", "S1"),
-        ActiveOrder("ORDER-B", "PRODUCT-B", "Product B", "S1"),
+        ActiveOrder("ORDER-A1", "PRODUCT-A", "210N产品A", "S1"),
+        ActiveOrder("ORDER-A2", "PRODUCT-A", "210N产品A", "S1"),
+        ActiveOrder("ORDER-B", "PRODUCT-B", "210N产品B", "S1"),
     ]
     batch = MainBufferAggregator().aggregate(
         realtime_buffers=[

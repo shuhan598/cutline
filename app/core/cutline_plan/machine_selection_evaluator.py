@@ -1585,9 +1585,16 @@ class MachineSelectionEvaluator:
         return (physical.total_capacity - physical.total_inventory) / growth_rate * 60
 
     def _physical_main_resolved(self, snapshot, main_id, virtual_groups, batch):
+        physical = self._physical_state(batch, main_id)
+        if (
+            physical is not None
+            and physical.total_capacity is not None
+            and physical.total_inventory >= physical.total_capacity
+        ):
+            return False
         total_rate = sum(state.inventory_change_rate for state in virtual_groups.values())
         minutes = self._physical_overflow_minutes(
-            self._physical_state(batch, main_id), total_rate,
+            physical, total_rate,
         )
         return total_rate <= 0 or (
             minutes is not None

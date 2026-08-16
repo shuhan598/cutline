@@ -59,8 +59,8 @@ from app.schemas.request_schema import (
     CutlineAlgorithmRequest,
 )
 from app.utils.buffer_binding import (
-    is_multi_value_bound_source_name,
     normalize_bound_source_product_name,
+    should_ignore_bound_source_name,
 )
 from app.utils.time_utils import normalize_local_time
 
@@ -574,8 +574,8 @@ class SnapshotAdapter:
         result: list[AlgorithmBufferOrderInventory] = []
         seen: set[tuple[str, str, str]] = set()
         for item in source:
-            if is_multi_value_bound_source_name(item.bound_source_name):
-                # 多值绑定无法唯一归属订单，临时忽略整条实时 Buffer 记录。
+            if should_ignore_bound_source_name(item.bound_source_name):
+                # 无效绑定无法唯一归属订单，临时忽略整条实时 Buffer 记录。
                 continue
             if item.buffer_code not in buffer_by_code:
                 continue

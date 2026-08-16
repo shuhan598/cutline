@@ -1389,6 +1389,49 @@ def test_batch_candidates_exhausted_builds_manual_decision():
     assert decision.manual_intervention is not None
 
 
+@pytest.mark.parametrize(
+    ("source_inventory", "source_rate"),
+    (
+        (1100, 0),
+        (1200, 100),
+        (1200, -100),
+    ),
+)
+def test_batch_at_or_over_capacity_builds_manual_intervention(
+    source_inventory,
+    source_rate,
+):
+    snapshot_value, warning, intervals, source, targets = _batch_context(
+        source_rate=source_rate,
+        source_inventory=source_inventory,
+        source_capacity=1100,
+        targets=(("ORD-TARGET", "BUF-TARGET", 0, 3900, 3900),),
+    )
+    selection = _select(
+        _batch_candidates(source, targets),
+        snapshot_value=snapshot_value,
+        warning=warning,
+        intervals=intervals,
+        overflows=[],
+    )
+
+    decision = CutlinePlanBuilder().build_overflow_decision(
+        snapshot_value,
+        warning,
+        selection,
+    )
+
+    assert selection.selected_machines == []
+    assert selection.risk_resolved is False
+    assert selection.failure_reason == "current_buffer_already_over_capacity"
+    assert decision.plan is None
+    assert decision.manual_intervention is not None
+    assert (
+        decision.manual_intervention.reason
+        == "current_buffer_already_over_capacity"
+    )
+
+
 def test_batch_evaluator_rejects_ineligible_source_group():
     snapshot_value, warning, intervals, source, targets = _batch_context()
     unavailable_source = replace(source, auto_donate_eligible=False)

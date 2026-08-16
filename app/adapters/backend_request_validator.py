@@ -43,7 +43,7 @@ from app.schemas.pending_cutline_schema import (
     PendingCutlinePlan,
     PendingCutlinePlanStatus,
 )
-from app.utils.buffer_binding import is_multi_value_bound_source_name
+from app.utils.buffer_binding import should_ignore_bound_source_name
 
 
 class BackendValidationIssue(BaseModel):
@@ -128,13 +128,13 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
     ) -> BackendRequestValidationResult:
         issues: list[BackendValidationIssue] = []
-        # 多值绑定记录仅保留“数据集已提供”的事实，其余完整性检查全部跳过。
+        # 无效绑定记录仅保留“数据集已提供”的事实，其余完整性检查全部跳过。
         filtered_request = request.model_copy(
             update={
                 "buffer_realtime": [
                     record
                     for record in request.buffer_realtime
-                    if not is_multi_value_bound_source_name(
+                    if not should_ignore_bound_source_name(
                         record.bound_source_name
                     )
                 ]
@@ -517,8 +517,8 @@ class BackendRequestCompletenessValidator:
 
         for index, realtime in enumerate(request.buffer_realtime):
             record_key = self._record_key("buffer_realtime", realtime, index)
-            if is_multi_value_bound_source_name(realtime.bound_source_name):
-                # 多值绑定暂不参与校验，整条实时 Buffer 记录由后续环节忽略。
+            if should_ignore_bound_source_name(realtime.bound_source_name):
+                # 无效绑定暂不参与校验，整条实时 Buffer 记录由后续环节忽略。
                 continue
             product_name = realtime.bound_source_name.strip()
             if not product_name:

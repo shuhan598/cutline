@@ -213,7 +213,28 @@ def _payload() -> dict:
 
 
 def _convert(payload: dict | None = None) -> AlgorithmSnapshot:
-    request = CutlineAlgorithmRequest.model_validate(payload or _payload())
+    data = deepcopy(payload or _payload())
+    # Valid Buffer bindings use the production naming convention exercised by
+    # the backend. Keep the fixture's human-readable product names elsewhere,
+    # while making the order/catalog names match the bound prefixes.
+    product_aliases = {"产品一": "210N产品一", "产品二": "210N产品二"}
+    for dataset in ("orders", "products", "machine_process_times"):
+        for record in data.get(dataset, []):
+            if record.get("product_name") in product_aliases:
+                record["product_name"] = product_aliases[record["product_name"]]
+    for record in data.get("buffer_realtime", []):
+        bound_source_name = record.get("bound_source_name")
+        if bound_source_name in product_aliases:
+            record["bound_source_name"] = product_aliases[bound_source_name]
+        elif isinstance(bound_source_name, str) and "-" in bound_source_name:
+            prefix, suffix = bound_source_name.split("-", 1)
+            if prefix in product_aliases:
+                record["bound_source_name"] = f"{product_aliases[prefix]}-{suffix}"
+    for record in data.get("agv_relations", []):
+        for field in ("product_name", "previous_product_name"):
+            if record.get(field) in product_aliases:
+                record[field] = product_aliases[record[field]]
+    request = CutlineAlgorithmRequest.model_validate(data)
     return snapshot_adapter_module.SnapshotAdapter().to_algorithm_snapshot(request)
 
 
@@ -775,17 +796,25 @@ def test_duplicate_product_name_current_orders_fail_before_inventory_match():
 
 def test_missing_buffer_product_name_match_is_isolated():
     payload = _payload()
-    payload["buffer_realtime"][0]["bound_source_name"] = "不存在"
+    payload["buffer_realtime"][0]["bound_source_name"] = "210N不存在"
 
     _, issues = _assert_aggregation_issue(payload, "order_mapping_not_found")
-    assert "不存在" in issues[0].message
+    assert "210N不存在" in issues[0].message
 
 
 def test_blank_buffer_bound_source_name_is_isolated():
     payload = _payload()
     payload["buffer_realtime"][0]["bound_source_name"] = "   "
 
-    _assert_aggregation_issue(payload, "order_mapping_not_found")
+    snapshot = _convert(payload)
+    assert not any(
+        item.buffer_code == "BUF-001" and item.order_code == "ORD-001"
+        for item in snapshot.buffer_order_inventories
+    )
+    assert not any(
+        issue.code == "order_mapping_not_found"
+        for issue in snapshot.main_buffer_batch.issues
+    )
 
 
 def test_multi_value_buffer_bound_source_record_is_ignored_completely():
@@ -1121,9 +1150,9 @@ def test_selected_agv_relation_is_converted_to_internal_binding():
         "machine_name": "机台一",
         "order_code": "ORD-001",
         "product_code": "PROD-001",
-        "product_name": "产品一",
+        "product_name": "210N产品一",
         "previous_product_code": "PROD-002",
-        "previous_product_name": "产品二",
+        "previous_product_name": "210N产品二",
         "wafer_spec": "N",
         "binding_time": datetime(
             2026,
@@ -1313,7 +1342,7 @@ def test_last_product_name_never_overrides_current_product_binding():
     snapshot = _convert(payload)
 
     assert snapshot.machine_runtimes[0].current_order_code == "ORD-001"
-    assert snapshot.agv_relations[0].product_name == "产品一"
+    assert snapshot.agv_relations[0].product_name == "210N产品一"
 
 
 @pytest.mark.parametrize("previous_name", [None, ""])

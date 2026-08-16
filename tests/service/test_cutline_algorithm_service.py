@@ -248,7 +248,7 @@ def _real_flow_payload():
                 "machine_code": "M-CAND",
                 "machine_name": "M-CAND",
                 "product_code": "PROD-SOURCE",
-                "product_name": "PROD SOURCE",
+                "product_name": "210N源产品",
                 "proc_seconds": 3600.0,
                 "actual_capacity": 400,
             }
@@ -269,21 +269,21 @@ def _real_flow_payload():
         "orders": [
             {
                 **_order("ORD-SOURCE", "PROD-SOURCE"),
-                "product_name": "PROD SOURCE",
+                "product_name": "210N源产品",
             },
             {
                 **_order("ORD-TARGET", "PROD-TARGET"),
-                "product_name": "PROD TARGET",
+                "product_name": "210N目标产品",
             },
         ],
         "products": [
             {
                 **_product("PROD-SOURCE"),
-                "product_name": "PROD SOURCE",
+                "product_name": "210N源产品",
             },
             {
                 **_product("PROD-TARGET"),
-                "product_name": "PROD TARGET",
+                "product_name": "210N目标产品",
             },
         ],
         "process_routes": [
@@ -294,14 +294,14 @@ def _real_flow_payload():
             {
                 "main_id": "source-inventory",
                 "buffer_code": "BUF-SOURCE",
-                "bound_source_name": "PROD SOURCE-背膜下-AUTO",
+                "bound_source_name": "210N源产品-背膜下-AUTO",
                 "current_quantity": 100000,
                 "current_utilization_rate": 0.5,
             },
             {
                 "main_id": "target-inventory",
                 "buffer_code": "BUF-TARGET",
-                "bound_source_name": "PROD TARGET-背膜下-AUTO",
+                "bound_source_name": "210N目标产品-背膜下-AUTO",
                 "current_quantity": 100,
                 "current_utilization_rate": 0.1,
             },
@@ -311,10 +311,10 @@ def _real_flow_payload():
             _buffer_master("BUF-TARGET"),
         ],
         "agv_relations": [
-            _agv_relation("M-CAND", "PROD SOURCE"),
-            _agv_relation("M-SRC-DOWN", "PROD SOURCE"),
-            _agv_relation("M-TGT-UP", "PROD TARGET"),
-            _agv_relation("M-TGT-DOWN", "PROD TARGET"),
+            _agv_relation("M-CAND", "210N源产品"),
+            _agv_relation("M-SRC-DOWN", "210N源产品"),
+            _agv_relation("M-TGT-UP", "210N目标产品"),
+            _agv_relation("M-TGT-DOWN", "210N目标产品"),
         ],
         "active_cutline_events": [],
     }
