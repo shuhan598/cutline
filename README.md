@@ -195,3 +195,32 @@ pytest -q
 pytest -q tests/test_current_examples.py
 ```
 
+## Docker 运行
+
+需要已安装 Docker（包含 Docker Compose）。在项目根目录启动服务：
+
+```sh
+docker compose up --build -d
+```
+
+服务启动后，`http://localhost:8000/health` 应返回 `{"status":"ok"}`。停止服务：
+
+```sh
+docker compose down
+```
+
+### 算法异常日志
+
+算法运行中出现异常时，服务会将完整 Python 堆栈写入容器的
+`/app/logs/algorithm-exceptions.log`。默认 Compose 配置将其绑定到项目根目录的
+`deploy/logs/algorithm-exceptions.log`。
+
+在 Linux 服务器上，可在启动前指定服务器日志目录：
+
+```sh
+export CUTLINE_LOG_HOST_DIR=/var/log/cutline-algorithm
+docker compose up --build -d
+```
+
+该服务器目录必须允许容器内的 `appuser` 写入。日志只记录接口路径和 Python 异常堆栈，
+不会记录请求体。

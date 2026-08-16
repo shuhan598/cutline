@@ -24,6 +24,7 @@ from app.schemas.response_schema import (
     CutlineEvaluateResponse,
 )
 from app.service.cutline_service import CutlineService
+from app.utils.algorithm_exception_logger import log_algorithm_exception
 
 
 router = APIRouter(tags=["cutline"])
@@ -162,7 +163,12 @@ def run_stub_algorithm_request(
     service: CutlineService = Depends(get_cutline_service),
 ) -> CutlineAlgorithmResponse:
     """执行【run_stub_algorithm_request】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
-    return service.evaluate_algorithm(_load_cutline_request(payload))
+    request = _load_cutline_request(payload)
+    try:
+        return service.evaluate_algorithm(request)
+    except Exception:
+        log_algorithm_exception("/stub/algo/run")
+        raise
 
 @router.post("/cutline/evaluate", response_model=CutlineEvaluateResponse)
 def evaluate_cutline_request(
@@ -173,13 +179,15 @@ def evaluate_cutline_request(
     request = _load_validated_cutline_request(payload)
     try:
         return service.evaluate_algorithm(request)
-    except SnapshotConversionError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "SNAPSHOT_CONVERSION_FAILED",
-                "message": str(exc),
-                "issues": [],
-            },
-        ) from exc
-
+    except Exception as exc:
+        log_algorithm_exception("/cutline/evaluate")
+        if isinstance(exc, SnapshotConversionError):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "SNAPSHOT_CONVERSION_FAILED",
+                    "message": str(exc),
+                    "issues": [],
+                },
+            ) from exc
+        raise

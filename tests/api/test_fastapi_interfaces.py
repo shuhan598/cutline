@@ -1,13 +1,16 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.api.cutline_api as cutline_api_module
+import app.utils.algorithm_exception_logger as algorithm_exception_logger_module
 from app.api.cutline_api import get_cutline_service
 from app.main import create_app
 from app.schemas.backend_request_schema import BackendAlgorithmRequest
@@ -17,6 +20,7 @@ from app.schemas.response_schema import (
     CutlineEvaluateResponse,
     PersistenceStateResponse,
 )
+from app.utils.algorithm_exception_logger import log_algorithm_exception
 from tests.fixtures.v3_full_route_factory import (
     SUPPORT_BUFFER_CODE,
     build_stockout_auto_payload,
@@ -180,6 +184,98 @@ def test_health_endpoint_returns_ok():
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_log_algorithm_exception_writes_active_traceback_to_configured_directory(
+    tmp_path: Path,
+    monkeypatch,
+):
+    monkeypatch.setenv("CUTLINE_LOG_DIR", str(tmp_path))
+
+    try:
+        raise RuntimeError("algorithm exploded")
+    except RuntimeError:
+        log_algorithm_exception("/cutline/evaluate")
+
+    contents = (tmp_path / "algorithm-exceptions.log").read_text(encoding="utf-8")
+    assert "/cutline/evaluate" in contents
+    assert "RuntimeError: algorithm exploded" in contents
+    assert "Traceback (most recent call last):" in contents
+
+
+def test_log_algorithm_exception_writes_one_record_per_concurrent_call(
+    tmp_path: Path,
+    monkeypatch,
+):
+    worker_count = 32
+    barrier = Barrier(worker_count)
+    monkeypatch.setenv("CUTLINE_LOG_DIR", str(tmp_path))
+
+    def log_exception(index: int) -> None:
+        barrier.wait()
+        try:
+            raise RuntimeError(f"algorithm exploded {index}")
+        except RuntimeError:
+            log_algorithm_exception(f"/cutline/evaluate/{index}")
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        list(executor.map(log_exception, range(worker_count)))
+
+    contents = (tmp_path / "algorithm-exceptions.log").read_text(encoding="utf-8")
+    assert contents.count("Unhandled algorithm exception at /cutline/evaluate/") == worker_count
+    for index in range(worker_count):
+        assert (
+            contents.count(
+                f"Unhandled algorithm exception at /cutline/evaluate/{index}\n"
+            )
+            == 1
+        )
+
+
+def test_log_algorithm_exception_uses_default_directory_for_empty_environment(
+    tmp_path: Path,
+    monkeypatch,
+):
+    monkeypatch.setenv("CUTLINE_LOG_DIR", "")
+    monkeypatch.setattr(
+        algorithm_exception_logger_module,
+        "DEFAULT_LOG_DIRECTORY",
+        tmp_path,
+    )
+
+    try:
+        raise RuntimeError("algorithm exploded")
+    except RuntimeError:
+        log_algorithm_exception("/cutline/evaluate")
+
+    assert (tmp_path / "algorithm-exceptions.log").is_file()
+
+
+@pytest.mark.parametrize("failure_target", ("mkdir", "file_handler"))
+def test_log_algorithm_exception_does_not_mask_active_exception_on_filesystem_error(
+    tmp_path: Path,
+    monkeypatch,
+    failure_target: str,
+):
+    monkeypatch.setenv("CUTLINE_LOG_DIR", str(tmp_path))
+
+    def raise_oserror(*args, **kwargs):
+        raise OSError("log storage unavailable")
+
+    if failure_target == "mkdir":
+        monkeypatch.setattr(algorithm_exception_logger_module.Path, "mkdir", raise_oserror)
+    else:
+        monkeypatch.setattr(
+            algorithm_exception_logger_module.logging,
+            "FileHandler",
+            raise_oserror,
+        )
+
+    try:
+        raise RuntimeError("algorithm exploded")
+    except RuntimeError as exception:
+        log_algorithm_exception("/cutline/evaluate")
+        assert str(exception) == "algorithm exploded"
 
 
 def test_backend_validate_accepts_transitional_backend_payload():
@@ -748,22 +844,57 @@ def test_cutline_evaluate_returns_200_when_all_main_groups_are_invalid():
     )
 
 
-def test_cutline_evaluate_keeps_unknown_runtime_error_as_500():
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/stub/algo/run", cutline_payload()),
+        ("/cutline/evaluate", build_stockout_auto_payload()),
+    ],
+)
+def test_algorithm_endpoint_logs_unexpected_exception_and_keeps_500(
+    path: str,
+    payload: dict,
+    tmp_path: Path,
+    monkeypatch,
+):
+    monkeypatch.setenv("CUTLINE_LOG_DIR", str(tmp_path))
     app = create_app()
 
     class FailingService:
         def evaluate_algorithm(self, request: CutlineAlgorithmRequest):
-            raise RuntimeError("unexpected program failure")
+            raise RuntimeError("algorithm endpoint failure")
 
     app.dependency_overrides[get_cutline_service] = FailingService
     client = TestClient(app, raise_server_exceptions=False)
 
-    response = client.post(
-        "/cutline/evaluate",
-        json=deepcopy(build_stockout_auto_payload()),
-    )
+    response = client.post(path, json=payload)
 
     assert response.status_code == 500
+    content = (tmp_path / "algorithm-exceptions.log").read_text(
+        encoding="utf-8"
+    )
+    assert path in content
+    assert "RuntimeError: algorithm endpoint failure" in content
+    assert "Traceback (most recent call last):" in content
+
+
+def test_cutline_evaluate_logs_snapshot_conversion_error(
+    tmp_path: Path,
+    monkeypatch,
+):
+    monkeypatch.setenv("CUTLINE_LOG_DIR", str(tmp_path))
+    payload = build_stockout_auto_payload()
+    payload["lines"] = []
+    client = TestClient(create_app(), raise_server_exceptions=False)
+
+    response = client.post("/cutline/evaluate", json=payload)
+
+    assert response.status_code == 422
+    content = (tmp_path / "algorithm-exceptions.log").read_text(
+        encoding="utf-8"
+    )
+    assert "/cutline/evaluate" in content
+    assert "SnapshotConversionError" in content
 
 
 def test_cutline_evaluate_loads_cutline_payload_once(monkeypatch):
@@ -788,4 +919,3 @@ def test_cutline_evaluate_loads_cutline_payload_once(monkeypatch):
 
     assert response.status_code == 200
     assert calls == 1
-
