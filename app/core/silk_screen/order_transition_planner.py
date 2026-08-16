@@ -24,6 +24,7 @@ _T = TypeVar("_T")
 
 @dataclass
 class _SilkOrderGroup:
+    """类 【_SilkOrderGroup】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     workshop_code: str
     process_code: str
     process_name: str
@@ -40,6 +41,7 @@ class SilkScreenOrderTransitionPlanner:
         *,
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmSilkScreenTransitionResult]:
+        """根据当前快照和业务规则执行【evaluate】计算，返回类型标注所声明的结果。"""
         runtime_by_machine = self._unique_by_code(
             snapshot.machine_runtimes,
             field_name="machine_code",
@@ -122,6 +124,7 @@ class SilkScreenOrderTransitionPlanner:
         group: _SilkOrderGroup,
         clear_minutes: float,
     ) -> AlgorithmSilkScreenTransitionResult:
+        """内部辅助步骤【_result】，为上层业务流程提供数据处理或共用判断。"""
         order = group.order
         remaining_quantity = max(
             order.total_quantity - order.produced_quantity,
@@ -201,6 +204,7 @@ class SilkScreenOrderTransitionPlanner:
         field_name: str,
         duplicate_label: str,
     ) -> dict[str, _T]:
+        """内部辅助步骤【_unique_by_code】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, _T] = {}
         for item in items:
             code = getattr(item, field_name)
@@ -215,6 +219,7 @@ class SilkScreenOrderTransitionPlanner:
         self,
         orders: list[AlgorithmOrder],
     ) -> dict[tuple[str, str], AlgorithmOrder]:
+        """内部辅助步骤【_order_index】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[tuple[str, str], AlgorithmOrder] = {}
         for order in orders:
             key = (order.workshop_code, order.order_code)

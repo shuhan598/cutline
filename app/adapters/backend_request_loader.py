@@ -35,6 +35,7 @@ class BackendRequestLoader:
 
     @staticmethod
     def _is_raw_agv_record(record: dict[str, Any]) -> bool:
+        """内部辅助步骤【_is_raw_agv_record】，为上层流程提供数据处理或共用判断。"""
         return any(field in record for field in _RAW_AGV_FIELD_MAP)
 
     @staticmethod
@@ -42,6 +43,7 @@ class BackendRequestLoader:
         record: dict[str, Any],
         index: int,
     ) -> dict[str, Any]:
+        """在不改变原始请求的前提下执行【_normalize_agv_record】数据转换，并保留必要的校验信息。"""
         if not BackendRequestLoader._is_raw_agv_record(record):
             return record
 
@@ -75,6 +77,7 @@ class BackendRequestLoader:
         raw_value: Any,
         standard_value: Any,
     ) -> bool:
+        """内部辅助步骤【_agv_values_match】，为上层流程提供数据处理或共用判断。"""
         if raw_field != "createtime":
             return raw_value == standard_value
         try:
@@ -108,6 +111,7 @@ class BackendRequestLoader:
 
     @staticmethod
     def _project_raw_agv_relations(records: Any) -> Any:
+        """内部辅助步骤【_project_raw_agv_relations】，为上层流程提供数据处理或共用判断。"""
         if not isinstance(records, list):
             return records
 
@@ -133,6 +137,7 @@ class BackendRequestLoader:
         return projected
 
     def load_dict(self, payload: dict[str, Any]) -> BackendAlgorithmRequest:
+        """在不改变原始请求的前提下执行【load_dict】数据转换，并保留必要的校验信息。"""
         cleaned = deepcopy(payload)
         machine_realtime = (
             cleaned.get("machine_realtime")
@@ -153,11 +158,13 @@ class BackendRequestLoader:
         self,
         payload: Any,
     ) -> CutlineAlgorithmRequest:
+        """在不改变原始请求的前提下执行【load_cutline_dict】数据转换，并保留必要的校验信息。"""
         return CutlineAlgorithmRequest.model_validate(
             self.normalize_payload(payload)
         )
 
     def load_json_file(self, file_path: str | Path) -> BackendAlgorithmRequest:
+        """在不改变原始请求的前提下执行【load_json_file】数据转换，并保留必要的校验信息。"""
         path = Path(file_path)
         try:
             with path.open(encoding="utf-8") as file:

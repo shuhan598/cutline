@@ -62,6 +62,7 @@ class MachineSelectionEvaluator:
         interval_results: list[AlgorithmIntervalNetRateResult],
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> AlgorithmStockoutSelectionResult:
+        """根据当前快照和业务规则执行【select_stockout_machines】计算，返回类型标注所声明的结果。"""
         stockout_warning_lead_minutes = (
             snapshot.config.stockout_warning_lead_minutes
         )
@@ -307,6 +308,7 @@ class MachineSelectionEvaluator:
         candidate_result: AlgorithmStockoutCandidateResult,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmStockoutSelectionResult:
+        """根据当前快照和业务规则执行【_select_stockout_from_batch】计算，返回类型标注所声明的结果。"""
         batch = snapshot.main_buffer_batch
         receiver_key = (
             warning.group_key or candidate_result.receiver_group_key
@@ -553,6 +555,7 @@ class MachineSelectionEvaluator:
     def _inventory_change_rate(
         result: AlgorithmIntervalNetRateResult,
     ) -> float:
+        """内部辅助步骤【_inventory_change_rate】，为上层业务流程提供数据处理或共用判断。"""
         if result.inventory_change_rate is not None:
             return result.inventory_change_rate
         return -result.net_consumption_rate
@@ -562,6 +565,7 @@ class MachineSelectionEvaluator:
         total_inventory: float,
         inventory_change_rate: float,
     ) -> float | None:
+        """内部辅助步骤【_group_depletion_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if inventory_change_rate >= 0:
             return None
         return total_inventory / abs(inventory_change_rate) * 60
@@ -571,6 +575,7 @@ class MachineSelectionEvaluator:
         group: MainBufferGroup,
         inventory_change_rate: float,
     ) -> float | None:
+        """内部辅助步骤【_group_overflow_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if inventory_change_rate <= 0:
             return None
         if group.total_capacity is None:
@@ -585,6 +590,7 @@ class MachineSelectionEvaluator:
         state: VirtualGroupState,
         lead_minutes: float,
     ) -> bool:
+        """内部辅助步骤【_stockout_resolved】，为上层业务流程提供数据处理或共用判断。"""
         if state.inventory_change_rate >= 0:
             return True
         depletion = self._group_depletion_minutes(
@@ -605,6 +611,7 @@ class MachineSelectionEvaluator:
         total_contribution: float = 0.0,
         risk_resolved: bool = False,
     ) -> AlgorithmStockoutSelectionResult:
+        """内部辅助步骤【_stockout_batch_result】，为上层业务流程提供数据处理或共用判断。"""
         return AlgorithmStockoutSelectionResult(
             workshop_code=warning.workshop_code,
             buffer_code=warning.buffer_code,
@@ -631,6 +638,7 @@ class MachineSelectionEvaluator:
         interval_results: list[AlgorithmIntervalNetRateResult],
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> AlgorithmOverflowSelectionResult:
+        """根据当前快照和业务规则执行【select_overflow_machines】计算，返回类型标注所声明的结果。"""
         if snapshot.main_buffer_batch.groups_by_group_key:
             return self._select_overflow_from_batch(
                 snapshot=snapshot,
@@ -1010,6 +1018,7 @@ class MachineSelectionEvaluator:
         candidate_result: AlgorithmOverflowCandidateResult,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmOverflowSelectionResult:
+        """根据当前快照和业务规则执行【_select_overflow_from_batch】计算，返回类型标注所声明的结果。"""
         batch = snapshot.main_buffer_batch
         source_key = warning.group_key
         if source_key is None:
@@ -1109,6 +1118,7 @@ class MachineSelectionEvaluator:
             def candidate_priority(item):
                 # 优先级依次为 source 排名、最新 target rate、稳定订单编码、
                 # 物理改善量和原候选位置；machine 自身既有排序仍作为稳定输入。
+                """执行【candidate_priority】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
                 position, candidate = item
                 options = sorted(
                     candidate.target_options,
@@ -1564,6 +1574,7 @@ class MachineSelectionEvaluator:
         state: VirtualGroupState,
         lead_minutes: float,
     ) -> bool:
+        """内部辅助步骤【_overflow_group_resolved】，为上层业务流程提供数据处理或共用判断。"""
         if state.inventory_change_rate <= 0:
             return True
         overflow_minutes = self._group_overflow_minutes(
@@ -1576,6 +1587,7 @@ class MachineSelectionEvaluator:
         )
 
     def _physical_overflow_minutes(self, physical, growth_rate: float):
+        """内部辅助步骤【_physical_overflow_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if physical is None or physical.total_capacity is None:
             return None
         if physical.total_inventory >= physical.total_capacity:
@@ -1585,6 +1597,7 @@ class MachineSelectionEvaluator:
         return (physical.total_capacity - physical.total_inventory) / growth_rate * 60
 
     def _physical_main_resolved(self, snapshot, main_id, virtual_groups, batch):
+        """内部辅助步骤【_physical_main_resolved】，为上层业务流程提供数据处理或共用判断。"""
         physical = self._physical_state(batch, main_id)
         if (
             physical is not None
@@ -1603,6 +1616,7 @@ class MachineSelectionEvaluator:
 
     @staticmethod
     def _target_effect_capacity(snapshot, machine_code, product_code, fallback):
+        """内部辅助步骤【_target_effect_capacity】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             item.actual_capacity
             for item in snapshot.machine_product_capacities
@@ -1612,6 +1626,7 @@ class MachineSelectionEvaluator:
 
     @staticmethod
     def _physical_state(batch, main_id):
+        """内部辅助步骤【_physical_state】，为上层业务流程提供数据处理或共用判断。"""
         state = batch.physical_main_buffers_by_main_id.get(main_id)
         if state is not None:
             return state
@@ -1643,6 +1658,7 @@ class MachineSelectionEvaluator:
         self,
         warning: AlgorithmOverflowWarningResult,
     ):
+        """内部辅助步骤【_maximum_growth_detail】，为上层业务流程提供数据处理或共用判断。"""
         positive = [
             detail
             for detail in warning.order_growth_details
@@ -1663,6 +1679,7 @@ class MachineSelectionEvaluator:
         option: AlgorithmOverflowTargetOption,
         interval_by_key: dict[IntervalKey, AlgorithmIntervalNetRateResult],
     ):
+        """内部辅助步骤【_overflow_target_interval】，为上层业务流程提供数据处理或共用判断。"""
         has_complete_context = all(
             value is not None
             for value in (
@@ -1712,6 +1729,7 @@ class MachineSelectionEvaluator:
         growth_rate: float,
         overflow_warning_lead_minutes: float,
     ) -> tuple[float | None, bool]:
+        """内部辅助步骤【_current_overflow_risk】，为上层业务流程提供数据处理或共用判断。"""
         if warning.total_inventory >= warning.max_capacity:
             return 0.0, False
         if growth_rate <= 0:
@@ -1738,6 +1756,7 @@ class MachineSelectionEvaluator:
         target_overflow: float | None = None,
         message: str,
     ) -> AlgorithmRejectedMachineEvaluation:
+        """内部辅助步骤【_overflow_rejected】，为上层业务流程提供数据处理或共用判断。"""
         return AlgorithmRejectedMachineEvaluation(
             machine_code=candidate.machine_code,
             reason=reason,
@@ -1777,6 +1796,7 @@ class MachineSelectionEvaluator:
         rejected: list[AlgorithmRejectedMachineEvaluation],
         risk_resolved: bool,
     ) -> str | None:
+        """内部辅助步骤【_overflow_failure_reason】，为上层业务流程提供数据处理或共用判断。"""
         if risk_resolved:
             return None
         if warning.total_inventory >= warning.max_capacity:
@@ -1801,6 +1821,7 @@ class MachineSelectionEvaluator:
         self,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> dict[IntervalKey, AlgorithmIntervalNetRateResult]:
+        """内部辅助步骤【_interval_index】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[IntervalKey, AlgorithmIntervalNetRateResult] = {}
         for interval in interval_results:
             key = self._interval_key(interval)
@@ -1815,6 +1836,7 @@ class MachineSelectionEvaluator:
         self,
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> dict[str, AlgorithmBufferOverflowTimeResult]:
+        """内部辅助步骤【_buffer_index】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, AlgorithmBufferOverflowTimeResult] = {}
         for overflow in overflow_results:
             if overflow.buffer_code in result:
@@ -1828,6 +1850,7 @@ class MachineSelectionEvaluator:
         self,
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> dict[str, str]:
+        """内部辅助步骤【_buffer_code_by_main_id】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, str] = {}
         for overflow in overflow_results:
             if overflow.main_id in result:
@@ -1838,6 +1861,7 @@ class MachineSelectionEvaluator:
         return result
 
     def _interval_key(self, interval) -> IntervalKey:
+        """内部辅助步骤【_interval_key】，为上层业务流程提供数据处理或共用判断。"""
         return (
             interval.workshop_code,
             interval.buffer_code,
@@ -1852,6 +1876,7 @@ class MachineSelectionEvaluator:
         self,
         warning: AlgorithmStockoutWarningResult,
     ) -> IntervalKey:
+        """内部辅助步骤【_warning_interval_key】，为上层业务流程提供数据处理或共用判断。"""
         return (
             warning.workshop_code,
             warning.buffer_code,
@@ -1867,6 +1892,7 @@ class MachineSelectionEvaluator:
         candidate: AlgorithmStockoutCandidateMachine,
         interval_by_key: dict[IntervalKey, AlgorithmIntervalNetRateResult],
     ):
+        """内部辅助步骤【_source_interval】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             (key, interval)
             for key, interval in interval_by_key.items()
@@ -1888,6 +1914,7 @@ class MachineSelectionEvaluator:
         output_quantity_30m: float,
         machine_code: str,
     ) -> float:
+        """校验【_validated_capacity】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         expected = output_quantity_30m * 2
         if not isclose(capacity, expected):
             raise MachineSelectionEvaluationError(
@@ -1901,6 +1928,7 @@ class MachineSelectionEvaluator:
         current_quantity: float,
         net_rate: float,
     ) -> float | None:
+        """内部辅助步骤【_depletion_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if net_rate <= 0:
             return None
         return current_quantity / net_rate * 60
@@ -1913,6 +1941,7 @@ class MachineSelectionEvaluator:
         contribution: float,
         state: VirtualCutlineState,
     ) -> tuple[float, float]:
+        """内部辅助步骤【_buffer_growth_after】，为上层业务流程提供数据处理或共用判断。"""
         source_before = state.buffer_growth_rates[source_buffer_code]
         target_before = state.buffer_growth_rates[target_buffer_code]
         if source_buffer_code == target_buffer_code:
@@ -1924,6 +1953,7 @@ class MachineSelectionEvaluator:
         buffer: AlgorithmBufferOverflowTimeResult,
         growth_rate: float,
     ) -> float | None:
+        """内部辅助步骤【_overflow_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if buffer.total_inventory >= buffer.max_capacity:
             return 0.0
         if growth_rate <= 0:
@@ -1949,6 +1979,7 @@ class MachineSelectionEvaluator:
         target_overflow: float | None = None,
         message: str,
     ) -> AlgorithmRejectedMachineEvaluation:
+        """内部辅助步骤【_rejected】，为上层业务流程提供数据处理或共用判断。"""
         return AlgorithmRejectedMachineEvaluation(
             machine_code=candidate.machine_code,
             reason=reason,
@@ -1980,6 +2011,7 @@ class MachineSelectionEvaluator:
         selected_count: int,
         risk_resolved: bool,
     ) -> str | None:
+        """内部辅助步骤【_stockout_failure_reason】，为上层业务流程提供数据处理或共用判断。"""
         if risk_resolved:
             return None
         if candidate_count == 0:

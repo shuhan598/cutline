@@ -13,6 +13,7 @@ class ReturnEvaluationError(ValueError):
     """切回评估所需数据缺失或相互冲突。"""
 
     def __init__(self, reason: str, event_id: str) -> None:
+        """内部辅助步骤【__init__】，为上层业务流程提供数据处理或共用判断。"""
         self.reason = reason
         self.event_id = event_id
         super().__init__(f"{event_id}: {reason}")
@@ -27,6 +28,7 @@ class ReturnEvaluator:
         snapshot: AlgorithmSnapshot,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> list[AlgorithmReturnResult]:
+        """根据当前快照和业务规则执行【evaluate_algorithm】计算，返回类型标注所声明的结果。"""
         results: list[AlgorithmReturnResult] = []
         for event in snapshot.active_cutline_events:
             if event.status != "active":
@@ -51,6 +53,7 @@ class ReturnEvaluator:
         event: AlgorithmActiveCutlineEvent,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmIntervalNetRateResult:
+        """内部辅助步骤【_algorithm_target_interval】，为上层业务流程提供数据处理或共用判断。"""
         batch = snapshot.main_buffer_batch
         if batch.groups_by_group_key:
             group_key = batch.group_key_by_buffer_code.get(
@@ -112,6 +115,7 @@ class ReturnEvaluator:
         event: AlgorithmActiveCutlineEvent,
         matches: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmIntervalNetRateResult:
+        """内部辅助步骤【_unique_target_interval】，为上层业务流程提供数据处理或共用判断。"""
         if not matches:
             raise ReturnEvaluationError(
                 "target_interval_not_found",
@@ -131,6 +135,7 @@ class ReturnEvaluator:
         event: AlgorithmActiveCutlineEvent,
         target_interval: AlgorithmIntervalNetRateResult,
     ) -> AlgorithmReturnResult:
+        """根据当前快照和业务规则执行【_evaluate_algorithm_event】计算，返回类型标注所声明的结果。"""
         current_time = snapshot.current_time
         previous_negative_start = event.negative_start_time
         condition_net_rate_met = target_interval.net_consumption_rate < 0
@@ -226,6 +231,7 @@ class ReturnEvaluator:
         "inventory_not_above_safe_level",
         "all_return_conditions_met",
     ]:
+        """内部辅助步骤【_algorithm_reason】，为上层业务流程提供数据处理或共用判断。"""
         if not condition_net_rate_met:
             return "net_rate_not_negative"
         if not condition_stability_met:

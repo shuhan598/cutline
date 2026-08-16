@@ -17,10 +17,12 @@ from pydantic import (
 
 
 class _PendingCutlineModel(BaseModel):
+    """类 【_PendingCutlineModel】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     model_config = ConfigDict(extra="forbid")
 
 
 class PendingCutlinePlanStatus(str, Enum):
+    """类 【PendingCutlinePlanStatus】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     PENDING = "PENDING"
     PARTIALLY_CONFIRMED = "PARTIALLY_CONFIRMED"
     CONFIRMED = "CONFIRMED"
@@ -29,6 +31,7 @@ class PendingCutlinePlanStatus(str, Enum):
 
 
 class BaselineMachineBinding(_PendingCutlineModel):
+    """类 【BaselineMachineBinding】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str
     order_code: str
     product_code: str
@@ -45,6 +48,7 @@ class BaselineMachineBinding(_PendingCutlineModel):
 
 
 class PendingCandidateMachine(_PendingCutlineModel):
+    """类 【PendingCandidateMachine】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str
     baseline_order_code: str
     baseline_product_code: str
@@ -67,6 +71,7 @@ class PendingCandidateMachine(_PendingCutlineModel):
 
 
 class PendingCutlinePlan(_PendingCutlineModel):
+    """类 【PendingCutlinePlan】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     plan_id: str = Field(min_length=1)
     warning_id: str = Field(min_length=1)
     warning_type: Literal["stockout", "overflow"]
@@ -100,12 +105,14 @@ class PendingCutlinePlan(_PendingCutlineModel):
     @field_validator("plan_id", "warning_id")
     @classmethod
     def validate_nonblank_identifier(cls, value: str) -> str:
+        """校验【validate_nonblank_identifier】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if not value.strip():
             raise ValueError("identifier must not be blank")
         return value
 
     @model_validator(mode="after")
     def validate_plan_consistency(self) -> PendingCutlinePlan:
+        """校验【validate_plan_consistency】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         _require_matching_timezone_awareness(
             self.plan_id,
             "created_at",
@@ -270,6 +277,7 @@ def _require_matching_timezone_awareness(
     right_field: str,
     right_value: datetime,
 ) -> None:
+    """内部辅助步骤【_require_matching_timezone_awareness】，为上层业务流程提供数据处理或共用判断。"""
     left_is_aware = left_value.utcoffset() is not None
     right_is_aware = right_value.utcoffset() is not None
     if left_is_aware != right_is_aware:
@@ -282,6 +290,7 @@ def _require_matching_timezone_awareness(
 
 
 def _first_duplicate(machine_codes: list[str]) -> str | None:
+    """内部辅助步骤【_first_duplicate】，为上层业务流程提供数据处理或共用判断。"""
     seen: set[str] = set()
     for machine_code in machine_codes:
         if machine_code in seen:

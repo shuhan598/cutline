@@ -17,12 +17,14 @@ CAPABILITY_NAMES = (
 
 @dataclass(frozen=True, order=True)
 class PhysicalBufferKey:
+    """类 【PhysicalBufferKey】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     workshop_code: str
     ordered_service_process_codes: tuple[str, ...]
 
 
 @dataclass(frozen=True, order=True)
 class GroupKey:
+    """类 【GroupKey】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     physical_buffer_key: PhysicalBufferKey
     main_id: str
     order_code: str
@@ -30,6 +32,7 @@ class GroupKey:
 
 @dataclass(frozen=True)
 class MainBufferAggregationIssue:
+    """类 【MainBufferAggregationIssue】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     code: str
     main_id: str
     representative_buffer_code: str | None
@@ -39,6 +42,7 @@ class MainBufferAggregationIssue:
 
 @dataclass(frozen=True)
 class MainBufferGroup:
+    """类 【MainBufferGroup】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     group_key: GroupKey
     main_id: str
     workshop_code: str
@@ -61,10 +65,12 @@ class MainBufferGroup:
 
     @property
     def all_capabilities_enabled(self) -> bool:
+        """执行【all_capabilities_enabled】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return all(getattr(self, name) for name in CAPABILITY_NAMES)
 
     @property
     def no_capabilities_enabled(self) -> bool:
+        """执行【no_capabilities_enabled】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return not any(getattr(self, name) for name in CAPABILITY_NAMES)
 
 
@@ -106,6 +112,7 @@ class PhysicalMainBufferState:
 
 @dataclass(frozen=True)
 class MainBufferAggregationBatch:
+    """类 【MainBufferAggregationBatch】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     groups: tuple[MainBufferGroup, ...] = ()
     issues: tuple[MainBufferAggregationIssue, ...] = ()
     groups_by_group_key: dict[GroupKey, MainBufferGroup] = field(
@@ -130,10 +137,12 @@ class MainBufferAggregationBatch:
 
     @classmethod
     def empty(cls) -> MainBufferAggregationBatch:
+        """执行【empty】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return cls()
 
     @property
     def groups_by_main_id(self) -> dict[str, tuple[MainBufferGroup, ...]]:
+        """执行【groups_by_main_id】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return {
             main_id: tuple(
                 self.groups_by_group_key[key]
@@ -145,6 +154,7 @@ class MainBufferAggregationBatch:
 
     @property
     def main_id_by_buffer_code(self) -> dict[str, str]:
+        """执行【main_id_by_buffer_code】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return {
             code: key.main_id
             for code, key in self.group_key_by_buffer_code.items()
@@ -152,6 +162,7 @@ class MainBufferAggregationBatch:
 
     @property
     def main_id_by_representative_buffer_code(self) -> dict[str, str]:
+        """执行【main_id_by_representative_buffer_code】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return {
             code: key.main_id
             for code, key in self.group_key_by_representative_buffer_code.items()
@@ -161,6 +172,7 @@ class MainBufferAggregationBatch:
     def main_ids_by_physical_buffer_key(
         self,
     ) -> dict[PhysicalBufferKey, tuple[str, ...]]:
+        """执行【main_ids_by_physical_buffer_key】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return {
             physical_key: tuple(sorted({key.main_id for key in keys}))
             for physical_key, keys in self.group_keys_by_physical_buffer_key.items()
@@ -174,6 +186,7 @@ class MainBufferAggregationBatch:
 
     @property
     def order_states_by_main_id(self) -> dict[str, tuple[OrderBufferState, ...]]:
+        """执行【order_states_by_main_id】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         result: dict[str, list[OrderBufferState]] = {}
         for (main_id, _), state in self.order_states_by_main_and_order.items():
             result.setdefault(main_id, []).append(state)

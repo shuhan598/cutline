@@ -26,6 +26,7 @@ class StockoutCandidateFinder:
         snapshot: AlgorithmSnapshot,
         warnings: list[AlgorithmStockoutWarningResult],
     ) -> list[AlgorithmStockoutCandidateResult]:
+        """根据当前快照和业务规则执行【find_algorithm】计算，返回类型标注所声明的结果。"""
         context = CandidateContext(snapshot)
         return [
             self._for_algorithm_warning(warning, context)
@@ -37,6 +38,7 @@ class StockoutCandidateFinder:
         warning: AlgorithmStockoutWarningResult,
         context: CandidateContext,
     ) -> AlgorithmStockoutCandidateResult:
+        """内部辅助步骤【_for_algorithm_warning】，为上层业务流程提供数据处理或共用判断。"""
         context.validate_warning_relation(warning)
         receiver_group = context.warning_group(warning)
         target_order, target_product = context.order_product(

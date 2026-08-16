@@ -181,6 +181,7 @@ class AlgorithmActiveCutlineEvent(AlgorithmModel):
         value: str | None,
         info: ValidationInfo,
     ) -> str | None:
+        """校验【validate_optional_identifier】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if value is not None and not value.strip():
             raise ValueError(f"{info.field_name} must not be blank")
         return value
@@ -287,10 +288,12 @@ class AlgorithmOrder(AlgorithmModel):
         description="订单未生产数量，由订单计划总量减去订单累计已生产量计算得到")
     @property
     def remaining_quantity(self) -> float:
+        """执行【remaining_quantity】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return self.total_quantity - self.produced_quantity
 
     @model_validator(mode="after")
     def validate_produced_quantity(self) -> AlgorithmOrder:
+        """校验【validate_produced_quantity】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if self.produced_quantity > self.total_quantity:
             raise ValueError("订单累计已生产数量不能大于订单计划总数量")
         return self

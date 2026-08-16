@@ -34,12 +34,14 @@ _cutline_service = CutlineService()
 
 
 def get_cutline_service() -> CutlineService:
+    """执行【get_cutline_service】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
     return _cutline_service
 
 
 def _raise_request_validation_error(
     exc: ValidationError | BackendRequestLoadError,
 ) -> NoReturn:
+    """内部辅助步骤【_raise_request_validation_error】，为上层业务流程提供数据处理或共用判断。"""
     if isinstance(exc, ValidationError):
         raise RequestValidationError(exc.errors()) from exc
     raise HTTPException(
@@ -55,6 +57,7 @@ def _raise_request_validation_error(
 
 
 def _load_cutline_request(payload: dict[str, Any]) -> CutlineAlgorithmRequest:
+    """在後端输入与算法内部模型之间执行【_load_cutline_request】转换，并保留必要的校验信息。"""
     try:
         return _backend_loader.load_cutline_dict(payload)
     except (ValidationError, BackendRequestLoadError) as exc:
@@ -66,6 +69,7 @@ def _raise_backend_data_invalid(
     *,
     cause: Exception | None = None,
 ) -> NoReturn:
+    """内部辅助步骤【_raise_backend_data_invalid】，为上层业务流程提供数据处理或共用判断。"""
     http_error = HTTPException(
         status_code=422,
         detail={
@@ -84,6 +88,7 @@ def _raise_backend_data_invalid(
 def _pydantic_validation_issues(
     exc: ValidationError,
 ) -> list[BackendValidationIssue]:
+    """内部辅助步骤【_pydantic_validation_issues】，为上层业务流程提供数据处理或共用判断。"""
     issues: list[BackendValidationIssue] = []
     for error in exc.errors(include_url=False):
         location = list(error.get("loc", ()))
@@ -111,6 +116,7 @@ def _pydantic_validation_issues(
 def _load_validated_cutline_request(
     payload: Any,
 ) -> CutlineAlgorithmRequest:
+    """在後端输入与算法内部模型之间执行【_load_validated_cutline_request】转换，并保留必要的校验信息。"""
     try:
         request = _backend_loader.load_cutline_dict(payload)
     except ValidationError as exc:
@@ -142,6 +148,7 @@ def _load_validated_cutline_request(
 def validate_backend_request(
     payload: dict[str, Any] = Body(...),
 ) -> BackendRequestValidationResult:
+    """校验【validate_backend_request】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
     try:
         request = _backend_loader.load_dict(payload)
     except (ValidationError, BackendRequestLoadError) as exc:
@@ -154,6 +161,7 @@ def run_stub_algorithm_request(
     payload: dict[str, Any] = Body(...),
     service: CutlineService = Depends(get_cutline_service),
 ) -> CutlineAlgorithmResponse:
+    """执行【run_stub_algorithm_request】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
     return service.evaluate_algorithm(_load_cutline_request(payload))
 
 @router.post("/cutline/evaluate", response_model=CutlineEvaluateResponse)
@@ -161,6 +169,7 @@ def evaluate_cutline_request(
     payload: Any = Body(None),
     service: CutlineService = Depends(get_cutline_service),
 ) -> CutlineEvaluateResponse:
+    """根据当前快照和业务规则执行【evaluate_cutline_request】计算，返回类型标注所声明的结果。"""
     request = _load_validated_cutline_request(payload)
     try:
         return service.evaluate_algorithm(request)

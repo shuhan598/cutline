@@ -27,6 +27,7 @@ class MixingTraceCalculator:
         snapshot: AlgorithmSnapshot,
         plan: AlgorithmCutlinePlan,
     ) -> AlgorithmMixingTraceBatchResult:
+        """根据当前快照和业务规则执行【calculate_for_plan】计算，返回类型标注所声明的结果。"""
         if not self._is_executable_plan(plan):
             return AlgorithmMixingTraceBatchResult()
 
@@ -71,6 +72,7 @@ class MixingTraceCalculator:
         snapshot: AlgorithmSnapshot,
         decision: AlgorithmCutlineDecisionResult,
     ) -> AlgorithmMixingTraceBatchResult:
+        """根据当前快照和业务规则执行【calculate_for_decision】计算，返回类型标注所声明的结果。"""
         if decision.plan is None:
             return AlgorithmMixingTraceBatchResult()
         return self.calculate_for_plan(snapshot=snapshot, plan=decision.plan)
@@ -81,6 +83,7 @@ class MixingTraceCalculator:
         snapshot: AlgorithmSnapshot,
         event: AlgorithmActiveCutlineEvent,
     ) -> AlgorithmMixingTraceBatchResult:
+        """根据当前快照和业务规则执行【calculate_for_event】计算，返回类型标注所声明的结果。"""
         try:
             plan_id = self._required_context(event, "plan_id")
             cutline_event_id = self._required_context(event, "event_id")
@@ -105,6 +108,7 @@ class MixingTraceCalculator:
         return AlgorithmMixingTraceBatchResult(records=[record])
 
     def _is_executable_plan(self, plan: AlgorithmCutlinePlan) -> bool:
+        """内部辅助步骤【_is_executable_plan】，为上层业务流程提供数据处理或共用判断。"""
         if plan is None:
             return False
         if getattr(plan, "risk_resolved", True) is not True:
@@ -123,6 +127,7 @@ class MixingTraceCalculator:
         cutline_event_id: str | None = None,
         estimated_cutline_time: datetime | None = None,
     ) -> AlgorithmMixingTraceRecord:
+        """根据当前快照和业务规则执行【_calculate_machine】计算，返回类型标注所声明的结果。"""
         if plan_id is None:
             plan_id = self._required_context(plan, "plan_id")
         machine_code = self._required_context(
@@ -274,6 +279,7 @@ class MixingTraceCalculator:
         )
 
     def _required_context(self, value, field_name: str) -> str:
+        """内部辅助步骤【_required_context】，为上层业务流程提供数据处理或共用判断。"""
         field_value = getattr(value, field_name, None)
         if not isinstance(field_value, str) or not field_value.strip():
             self._raise(
@@ -289,6 +295,7 @@ class MixingTraceCalculator:
         *,
         missing_reason: str,
     ):
+        """内部辅助步骤【_unique_order】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             order for order in snapshot.orders if order.order_code == order_code
         ]
@@ -308,6 +315,7 @@ class MixingTraceCalculator:
         field_name: str,
         order_product_code: str,
     ) -> str:
+        """根据当前快照和业务规则执行【_resolved_product_code】计算，返回类型标注所声明的结果。"""
         if not isinstance(order_product_code, str) or not order_product_code:
             self._raise(
                 "selected_machine_context_incomplete",
@@ -330,6 +338,7 @@ class MixingTraceCalculator:
         machine_code: str,
         process_code: str,
     ) -> str:
+        """内部辅助步骤【_process_name】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             machine
             for machine in snapshot.machine_masters
@@ -349,6 +358,7 @@ class MixingTraceCalculator:
         return machine.process_name
 
     def _runtime(self, snapshot: AlgorithmSnapshot, machine_code: str):
+        """内部辅助步骤【_runtime】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             runtime
             for runtime in snapshot.machine_runtimes
@@ -367,6 +377,7 @@ class MixingTraceCalculator:
         return matches[0]
 
     def _actual_capacity(self, runtime) -> float:
+        """内部辅助步骤【_actual_capacity】，为上层业务流程提供数据处理或共用判断。"""
         quantities = (
             runtime.input_quantity_30m,
             runtime.output_quantity_30m,
@@ -391,6 +402,7 @@ class MixingTraceCalculator:
         machine_code: str,
         source_product_code: str,
     ) -> float:
+        """内部辅助步骤【_process_duration】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             capacity
             for capacity in snapshot.machine_product_capacities
@@ -416,6 +428,7 @@ class MixingTraceCalculator:
         return proc_seconds
 
     def _plan_generated_time(self, plan: AlgorithmCutlinePlan) -> datetime:
+        """内部辅助步骤【_plan_generated_time】，为上层业务流程提供数据处理或共用判断。"""
         generated_time = getattr(plan, "calculation_time", None)
         if generated_time is None:
             generated_time = getattr(plan, "plan_generated_time", None)
@@ -433,6 +446,7 @@ class MixingTraceCalculator:
         selected_machine,
         error: MixingTraceCalculationError,
     ) -> AlgorithmMixingTraceFailure:
+        """内部辅助步骤【_failure】，为上层业务流程提供数据处理或共用判断。"""
         plan_id = self._string_or_empty(getattr(plan, "plan_id", None))
         machine_code = self._string_or_empty(
             getattr(selected_machine, "machine_code", None)
@@ -457,6 +471,7 @@ class MixingTraceCalculator:
         event: AlgorithmActiveCutlineEvent,
         error: MixingTraceCalculationError,
     ) -> AlgorithmMixingTraceFailure:
+        """内部辅助步骤【_event_failure】，为上层业务流程提供数据处理或共用判断。"""
         return AlgorithmMixingTraceFailure(
             plan_id=self._string_or_empty(getattr(event, "plan_id", None)),
             cutline_event_id=self._string_or_empty(
@@ -476,6 +491,7 @@ class MixingTraceCalculator:
         )
 
     def _is_finite_non_negative(self, value) -> bool:
+        """内部辅助步骤【_is_finite_non_negative】，为上层业务流程提供数据处理或共用判断。"""
         return (
             isinstance(value, (int, float))
             and not isinstance(value, bool)
@@ -484,7 +500,9 @@ class MixingTraceCalculator:
         )
 
     def _string_or_empty(self, value) -> str:
+        """内部辅助步骤【_string_or_empty】，为上层业务流程提供数据处理或共用判断。"""
         return value if isinstance(value, str) else ""
 
     def _raise(self, reason: str, message: str):
+        """内部辅助步骤【_raise】，为上层业务流程提供数据处理或共用判断。"""
         raise MixingTraceCalculationError(reason, message)

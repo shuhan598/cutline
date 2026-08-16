@@ -23,6 +23,7 @@ class ResponseModel(BaseModel):
 
 
 class StockoutWarningResponse(ResponseModel):
+    """类 【StockoutWarningResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     warning_id: str = Field(..., min_length=1)
     warning_type: Literal["stockout"] = "stockout"
     warning_time: datetime
@@ -42,6 +43,7 @@ class StockoutWarningResponse(ResponseModel):
 
 
 class OverflowWarningResponse(ResponseModel):
+    """类 【OverflowWarningResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     warning_id: str = Field(..., min_length=1)
     warning_type: Literal["overflow"] = "overflow"
     warning_time: datetime
@@ -56,6 +58,7 @@ class OverflowWarningResponse(ResponseModel):
 
 
 class SelectedMachineResponse(ResponseModel):
+    """类 【SelectedMachineResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str
     source_order_code: str
     target_order_code: str
@@ -69,14 +72,17 @@ class SelectedMachineResponse(ResponseModel):
 
 
 class StockoutSelectedMachineResponse(SelectedMachineResponse):
+    """类 【StockoutSelectedMachineResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     contribution_capacity: float = Field(..., ge=0)
 
 
 class OverflowSelectedMachineResponse(SelectedMachineResponse):
+    """类 【OverflowSelectedMachineResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     reduced_capacity: float = Field(..., ge=0)
 
 
 class StockoutCutlinePlanResponse(ResponseModel):
+    """类 【StockoutCutlinePlanResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     plan_id: str
     warning_type: Literal["stockout"] = "stockout"
     calculation_time: datetime
@@ -96,6 +102,7 @@ class StockoutCutlinePlanResponse(ResponseModel):
 
 
 class OverflowCutlinePlanResponse(ResponseModel):
+    """类 【OverflowCutlinePlanResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     plan_id: str
     warning_type: Literal["overflow"] = "overflow"
     calculation_time: datetime
@@ -122,15 +129,18 @@ CutlinePlanResponse = Annotated[
 
 
 class AutomaticCutlineDecisionResponse(ResponseModel):
+    """类 【AutomaticCutlineDecisionResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     warning_id: str = Field(..., min_length=1)
     plan: CutlinePlanResponse
 
 
 class ManualInterventionResponse(ResponseModel):
+    """类 【ManualInterventionResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     reason: str = Field(..., min_length=1)
 
 
 class ManualCutlineDecisionResponse(ResponseModel):
+    """类 【ManualCutlineDecisionResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     warning_id: str = Field(..., min_length=1)
     manual_intervention: ManualInterventionResponse
 
@@ -141,6 +151,7 @@ CutlineDecisionResponse = (
 
 
 class ReturnRecommendationResponse(ResponseModel):
+    """类 【ReturnRecommendationResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     event_id: str = Field(..., min_length=1)
     machine_code: str
     source_order_code: str
@@ -149,6 +160,7 @@ class ReturnRecommendationResponse(ResponseModel):
 
 
 class SilkScreenClearanceResponse(ResponseModel):
+    """类 【SilkScreenClearanceResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     workshop_code: str
     current_order_code: str
     machine_codes: list[str]
@@ -166,6 +178,7 @@ class SilkScreenClearanceResponse(ResponseModel):
 
 
 class ActiveCutlineEventResponse(ResponseModel):
+    """类 【ActiveCutlineEventResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     event_id: str = Field(..., min_length=1)
     machine_code: str
     source_order_code: str
@@ -181,11 +194,13 @@ class ActiveCutlineEventResponse(ResponseModel):
 
 
 class ActiveCutlineEventUpdateResponse(ResponseModel):
+    """类 【ActiveCutlineEventUpdateResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     event_id: str = Field(..., min_length=1)
     negative_start_time: datetime | None
 
 
 class MixingCompositionResponse(ResponseModel):
+    """类 【MixingCompositionResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     order_code: str
     product_code: str
     sequence: int = Field(..., ge=1)
@@ -193,6 +208,7 @@ class MixingCompositionResponse(ResponseModel):
 
 
 class MixingTraceRecordResponse(ResponseModel):
+    """类 【MixingTraceRecordResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     mix_trace_id: str
     plan_id: str
     cutline_event_id: str
@@ -214,6 +230,7 @@ class MixingTraceRecordResponse(ResponseModel):
 
 
 class PipelineErrorResponse(ResponseModel):
+    """类 【PipelineErrorResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     stage: str
     warning_type: str | None = None
     warning_key: str | None = None
@@ -222,6 +239,7 @@ class PipelineErrorResponse(ResponseModel):
 
 
 class MixingTraceErrorResponse(ResponseModel):
+    """类 【MixingTraceErrorResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     stage: Literal["mixing_trace"] = "mixing_trace"
     machine_code: str
     reason: str
@@ -263,6 +281,7 @@ class CutlineAlgorithmResponse(ResponseModel):
 
     @model_validator(mode="after")
     def validate_closed_events_match_recommendations(self):
+        """校验【validate_closed_events_match_recommendations】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         recommendation_ids = [
             item.event_id for item in self.return_recommendations
         ]
@@ -280,6 +299,7 @@ class CutlineAlgorithmResponse(ResponseModel):
 
 
 class ActiveCutlineEventPersistenceResponse(ResponseModel):
+    """类 【ActiveCutlineEventPersistenceResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     event_id: str = Field(..., min_length=1)
     plan_id: str | None = Field(default=None, min_length=1)
     warning_id: str | None = Field(default=None, min_length=1)
@@ -314,12 +334,14 @@ class ActiveCutlineEventPersistenceResponse(ResponseModel):
     @field_validator("plan_id", "warning_id")
     @classmethod
     def validate_optional_identifier(cls, value: str | None) -> str | None:
+        """校验【validate_optional_identifier】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if value is not None and not value.strip():
             raise ValueError("optional identifier must not be blank")
         return value
 
 
 class PersistenceStateResponse(ResponseModel):
+    """类 【PersistenceStateResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     pending_cutline_plans: list[PendingCutlinePlan] = Field(
         default_factory=list
     )
@@ -339,6 +361,7 @@ class PersistenceStateResponse(ResponseModel):
     )
     @classmethod
     def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        """校验【validate_persisted_event_ids】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if any(not event_id.strip() for event_id in value):
             raise ValueError("persisted event ids must not be blank")
         if len(value) != len(set(value)):
@@ -347,6 +370,7 @@ class PersistenceStateResponse(ResponseModel):
 
 
 class CutlineEvaluateResponse(CutlineAlgorithmResponse):
+    """类 【CutlineEvaluateResponse】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     persistence_state: PersistenceStateResponse = Field(
         default_factory=PersistenceStateResponse
     )

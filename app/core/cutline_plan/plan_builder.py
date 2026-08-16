@@ -24,6 +24,7 @@ class CutlinePlanBuilder:
         warning: AlgorithmStockoutWarningResult,
         selection_result: AlgorithmStockoutSelectionResult,
     ) -> AlgorithmCutlineDecisionResult:
+        """根据当前快照和业务规则执行【build_stockout_decision】计算，返回类型标注所声明的结果。"""
         if selection_result.risk_resolved:
             return AlgorithmCutlineDecisionResult(
                 plan=AlgorithmStockoutCutlinePlan(
@@ -89,6 +90,7 @@ class CutlinePlanBuilder:
         warning: AlgorithmOverflowWarningResult,
         selection_result: AlgorithmOverflowSelectionResult,
     ) -> AlgorithmCutlineDecisionResult:
+        """根据当前快照和业务规则执行【build_overflow_decision】计算，返回类型标注所声明的结果。"""
         if selection_result.risk_resolved:
             return AlgorithmCutlineDecisionResult(
                 plan=AlgorithmOverflowCutlinePlan(
@@ -165,6 +167,7 @@ class CutlinePlanBuilder:
         remaining_risk_value: float,
         selection_result,
     ) -> AlgorithmManualInterventionResult:
+        """内部辅助步骤【_algorithm_manual_intervention】，为上层业务流程提供数据处理或共用判断。"""
         passed = [
             item.model_copy(deep=True)
             for item in selection_result.selected_machines
@@ -206,6 +209,7 @@ class CutlinePlanBuilder:
         buffer_code: str,
         order_code: str,
     ) -> str:
+        """内部辅助步骤【_algorithm_plan_id】，为上层业务流程提供数据处理或共用判断。"""
         return (
             f"{warning_type}:{snapshot.current_time.isoformat()}:"
             f"{buffer_code}:{order_code}"

@@ -14,10 +14,12 @@ from app.schemas.request_schema import (
 
 
 class _BackendRequestModel(BaseModel):
+    """类 【_BackendRequestModel】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     model_config = ConfigDict(extra="forbid")
 
 
 class BackendSnapshotMeta(_BackendRequestModel):
+    """类 【BackendSnapshotMeta】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     run_id: str
     trigger_type: str
     workshop_id: str
@@ -29,6 +31,7 @@ class BackendSnapshotMeta(_BackendRequestModel):
 
 
 class BackendMachineRealtime(_BackendRequestModel):
+    """类 【BackendMachineRealtime】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str = Field(
         ...,
         description="机台实时状态使用的 P166 集团编码，对应静态机台 p166_jt_group",
@@ -40,6 +43,7 @@ class BackendMachineRealtime(_BackendRequestModel):
 
 
 class BackendMachineMaster(_BackendRequestModel):
+    """类 【BackendMachineMaster】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str = Field(
         ...,
         description="静态机台标准编码，对应 AGV equipmentid，并作为算法内部机台编码",
@@ -54,6 +58,7 @@ class BackendMachineMaster(_BackendRequestModel):
 
 
 class BackendMachineProcessTime(_BackendRequestModel):
+    """类 【BackendMachineProcessTime】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str
     machine_name: str
     product_code: str
@@ -63,11 +68,13 @@ class BackendMachineProcessTime(_BackendRequestModel):
 
 
 class BackendWorkshop(_BackendRequestModel):
+    """类 【BackendWorkshop】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     workshop_code: str
     workshop_name: str | None
 
 
 class BackendLine(_BackendRequestModel):
+    """类 【BackendLine】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     line_code: str
     line_name: str
     wafer_spec: str
@@ -76,6 +83,7 @@ class BackendLine(_BackendRequestModel):
 
 
 class BackendMachineLine(_BackendRequestModel):
+    """类 【BackendMachineLine】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str
     machine_name: str
     line_code: str
@@ -84,6 +92,7 @@ class BackendMachineLine(_BackendRequestModel):
 
 
 class BackendOrder(_BackendRequestModel):
+    """类 【BackendOrder】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     order_code: str
     order_status: str
     total_quantity: float = Field(ge=0)
@@ -98,6 +107,7 @@ class BackendOrder(_BackendRequestModel):
 
 
 class BackendProduct(_BackendRequestModel):
+    """类 【BackendProduct】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     product_code: str
     product_name: str
     wafer_size: str
@@ -107,6 +117,7 @@ class BackendProduct(_BackendRequestModel):
 
 
 class BackendProcessRoute(_BackendRequestModel):
+    """类 【BackendProcessRoute】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     process_code: str
     process_name: str
     sequence: int
@@ -128,6 +139,7 @@ class BackendProcessRoute(_BackendRequestModel):
 
 
 class BackendBufferRealtime(_BackendRequestModel):
+    """类 【BackendBufferRealtime】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     main_id: str | None
     buffer_code: str
     bound_source_name: str = Field(
@@ -139,6 +151,7 @@ class BackendBufferRealtime(_BackendRequestModel):
 
 
 class BackendBufferMaster(_BackendRequestModel):
+    """类 【BackendBufferMaster】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     buffer_code: str
     buffer_name: str
     buffer_type: str
@@ -152,6 +165,7 @@ class BackendBufferMaster(_BackendRequestModel):
 
 
 class BackendAgvRelation(_BackendRequestModel):
+    """类 【BackendAgvRelation】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     equipmentid: str = Field(
         ...,
         description="AGV 记录中的机台编号，对应静态机台 machine_code",
@@ -167,6 +181,7 @@ class BackendAgvRelation(_BackendRequestModel):
 
 
 class BackendAlgorithmRequest(_BackendRequestModel):
+    """类 【BackendAlgorithmRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     snapshot_meta: BackendSnapshotMeta
     machine_realtime: list[BackendMachineRealtime]
     machine_master: list[BackendMachineMaster]
@@ -194,6 +209,7 @@ class BackendAlgorithmRequest(_BackendRequestModel):
     )
     @classmethod
     def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        """校验【validate_persisted_event_ids】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if any(not event_id.strip() for event_id in value):
             raise ValueError("persisted event ids must not be blank")
         if len(value) != len(set(value)):
@@ -202,6 +218,7 @@ class BackendAlgorithmRequest(_BackendRequestModel):
 
     @model_validator(mode="after")
     def validate_confirmed_pending_events(self) -> BackendAlgorithmRequest:
+        """校验【validate_confirmed_pending_events】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         validate_confirmed_pending_active_coverage(
             self.pending_cutline_plans,
             self.active_cutline_events,

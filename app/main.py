@@ -7,6 +7,7 @@ from app.api.health_api import router as health_router
 
 
 def create_app() -> FastAPI:
+    """根据当前快照和业务规则执行【create_app】计算，返回类型标注所声明的结果。"""
     app = FastAPI(title="Cutline Algorithm Service")
     app.include_router(health_router)
     app.include_router(cutline_router)

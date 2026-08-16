@@ -18,6 +18,7 @@ class CutlineService:
         adapter: Optional[SnapshotAdapter] = None,
         mapper: Optional[AlgorithmResponseMapper] = None,
     ):
+        """初始化【__init__】对象的状态、索引和依赖。"""
         self._pipeline = pipeline if pipeline is not None else CutlinePipeline()
         self._adapter = adapter if adapter is not None else SnapshotAdapter()
         self._mapper = mapper if mapper is not None else AlgorithmResponseMapper()
@@ -26,6 +27,7 @@ class CutlineService:
         self,
         request: CutlineAlgorithmRequest,
     ) -> CutlineEvaluateResponse:
+        """根据当前快照和业务规则执行【evaluate_algorithm】计算，返回类型标注所声明的结果。"""
         snapshot = self._adapter.to_algorithm_snapshot(request)
         result = self._pipeline.evaluate_algorithm(snapshot)
         return self._mapper.to_evaluate_response(result)

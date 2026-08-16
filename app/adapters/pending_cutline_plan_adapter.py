@@ -51,6 +51,7 @@ class PendingCutlinePlanAdapter:
         workshop_codes: set[str],
         workshop_resolver: MachineWorkshopResolver,
     ) -> list[PendingCutlinePlan]:
+        """在後端输入与算法内部模型之间执行【convert】转换，并保留必要的校验信息。"""
         source = list(plans)
         self._validate_unique_plans(source, snapshot_time=snapshot_time)
         return [
@@ -75,6 +76,7 @@ class PendingCutlinePlanAdapter:
         *,
         snapshot_time: datetime,
     ) -> None:
+        """校验【_validate_unique_plans】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         by_id: dict[str, list[PendingCutlinePlan]] = {}
         by_business_key: dict[
             tuple[str, str, str, str, str, str],
@@ -129,6 +131,7 @@ class PendingCutlinePlanAdapter:
         workshop_codes: set[str],
         workshop_resolver: MachineWorkshopResolver,
     ) -> PendingCutlinePlan:
+        """在後端输入与算法内部模型之间执行【_convert_plan】转换，并保留必要的校验信息。"""
         created_at = normalize_local_time(plan.created_at)
         expire_at = normalize_local_time(plan.expire_at)
         warning_time = normalize_local_time(plan.warning_time)
@@ -280,6 +283,7 @@ class PendingCutlinePlanAdapter:
         product_by_code: dict[str, AlgorithmProduct],
         workshop_resolver: MachineWorkshopResolver,
     ) -> BaselineMachineBinding:
+        """校验【_validate_baseline】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         machine = self._require_machine(
             plan.plan_id, baseline.machine_code, machine_by_code
         )
@@ -386,6 +390,7 @@ class PendingCutlinePlanAdapter:
         relation_by_buffer: dict[str, AlgorithmBufferProcessRelation],
         workshop_resolver: MachineWorkshopResolver,
     ) -> PendingCandidateMachine:
+        """校验【_validate_candidate】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         baseline = baseline_by_machine.get(candidate.machine_code)
         if baseline is None:
             raise PendingCutlinePlanConversionError(
@@ -634,6 +639,7 @@ class PendingCutlinePlanAdapter:
         plan: PendingCutlinePlan,
         candidates: list[PendingCandidateMachine],
     ) -> None:
+        """校验【_validate_candidate_summaries】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         summaries = (
             (
                 "source_order_code",
@@ -671,6 +677,7 @@ class PendingCutlinePlanAdapter:
         machine_code: str,
         machine_by_code: dict[str, AlgorithmMachineMaster],
     ) -> AlgorithmMachineMaster:
+        """内部辅助步骤【_require_machine】，为上层流程提供数据处理或共用判断。"""
         machine = machine_by_code.get(machine_code)
         if machine is None:
             raise PendingCutlinePlanConversionError(
@@ -685,6 +692,7 @@ class PendingCutlinePlanAdapter:
         machine: AlgorithmMachineMaster,
         resolver: MachineWorkshopResolver,
     ) -> str:
+        """内部辅助步骤【_resolve_machine_workshop】，为上层流程提供数据处理或共用判断。"""
         try:
             return resolver.resolve_machine_workshop(machine)
         except MachineWorkshopResolutionError as exc:
@@ -702,6 +710,7 @@ class PendingCutlinePlanAdapter:
         order_by_code: dict[str, AlgorithmOrder],
         product_by_code: dict[str, AlgorithmProduct],
     ) -> tuple[AlgorithmOrder, AlgorithmProduct]:
+        """内部辅助步骤【_require_order_product】，为上层流程提供数据处理或共用判断。"""
         location = f"plan_id={plan_id}"
         if machine_code is not None:
             location += f", machine_code={machine_code}"
@@ -734,6 +743,7 @@ class PendingCutlinePlanAdapter:
         buffer_by_code: dict[str, AlgorithmBufferMaster],
         relation_by_buffer: dict[str, AlgorithmBufferProcessRelation],
     ) -> AlgorithmBufferProcessRelation:
+        """内部辅助步骤【_require_buffer_relation】，为上层流程提供数据处理或共用判断。"""
         location = f"plan_id={plan_id}"
         if machine_code is not None:
             location += f", machine_code={machine_code}"
@@ -759,6 +769,7 @@ class PendingCutlinePlanAdapter:
         upstream_process_code: str,
         downstream_process_code: str,
     ) -> None:
+        """内部辅助步骤【_require_interval】，为上层流程提供数据处理或共用判断。"""
         expected = (
             relation.workshop_code,
             relation.upstream_process_code,
@@ -786,6 +797,7 @@ class PendingCutlinePlanAdapter:
         actual: str,
         expected: str,
     ) -> None:
+        """内部辅助步骤【_require_equal】，为上层流程提供数据处理或共用判断。"""
         if actual != expected:
             raise PendingCutlinePlanConversionError(
                 f"plan_id={plan_id}, machine_code={machine_code}: "

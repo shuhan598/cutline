@@ -24,6 +24,7 @@ class OverflowTimeCalculator:
         snapshot: AlgorithmSnapshot,
         net_rate_results: list[AlgorithmIntervalNetRateResult],
     ) -> list[AlgorithmBufferOverflowTimeResult]:
+        """根据当前快照和业务规则执行【calculate_algorithm】计算，返回类型标注所声明的结果。"""
         if snapshot.main_buffer_batch.groups_by_group_key:
             return self._calculate_from_batch(snapshot, net_rate_results)
 
@@ -130,6 +131,7 @@ class OverflowTimeCalculator:
         snapshot: AlgorithmSnapshot,
         net_rate_results: list[AlgorithmIntervalNetRateResult],
     ) -> list[AlgorithmBufferOverflowTimeResult]:
+        """根据当前快照和业务规则执行【_calculate_from_batch】计算，返回类型标注所声明的结果。"""
         rates_by_key = {}
         for rate in net_rate_results:
             if rate.group_key is None:
@@ -185,6 +187,7 @@ class OverflowTimeCalculator:
         return results
 
     def _calculate_physical_main(self, physical, groups, rates):
+        """根据当前快照和业务规则执行【_calculate_physical_main】计算，返回类型标注所声明的结果。"""
         details = [
             AlgorithmOrderGrowthDetail(
                 order_code=rate.order_code,
@@ -246,6 +249,7 @@ class OverflowTimeCalculator:
         group: MainBufferGroup,
         net_rate: AlgorithmIntervalNetRateResult,
     ) -> AlgorithmBufferOverflowTimeResult:
+        """根据当前快照和业务规则执行【_calculate_batch_group】计算，返回类型标注所声明的结果。"""
         if group.total_capacity is None:
             raise PredictionTimeCalculationError(
                 f"{group.main_id} overflow-eligible group has no capacity"
@@ -309,6 +313,7 @@ class OverflowTimeCalculator:
         relation: AlgorithmBufferProcessRelation,
         net_rates: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmBufferOverflowTimeResult:
+        """根据当前快照和业务规则执行【_calculate_algorithm_buffer】计算，返回类型标注所声明的结果。"""
         order_growth_details = [
             AlgorithmOrderGrowthDetail(
                 order_code=net_rate.order_code,

@@ -32,6 +32,7 @@ class CandidateContext:
     """新版候选筛选共用的唯一索引和引用解析上下文。"""
 
     def __init__(self, snapshot: AlgorithmSnapshot):
+        """内部辅助步骤【__init__】，为上层业务流程提供数据处理或共用判断。"""
         self.main_buffer_batch = snapshot.main_buffer_batch
         self.runtime_by_machine_code = self._unique_index(
             snapshot.machine_runtimes,
@@ -80,6 +81,7 @@ class CandidateContext:
         field_name: str,
         label: str,
     ) -> dict[str, ModelT]:
+        """内部辅助步骤【_unique_index】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, ModelT] = {}
         for item in items:
             key = getattr(item, field_name)
@@ -95,6 +97,7 @@ class CandidateContext:
         items: Iterable[ModelT],
         field_name: str,
     ) -> dict[str, ModelT]:
+        """内部辅助步骤【_unambiguous_index】，为上层业务流程提供数据处理或共用判断。"""
         grouped: dict[str, list[ModelT]] = {}
         for item in items:
             grouped.setdefault(getattr(item, field_name), []).append(item)
@@ -105,6 +108,7 @@ class CandidateContext:
         }
 
     def _validate_references(self) -> None:
+        """校验【_validate_references】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for runtime in self.runtime_by_machine_code.values():
             if runtime.machine_code not in self.machine_by_code:
                 raise CandidateMachineCalculationError(
@@ -141,6 +145,7 @@ class CandidateContext:
         self,
         machine_code: str,
     ) -> tuple[AlgorithmMachineRuntime, AlgorithmMachineMaster]:
+        """执行【machine_context】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         runtime = self.runtime_by_machine_code[machine_code]
         machine = self.machine_by_code[machine_code]
         return runtime, machine
@@ -149,6 +154,7 @@ class CandidateContext:
         self,
         order_code: str,
     ) -> tuple[AlgorithmOrder, AlgorithmProduct]:
+        """执行【order_product】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         order = self.order_by_code.get(order_code)
         if order is None:
             raise CandidateMachineCalculationError(
@@ -158,6 +164,7 @@ class CandidateContext:
         return order, product
 
     def machine_workshop_code(self, machine_code: str) -> str:
+        """执行【machine_workshop_code】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         machine = self.machine_by_code[machine_code]
         try:
             return self.workshop_resolver.resolve_machine_workshop(machine)
@@ -165,6 +172,7 @@ class CandidateContext:
             raise CandidateMachineCalculationError(str(exc)) from exc
 
     def candidate_agv(self, machine_code: str) -> AlgorithmAgvRelation:
+        """执行【candidate_agv】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         relation = self.agv_by_machine_code.get(machine_code)
         if relation is None:
             raise CandidateMachineCalculationError(
@@ -173,6 +181,7 @@ class CandidateContext:
         return relation
 
     def validate_warning_relation(self, warning) -> AlgorithmBufferProcessRelation:
+        """校验【validate_warning_relation】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         relation = self.buffer_relation_by_code.get(warning.buffer_code)
         if relation is None:
             raise CandidateMachineCalculationError(
@@ -196,6 +205,7 @@ class CandidateContext:
         return relation
 
     def warning_group(self, warning) -> MainBufferGroup | None:
+        """执行【warning_group】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         if not self.main_buffer_batch.groups_by_group_key:
             return None
         group_key = getattr(warning, "group_key", None)
@@ -219,6 +229,7 @@ class CandidateContext:
         physical_buffer_key: PhysicalBufferKey,
         order_code: str,
     ) -> MainBufferGroup | None:
+        """执行【unique_group_for_order】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         matches = [
             self.main_buffer_batch.groups_by_group_key[group_key]
             for group_key in self.main_buffer_batch.group_keys_by_physical_buffer_key.get(

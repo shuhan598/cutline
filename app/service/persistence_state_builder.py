@@ -39,6 +39,7 @@ class PersistenceStateBuilder:
         new_mixing_trace_records: list[AlgorithmMixingTraceRecord],
         successful_mixed_event_ids: list[str],
     ) -> AlgorithmPersistenceState:
+        """根据当前快照和业务规则执行【build】计算，返回类型标注所声明的结果。"""
         plans_by_id = self._unique_plans(
             incoming_pending_plans,
             source="incoming_pending_plans",
@@ -173,6 +174,7 @@ class PersistenceStateBuilder:
         *,
         source: str,
     ) -> dict[str, PendingCutlinePlan]:
+        """内部辅助步骤【_unique_plans】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, PendingCutlinePlan] = {}
         for plan in plans:
             existing = result.get(plan.plan_id)
@@ -187,6 +189,7 @@ class PersistenceStateBuilder:
         self,
         evaluations: Iterable[PendingCutlinePlanEvaluation],
     ) -> dict[str, PendingCutlinePlanEvaluation]:
+        """内部辅助步骤【_unique_evaluations】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, PendingCutlinePlanEvaluation] = {}
         for evaluation in evaluations:
             existing = result.get(evaluation.plan_id)
@@ -201,6 +204,7 @@ class PersistenceStateBuilder:
         self,
         events: Iterable[AlgorithmActiveCutlineEvent],
     ) -> list[AlgorithmActiveCutlineEvent]:
+        """内部辅助步骤【_unique_active_events】，为上层业务流程提供数据处理或共用判断。"""
         by_id: dict[str, AlgorithmActiveCutlineEvent] = {}
         for event in events:
             existing = by_id.get(event.event_id)
@@ -213,4 +217,5 @@ class PersistenceStateBuilder:
 
     @staticmethod
     def _sorted_unique(values: Iterable[str]) -> list[str]:
+        """内部辅助步骤【_sorted_unique】，为上层业务流程提供数据处理或共用判断。"""
         return sorted(set(values))

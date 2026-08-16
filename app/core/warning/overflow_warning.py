@@ -17,6 +17,7 @@ class OverflowWarningEvaluator:
         snapshot: AlgorithmSnapshot,
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> list[AlgorithmOverflowWarningResult]:
+        """函数 ``evaluate_algorithm`` 执行当前业务步骤。参数、返回值和异常语义以类型标注及调用方契约为准。"""
         overflow_warning_lead_minutes = safe_float(
             snapshot.config.overflow_warning_lead_minutes
         )
@@ -83,6 +84,7 @@ class OverflowWarningEvaluator:
         self,
         overflow: AlgorithmBufferOverflowTimeResult,
     ) -> None:
+        """函数 ``_validate_algorithm_overflow`` 执行当前业务步骤。参数、返回值和异常语义以类型标注及调用方契约为准。"""
         context = (
             f"workshop={getattr(overflow, 'workshop_code', None)}, "
             f"main_id={overflow.main_id}, "

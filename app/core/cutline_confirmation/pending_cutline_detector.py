@@ -39,6 +39,7 @@ class PendingCutlineDetectionError(ValueError):
 
 @dataclass(frozen=True)
 class _Claim:
+    """类 【_Claim】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     transition: ConfirmedCutlineTransition
     binding_time: datetime
 
@@ -51,6 +52,7 @@ class PendingCutlineDetector:
         snapshot: AlgorithmSnapshot,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> PendingCutlineDetectionBatchResult:
+        """执行【detect】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         try:
             context = CandidateContext(snapshot)
         except CandidateMachineCalculationError as exc:
@@ -159,6 +161,7 @@ class PendingCutlineDetector:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> dict[str, list[AlgorithmAgvRelation]]:
+        """内部辅助步骤【_history_by_machine】，为上层业务流程提供数据处理或共用判断。"""
         grouped: dict[str, list[AlgorithmAgvRelation]] = defaultdict(list)
         for relation in snapshot.agv_binding_history:
             grouped[relation.machine_code].append(relation)
@@ -183,6 +186,7 @@ class PendingCutlineDetector:
         history: list[AlgorithmAgvRelation],
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> _Claim | None:
+        """内部辅助步骤【_first_claim】，为上层业务流程提供数据处理或共用判断。"""
         created_at = normalize_local_time(plan.created_at)
         expire_at = normalize_local_time(plan.expire_at)
         snapshot_time = normalize_local_time(snapshot.current_time)
@@ -221,6 +225,7 @@ class PendingCutlineDetector:
         baseline: BaselineMachineBinding,
         relation: AlgorithmAgvRelation,
     ) -> None:
+        """校验【_validate_previous_product】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         previous_code = relation.previous_product_code
         if previous_code is None or not previous_code.strip():
             return
@@ -249,6 +254,7 @@ class PendingCutlineDetector:
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> ConfirmedCutlineTransition | None:
         # 先固定机台和 warning Buffer 的业务范围，再判断推荐或非推荐路径。
+        """根据当前快照和业务规则执行【_build_transition】计算，返回类型标注所声明的结果。"""
         self._validate_machine_scope(context, plan, baseline)
         self._validate_persisted_buffer_code(
             context=context,
@@ -295,6 +301,7 @@ class PendingCutlineDetector:
         plan: PendingCutlinePlan,
         baseline: BaselineMachineBinding,
     ) -> None:
+        """校验【_validate_machine_scope】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         machine = context.machine_by_code.get(baseline.machine_code)
         if machine is None:
             raise PendingCutlineDetectionError(
@@ -334,6 +341,7 @@ class PendingCutlineDetector:
         candidate: PendingCandidateMachine,
         relation: AlgorithmAgvRelation,
     ) -> ConfirmedCutlineTransition | None:
+        """内部辅助步骤【_recommended_transition】，为上层业务流程提供数据处理或共用判断。"""
         if (
             plan.warning_type == "overflow"
             and baseline.machine_code not in plan.before_machine_codes
@@ -387,6 +395,7 @@ class PendingCutlineDetector:
         expected_order_code: str,
         role: str,
     ) -> None:
+        """校验【_validate_persisted_buffer_code】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         batch = context.main_buffer_batch
         if not batch.groups_by_group_key:
             return
@@ -415,6 +424,7 @@ class PendingCutlineDetector:
         plan: PendingCutlinePlan,
         candidate: PendingCandidateMachine,
     ) -> None:
+        """校验【_validate_overflow_candidate_main】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         if plan.warning_type != "overflow":
             return
         batch = context.main_buffer_batch
@@ -445,6 +455,7 @@ class PendingCutlineDetector:
         relation: AlgorithmAgvRelation,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> ConfirmedCutlineTransition | None:
+        """内部辅助步骤【_nonrecommended_stockout_transition】，为上层业务流程提供数据处理或共用判断。"""
         if (
             baseline.order_code == plan.monitored_order_code
             or relation.order_code != plan.monitored_order_code
@@ -486,6 +497,7 @@ class PendingCutlineDetector:
         relation: AlgorithmAgvRelation,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> ConfirmedCutlineTransition | None:
+        """内部辅助步骤【_nonrecommended_overflow_transition】，为上层业务流程提供数据处理或共用判断。"""
         if (
             baseline.machine_code not in plan.before_machine_codes
             or relation.order_code == baseline.order_code
@@ -539,6 +551,7 @@ class PendingCutlineDetector:
         machine_code: str,
         order_code: str,
     ) -> tuple[AlgorithmOrder, AlgorithmProduct]:
+        """内部辅助步骤【_order_product】，为上层业务流程提供数据处理或共用判断。"""
         try:
             return context.order_product(order_code)
         except CandidateMachineCalculationError as exc:
@@ -556,6 +569,7 @@ class PendingCutlineDetector:
         *,
         required_main_id: str | None = None,
     ) -> str | None:
+        """根据当前快照和业务规则执行【_resolve_source_buffer】计算，返回类型标注所声明的结果。"""
         matches = [
             item
             for item in interval_results
@@ -604,6 +618,7 @@ class PendingCutlineDetector:
         context: CandidateContext,
         plan: PendingCutlinePlan,
     ) -> str | None:
+        """内部辅助步骤【_warning_main_id】，为上层业务流程提供数据处理或共用判断。"""
         warning_key = context.main_buffer_batch.group_key_by_buffer_code.get(
             plan.buffer_code
         )
@@ -617,6 +632,7 @@ class PendingCutlineDetector:
         target_wafer_size: str,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmIntervalNetRateResult:
+        """根据当前快照和业务规则执行【_resolve_overflow_target】计算，返回类型标注所声明的结果。"""
         source_main_id = None
         batch = context.main_buffer_batch
         source_key = batch.group_key_by_buffer_code.get(plan.buffer_code)
@@ -686,6 +702,7 @@ class PendingCutlineDetector:
         target_wafer_spec: str,
         is_recommended_candidate: bool,
     ) -> ConfirmedCutlineTransition:
+        """内部辅助步骤【_transition】，为上层业务流程提供数据处理或共用判断。"""
         return ConfirmedCutlineTransition(
             plan_id=plan.plan_id,
             warning_id=plan.warning_id,
@@ -712,6 +729,7 @@ class PendingCutlineDetector:
         snapshot: AlgorithmSnapshot,
         plan: PendingCutlinePlan,
     ) -> set[str]:
+        """内部辅助步骤【_owned_active_codes】，为上层业务流程提供数据处理或共用判断。"""
         baseline_by_code = {
             baseline.machine_code: baseline
             for baseline in plan.baseline_machine_bindings
@@ -762,6 +780,7 @@ class PendingCutlineDetector:
         event: AlgorithmActiveCutlineEvent,
         stable_event_id: bool,
     ) -> None:
+        """校验【_validate_owned_active_event】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         prefix = (
             f"plan_id={plan.plan_id}, warning_id={plan.warning_id}, "
             f"event_id={event.event_id}, machine_code={event.machine_code}: "
@@ -852,6 +871,7 @@ class PendingCutlineDetector:
         snapshot: AlgorithmSnapshot,
         claim: _Claim,
     ) -> bool:
+        """内部辅助步骤【_is_claimed_by_active_event】，为上层业务流程提供数据处理或共用判断。"""
         transition = claim.transition
         for event in snapshot.active_cutline_events:
             event_key = (
@@ -881,6 +901,7 @@ class PendingCutlineDetector:
         claims_by_plan: dict[str, list[_Claim]],
         remaining_slots_by_plan: dict[str, int],
     ) -> list[_Claim]:
+        """内部辅助步骤【_arbitrate_claims】，为上层业务流程提供数据处理或共用判断。"""
         raw_claims = self._deduplicate_claims(
             [
                 claim
@@ -943,6 +964,7 @@ class PendingCutlineDetector:
         return [*selected_recommended, *selected_fallback]
 
     def _deduplicate_claims(self, claims: list[_Claim]) -> list[_Claim]:
+        """内部辅助步骤【_deduplicate_claims】，为上层业务流程提供数据处理或共用判断。"""
         by_business_key: dict[
             tuple[str, str, str, str, str, datetime],
             _Claim,
@@ -955,6 +977,7 @@ class PendingCutlineDetector:
         self,
         claims: list[_Claim],
     ) -> None:
+        """内部辅助步骤【_raise_claim_conflict】，为上层业务流程提供数据处理或共用判断。"""
         claims_by_switch: dict[
             tuple[str, str, str, datetime],
             list[_Claim],
@@ -989,6 +1012,7 @@ class PendingCutlineDetector:
         self,
         claim: _Claim,
     ) -> tuple[str, str, str, datetime]:
+        """内部辅助步骤【_claim_switch_key】，为上层业务流程提供数据处理或共用判断。"""
         transition = claim.transition
         return (
             transition.machine_code,
@@ -1001,6 +1025,7 @@ class PendingCutlineDetector:
         self,
         claim: _Claim,
     ) -> tuple[str, str, str, str, str, datetime]:
+        """内部辅助步骤【_claim_business_key】，为上层业务流程提供数据处理或共用判断。"""
         transition = claim.transition
         return (
             transition.plan_id,
@@ -1012,6 +1037,7 @@ class PendingCutlineDetector:
         )
 
     def _claim_sort_key(self, claim: _Claim) -> tuple[datetime, str, str]:
+        """内部辅助步骤【_claim_sort_key】，为上层业务流程提供数据处理或共用判断。"""
         return (
             claim.binding_time,
             claim.transition.machine_code,
@@ -1027,6 +1053,7 @@ class PendingCutlineDetector:
         active_confirmed_codes: set[str],
         new_confirmed_codes: set[str],
     ) -> PendingCutlinePlanEvaluation:
+        """根据当前快照和业务规则执行【_evaluate_plan】计算，返回类型标注所声明的结果。"""
         current_codes = self._current_machine_codes(context, plan)
         if plan.status in {
             PendingCutlinePlanStatus.CONFIRMED,
@@ -1085,6 +1112,7 @@ class PendingCutlineDetector:
         context: CandidateContext,
         plan: PendingCutlinePlan,
     ) -> list[str]:
+        """内部辅助步骤【_current_machine_codes】，为上层业务流程提供数据处理或共用判断。"""
         result: list[str] = []
         baseline_by_machine = {
             item.machine_code: item for item in plan.baseline_machine_bindings

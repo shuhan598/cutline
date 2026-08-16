@@ -42,6 +42,7 @@ class PendingAgvBindingAdapter:
         order_index: CurrentOrderIndex,
         workshop_resolver: MachineWorkshopResolver,
     ) -> list[AlgorithmAgvRelation]:
+        """在不改变原始请求的前提下执行【convert】数据转换，并保留必要的校验信息。"""
         plan_list = [
             plan
             for plan in plans
@@ -169,6 +170,7 @@ class PendingAgvBindingAdapter:
         order_index: CurrentOrderIndex,
         workshop_resolver: MachineWorkshopResolver,
     ) -> None:
+        """校验【_validate_saved_baselines】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for plan in plans:
             created_at = normalize_local_time(plan.created_at)
             records_by_machine: dict[
@@ -247,6 +249,7 @@ class PendingAgvBindingAdapter:
         machine_code: str,
         binding_time: datetime,
     ) -> AlgorithmAgvRelation:
+        """内部辅助步骤【_collapse_same_time_records】，为上层流程提供数据处理或共用判断。"""
         first = records[0][1]
         if any(record != first for _, record in records[1:]):
             plan_ids = sorted(
@@ -289,6 +292,7 @@ class PendingAgvBindingAdapter:
         workshop_resolver: MachineWorkshopResolver,
         context: str,
     ) -> AlgorithmAgvRelation:
+        """在不改变原始请求的前提下执行【convert_binding】数据转换，并保留必要的校验信息。"""
         try:
             machine = machine_index.resolve_agv_code(relation.machine_code)
             if relation.machine_name != machine.machine_name:

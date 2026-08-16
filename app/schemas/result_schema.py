@@ -427,6 +427,7 @@ class AlgorithmSelectedMachineEvaluation(BaseModel):
 
     @model_validator(mode="after")
     def validate_capacity_kind(self):
+        """校验【validate_capacity_kind】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         has_contribution = self.contribution_capacity is not None
         has_reduction = self.reduced_capacity is not None
         if has_contribution == has_reduction:
@@ -461,6 +462,7 @@ class AlgorithmStockoutSelectionResult(BaseModel):
 
     @model_validator(mode="after")
     def validate_selection_state(self):
+        """校验【validate_selection_state】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if any(
             item.contribution_capacity is None
             for item in self.selected_machines
@@ -476,6 +478,7 @@ class AlgorithmStockoutSelectionResult(BaseModel):
         return self
 
     def _validate_failure_reason(self) -> None:
+        """校验【_validate_failure_reason】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if self.risk_resolved and self.failure_reason is not None:
             raise ValueError("resolved selection cannot have a failure reason")
         if not self.risk_resolved and not self.failure_reason:
@@ -508,6 +511,7 @@ class AlgorithmOverflowSelectionResult(BaseModel):
 
     @model_validator(mode="after")
     def validate_selection_state(self):
+        """校验【validate_selection_state】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if any(
             item.reduced_capacity is None
             for item in self.selected_machines
@@ -606,6 +610,7 @@ class AlgorithmCutlineDecisionResult(BaseModel):
 
     @model_validator(mode="after")
     def validate_exactly_one_result(self):
+        """校验【validate_exactly_one_result】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if (self.plan is None) == (self.manual_intervention is None):
             raise ValueError(
                 "exactly one of plan or manual_intervention must be present"
@@ -701,6 +706,7 @@ class AlgorithmPersistenceState(BaseModel):
     )
     @classmethod
     def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        """校验【validate_persisted_event_ids】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if any(not event_id.strip() for event_id in value):
             raise ValueError("persisted event ids must not be blank")
         if len(value) != len(set(value)):

@@ -25,6 +25,7 @@ from app.utils.buffer_binding import (
 
 
 class BufferRealtimeView(Protocol):
+    """类 【BufferRealtimeView】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     main_id: str | None
     buffer_code: str
     bound_source_name: str
@@ -32,17 +33,25 @@ class BufferRealtimeView(Protocol):
 
 
 class BufferMasterView(Protocol):
+    """类 【BufferMasterView】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     @property
-    def buffer_code(self) -> str: ...
+    def buffer_code(self) -> str:
+        """返回物理 Buffer 的唯一编码。"""
+        ...
 
     @property
-    def max_capacity(self) -> float | None: ...
+    def max_capacity(self) -> float | None:
+        """返回该物理 Buffer 的最大容量；缺失时返回 None。"""
+        ...
 
     @property
-    def served_process_codes(self) -> list[str]: ...
+    def served_process_codes(self) -> list[str]:
+        """返回该 Buffer 服务的有序工序编码列表。"""
+        ...
 
 
 class BufferRelationView(Protocol):
+    """类 【BufferRelationView】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     buffer_code: str
     workshop_code: str
     upstream_process_code: str
@@ -50,6 +59,7 @@ class BufferRelationView(Protocol):
 
 
 class OrderView(Protocol):
+    """类 【OrderView】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     order_code: str
     product_code: str
     product_name: str
@@ -65,6 +75,7 @@ _CAPACITY_CAPABILITIES = (
 
 
 def _is_current_order(order: OrderView) -> bool:
+    """内部辅助步骤【_is_current_order】，为上层业务流程提供数据处理或共用判断。"""
     status = getattr(order, "order_status", None)
     if status is None or not str(status).strip():
         return True
@@ -91,11 +102,15 @@ class MainBufferAggregator:
         buffer_relations: Iterable[BufferRelationView],
         orders: Iterable[OrderView],
     ) -> MainBufferAggregationBatch:
-        # main_id 是物理 Buffer 的唯一身份，所有实时层先按 main 聚合。
+        # main_id 是物理 Buffer 的唯一身份，所有有效实时层先按 main 聚合。
+        # 无效绑定必须在聚合前过滤，否则它们可能错误地创建一个 main、参与
+        # 库存/容量求和，甚至制造虚假的订单映射或物理 Buffer 冲突。
+        """执行【aggregate】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         realtime_by_main: dict[str, list[BufferRealtimeView]] = defaultdict(list)
         for realtime in realtime_buffers:
             if should_ignore_bound_source_name(realtime.bound_source_name):
-                # 无效绑定暂不解析，整条记录不进入物理 Buffer 聚合。
+                # 与后端校验、快照转换保持一致：整条记录不进入任何 main 的
+                # 分组，也不会影响该物理 Buffer 的库存、容量、预警和能力状态。
                 continue
             realtime_by_main[self._normalize(getattr(realtime, "main_id", None))].append(
                 realtime
@@ -136,6 +151,7 @@ class MainBufferAggregator:
         relations_by_code: dict[str, list[BufferRelationView]],
         orders_by_name: dict[str, list[OrderView]],
     ) -> tuple[list[MainBufferGroup], PhysicalMainBufferState, list[MainBufferAggregationIssue]]:
+        """内部辅助步骤【_aggregate_main】，为上层业务流程提供数据处理或共用判断。"""
         issues: list[MainBufferAggregationIssue] = []
         fatal = not main_id
         if not main_id:
@@ -180,6 +196,9 @@ class MainBufferAggregator:
                     if capacity is not None and capacity > 0:
                         capacities[buffer_code] = capacity
 
+            # 绑定名中的工序/自动后缀不是订单名的一部分，先提取产品名前缀，
+            # 再按当前订单状态解析；合法但未知的产品会记录映射问题，而不是
+            # 被误判为格式无效。
             source_name = normalize_bound_source_product_name(
                 self._normalize(realtime.bound_source_name),
             )
@@ -274,6 +293,7 @@ class MainBufferAggregator:
 
     def _build_batch(self, groups, physical_states, issues):
         # 同时建立物理 main、订单子状态和兼容查询所需的只读索引。
+        """根据当前快照和业务规则执行【_build_batch】计算，返回类型标注所声明的结果。"""
         groups_by_key: dict[GroupKey, MainBufferGroup] = {}
         keys_by_main: dict[str, list[GroupKey]] = defaultdict(list)
         keys_by_physical: dict[PhysicalBufferKey, list[GroupKey]] = defaultdict(list)
@@ -319,6 +339,7 @@ class MainBufferAggregator:
         )
 
     def _validate_index_conflicts(self, groups):
+        """校验【_validate_index_conflicts】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         owners_by_code: dict[str, list[MainBufferGroup]] = defaultdict(list)
         for group in groups:
             for code in group.buffer_codes:
@@ -345,6 +366,7 @@ class MainBufferAggregator:
 
     @staticmethod
     def _deduplicate_issues(issues):
+        """内部辅助步骤【_deduplicate_issues】，为上层业务流程提供数据处理或共用判断。"""
         by_key = {}
         for issue in issues:
             key = (issue.code, issue.main_id)
@@ -357,6 +379,7 @@ class MainBufferAggregator:
 
     @staticmethod
     def _multi_index(records: Iterable[Any], field_name: str):
+        """内部辅助步骤【_multi_index】，为上层业务流程提供数据处理或共用判断。"""
         result = defaultdict(list)
         for record in records:
             result[MainBufferAggregator._normalize(getattr(record, field_name))].append(record)
@@ -364,6 +387,7 @@ class MainBufferAggregator:
 
     @staticmethod
     def _number_or_none(value: Any):
+        """内部辅助步骤【_number_or_none】，为上层业务流程提供数据处理或共用判断。"""
         if isinstance(value, bool):
             return None
         try:
@@ -374,10 +398,12 @@ class MainBufferAggregator:
 
     @staticmethod
     def _normalize(value: Any):
+        """内部辅助步骤【_normalize】，为上层业务流程提供数据处理或共用判断。"""
         return "" if value is None else str(value).strip()
 
     @staticmethod
     def _issue(code, main_id, representative_buffer_code, message, affected_capabilities):
+        """内部辅助步骤【_issue】，为上层业务流程提供数据处理或共用判断。"""
         return MainBufferAggregationIssue(
             code=code,
             main_id=main_id,

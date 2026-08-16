@@ -13,6 +13,7 @@ class DepletionTimeCalculator:
         self,
         net_rate_results: list[AlgorithmIntervalNetRateResult],
     ) -> list[AlgorithmDepletionTimeResult]:
+        """根据当前快照和业务规则执行【calculate_algorithm】计算，返回类型标注所声明的结果。"""
         return [
             self._for_algorithm_interval(net_rate)
             for net_rate in net_rate_results
@@ -22,6 +23,7 @@ class DepletionTimeCalculator:
         self,
         net_rate: AlgorithmIntervalNetRateResult,
     ) -> AlgorithmDepletionTimeResult:
+        """内部辅助步骤【_for_algorithm_interval】，为上层业务流程提供数据处理或共用判断。"""
         depletion_minutes = None
         if net_rate.net_consumption_rate > 0:
             depletion_minutes = (

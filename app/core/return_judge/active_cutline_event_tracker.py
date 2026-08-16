@@ -15,6 +15,7 @@ class ActiveCutlineEventTracker:
         self,
         event_id_factory: Callable[[], str] | None = None,
     ) -> None:
+        """内部辅助步骤【__init__】，为上层业务流程提供数据处理或共用判断。"""
         self._event_id_factory = event_id_factory or (lambda: str(uuid4()))
 
     def create_event(
@@ -44,6 +45,7 @@ class ActiveCutlineEventTracker:
         is_recommended_candidate: bool | None = None,
         event_id: str | None = None,
     ) -> AlgorithmActiveCutlineEvent:
+        """根据当前快照和业务规则执行【create_event】计算，返回类型标注所声明的结果。"""
         return AlgorithmActiveCutlineEvent(
             event_id=(
                 event_id
@@ -86,6 +88,7 @@ class ActiveCutlineEventTracker:
         event: AlgorithmActiveCutlineEvent,
         negative_start_time: datetime | None,
     ) -> AlgorithmActiveCutlineEvent:
+        """执行【update_negative_start_time】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return event.model_copy(
             update={"negative_start_time": negative_start_time},
             deep=True,
@@ -96,6 +99,7 @@ class ActiveCutlineEventTracker:
         *,
         event: AlgorithmActiveCutlineEvent,
     ) -> AlgorithmActiveCutlineEvent:
+        """执行【mark_return_recommended】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return event.model_copy(
             update={"status": "return_recommended"},
             deep=True,
@@ -107,6 +111,7 @@ class ActiveCutlineEventTracker:
         event: AlgorithmActiveCutlineEvent,
         returned_time: datetime | None = None,
     ) -> AlgorithmActiveCutlineEvent:
+        """执行【mark_returned】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         _ = returned_time
         return event.model_copy(
             update={
@@ -121,6 +126,7 @@ class ActiveCutlineEventTracker:
         *,
         event: AlgorithmActiveCutlineEvent,
     ) -> AlgorithmActiveCutlineEvent:
+        """执行【mark_cancelled】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return event.model_copy(
             update={"status": "cancelled"},
             deep=True,

@@ -38,6 +38,7 @@ class RequestModel(BaseModel):
 
 
 class SnapshotMetaRequest(RequestModel):
+    """类 【SnapshotMetaRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     run_id: str = Field(..., description="本次算法运行编号")
     trigger_type: str = Field(..., description="本次算法运行的触发方式")
     workshop_id: str = Field(..., description="当前车间编号")
@@ -49,6 +50,7 @@ class SnapshotMetaRequest(RequestModel):
 
 
 class MachineRealtimeRequest(RequestModel):
+    """类 【MachineRealtimeRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str = Field(
         ...,
         description="机台实时状态使用的 P166 集团编码，对应静态机台 p166_jt_group",
@@ -73,6 +75,7 @@ class MachineRealtimeRequest(RequestModel):
 
 
 class MachineMasterRequest(RequestModel):
+    """类 【MachineMasterRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str = Field(
         ...,
         description="静态机台标准编码，对应 AGV equipmentid，并作为算法内部机台编码",
@@ -87,6 +90,7 @@ class MachineMasterRequest(RequestModel):
 
 
 class MachineProcessTimeRequest(RequestModel):
+    """类 【MachineProcessTimeRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str = Field(..., description="机台与产品型号关系中的机台编码")
     machine_name: str = Field(..., description="机台与产品型号关系中的机台名称")
     product_code: str = Field(..., description="机台与产品型号关系中的产品型号编码")
@@ -102,11 +106,13 @@ class MachineProcessTimeRequest(RequestModel):
 
 
 class WorkshopRequest(RequestModel):
+    """类 【WorkshopRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     workshop_code: str = Field(..., description="车间编码")
     workshop_name: str | None = Field(..., description="车间名称，数据缺失时为 null")
 
 
 class LineRequest(RequestModel):
+    """类 【LineRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     line_code: str = Field(..., description="产线编码")
     line_name: str = Field(..., description="产线名称")
     wafer_spec: str = Field(..., description="产线绑定的硅片规格")
@@ -130,6 +136,7 @@ class MachineLineRequest(RequestModel):
 
 
 class OrderRequest(RequestModel):
+    """类 【OrderRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     order_code: str = Field(..., description="订单编码")
     order_status: str = Field(..., description="订单状态")
     total_quantity: float = Field(..., ge=0, description="订单计划生产的总数量")
@@ -144,6 +151,7 @@ class OrderRequest(RequestModel):
 
 
 class ProductRequest(RequestModel):
+    """类 【ProductRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     product_code: str = Field(..., description="产品型号编码")
     product_name: str = Field(..., description="产品型号名称")
     wafer_size: str = Field(..., description="产品对应的硅片尺寸")
@@ -153,6 +161,7 @@ class ProductRequest(RequestModel):
 
 
 class ProcessRouteRequest(RequestModel):
+    """类 【ProcessRouteRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     process_code: str = Field(..., description="工艺路线节点的工序编码")
     process_name: str = Field(..., description="工艺路线节点的工序名称")
     sequence: int = Field(..., description="工序在工艺路线中的顺序号")
@@ -179,6 +188,7 @@ class ProcessRouteRequest(RequestModel):
 
 
 class BufferRealtimeRequest(RequestModel):
+    """类 【BufferRealtimeRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     main_id: str | None = Field(..., description="Buffer 实时数据主记录编号，缺失时为 null")
     buffer_code: str = Field(..., description="Buffer 编码")
     bound_source_name: str = Field(
@@ -190,6 +200,7 @@ class BufferRealtimeRequest(RequestModel):
 
 
 class BufferMasterRequest(RequestModel):
+    """类 【BufferMasterRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     buffer_code: str = Field(..., description="Buffer 编码")
     buffer_name: str = Field(..., description="Buffer 名称")
     buffer_type: str = Field(..., description="Buffer 类型")
@@ -203,6 +214,7 @@ class BufferMasterRequest(RequestModel):
 
 
 class AgvRelationRequest(RequestModel):
+    """类 【AgvRelationRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_code: str = Field(
         ...,
         description="AGV equipmentid 投影的标准机台编码",
@@ -297,6 +309,7 @@ class ActiveCutlineEventRequest(RequestModel):
     @field_validator("plan_id", "warning_id")
     @classmethod
     def validate_optional_identifier(cls, value: str | None) -> str | None:
+        """校验【validate_optional_identifier】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if value is not None and not value.strip():
             raise ValueError("optional identifier must not be blank")
         return value
@@ -343,6 +356,7 @@ def _active_event_matches_confirmation(
     baseline_process_code: str,
     event: ActiveCutlineEventRequest | AlgorithmActiveCutlineEvent,
 ) -> bool:
+    """内部辅助步骤【_active_event_matches_confirmation】，为上层业务流程提供数据处理或共用判断。"""
     if event.machine_code != machine_code:
         return False
     has_full_identity = (
@@ -389,6 +403,7 @@ def _active_event_matches_confirmation(
 
 
 class CutlineAlgorithmRequest(RequestModel):
+    """类 【CutlineAlgorithmRequest】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     snapshot_meta: SnapshotMetaRequest = Field(..., description="算法运行上下文、版本和降级标记")
     machine_realtime: list[MachineRealtimeRequest] = Field(..., description="机台实时状态及当前统计周期数量")
     machine_master: list[MachineMasterRequest] = Field(
@@ -436,6 +451,7 @@ class CutlineAlgorithmRequest(RequestModel):
     )
     @classmethod
     def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        """校验【validate_persisted_event_ids】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if any(not event_id.strip() for event_id in value):
             raise ValueError("persisted event ids must not be blank")
         if len(value) != len(set(value)):
@@ -444,6 +460,7 @@ class CutlineAlgorithmRequest(RequestModel):
 
     @model_validator(mode="after")
     def validate_confirmed_pending_events(self) -> CutlineAlgorithmRequest:
+        """校验【validate_confirmed_pending_events】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         validate_confirmed_pending_active_coverage(
             self.pending_cutline_plans,
             self.active_cutline_events,
@@ -532,6 +549,7 @@ class AlgorithmSnapshot(BaseModel):
     )
     @classmethod
     def validate_persisted_event_ids(cls, value: list[str]) -> list[str]:
+        """校验【validate_persisted_event_ids】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         if any(not event_id.strip() for event_id in value):
             raise ValueError("persisted event ids must not be blank")
         if len(value) != len(set(value)):
@@ -540,6 +558,7 @@ class AlgorithmSnapshot(BaseModel):
 
     @model_validator(mode="after")
     def validate_confirmed_pending_events(self) -> AlgorithmSnapshot:
+        """校验【validate_confirmed_pending_events】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         validate_confirmed_pending_active_coverage(
             self.pending_cutline_plans,
             self.active_cutline_events,

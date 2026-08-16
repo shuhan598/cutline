@@ -47,6 +47,7 @@ from app.utils.buffer_binding import should_ignore_bound_source_name
 
 
 class BackendValidationIssue(BaseModel):
+    """类 【BackendValidationIssue】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     model_config = ConfigDict(extra="forbid")
 
     code: str
@@ -57,6 +58,7 @@ class BackendValidationIssue(BaseModel):
 
 
 class BackendRequestValidationResult(BaseModel):
+    """类 【BackendRequestValidationResult】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     model_config = ConfigDict(extra="forbid")
 
     valid: bool
@@ -127,8 +129,12 @@ class BackendRequestCompletenessValidator:
         self,
         request: CompletenessRequest,
     ) -> BackendRequestValidationResult:
+        """校验【validate】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         issues: list[BackendValidationIssue] = []
-        # 无效绑定记录仅保留“数据集已提供”的事实，其余完整性检查全部跳过。
+        # Buffer 绑定的产品名格式属于“可选参与算法”的前置条件：
+        # 1. 无效记录不能用于订单、车间和 Buffer 的引用校验；
+        # 2. 过滤只作用于校验副本，不修改调用方传入的原始 request；
+        # 3. 这样无效记录不会因为自身字段缺失而污染其他有效记录的校验结果。
         filtered_request = request.model_copy(
             update={
                 "buffer_realtime": [
@@ -181,6 +187,7 @@ class BackendRequestCompletenessValidator:
         snapshot_time: datetime,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_pending_plans】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         by_plan_id: dict[str, list[PendingCutlinePlan]] = defaultdict(list)
         by_business_key: dict[
             tuple[str, str, str, str, str, str],
@@ -245,6 +252,7 @@ class BackendRequestCompletenessValidator:
         plan: PendingCutlinePlan,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_pending_nested_codes】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         collections = (
             ("before_machine_codes", plan.before_machine_codes),
             ("confirmed_machine_codes", plan.confirmed_machine_codes),
@@ -296,6 +304,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_empty_datasets】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for dataset in _REQUIRED_DATASETS:
             if not getattr(request, dataset):
                 issues.append(
@@ -313,6 +322,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_required_nullable_fields】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for dataset, field in _REQUIRED_NULLABLE_FIELDS:
             for index, record in enumerate(getattr(request, dataset)):
                 if getattr(record, field) is None:
@@ -331,6 +341,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_empty_codes】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for dataset in request.__class__.model_fields:
             if dataset == "snapshot_meta":
                 continue
@@ -389,6 +400,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_unique_reference_fields】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         specifications = (
             ("machine_master", "machine_code"),
             ("machine_master", "p166_jt_group"),
@@ -445,6 +457,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_order_products】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         products_by_code: dict[str, list[ProductRecord]] = defaultdict(list)
         for product in request.products:
             products_by_code[product.product_code.strip()].append(product)
@@ -476,6 +489,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_buffer_bindings】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         orders_by_product_name: dict[
             str,
             list[OrderRecord],
@@ -518,7 +532,10 @@ class BackendRequestCompletenessValidator:
         for index, realtime in enumerate(request.buffer_realtime):
             record_key = self._record_key("buffer_realtime", realtime, index)
             if should_ignore_bound_source_name(realtime.bound_source_name):
-                # 无效绑定暂不参与校验，整条实时 Buffer 记录由后续环节忽略。
+                # 无效绑定在此处静默跳过：它不会产生空值、引用缺失或车间不一致
+                # 错误，后续快照转换和主 Buffer 聚合也会再次执行同一过滤，保证
+                # 三个边界的行为一致。格式正确但产品不存在时不会走这里，而是
+                # 继续保留给后续订单映射逻辑处理。
                 continue
             product_name = realtime.bound_source_name.strip()
             if not product_name:
@@ -574,6 +591,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_references】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for source_dataset, source_field, target_dataset, target_field in _RELATIONSHIPS:
             targets = {
                 self._normalized_reference_value(value)
@@ -611,6 +629,7 @@ class BackendRequestCompletenessValidator:
         ],
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_agv_bindings】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         machines_by_standard_code: dict[
             str,
             list[MachineMasterRecord],
@@ -870,6 +889,7 @@ class BackendRequestCompletenessValidator:
 
     @staticmethod
     def _normalized_reference_value(value: object) -> object:
+        """在不改变原始请求的前提下执行【_normalized_reference_value】数据转换，并保留必要的校验信息。"""
         return value.strip() if isinstance(value, str) else value
 
     def _validate_routes(
@@ -877,6 +897,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_routes】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         grouped: dict[str, list[tuple[int, Any]]] = defaultdict(list)
         for index, route in enumerate(request.process_routes):
             try:
@@ -992,6 +1013,7 @@ class BackendRequestCompletenessValidator:
         max_sequence: int,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_silk_screen_route】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         route_key = workshop_code
         silk_routes = [
             (index, route)
@@ -1057,6 +1079,7 @@ class BackendRequestCompletenessValidator:
         indexed_routes: list[tuple[int, Any]],
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_route_adjacency】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for position, (_, route) in enumerate(indexed_routes):
             previous = (
                 indexed_routes[position - 1][1] if position > 0 else None
@@ -1119,6 +1142,7 @@ class BackendRequestCompletenessValidator:
         workshop_code: str,
         route: Any,
     ) -> str:
+        """内部辅助步骤【_route_record_key】，为上层流程提供数据处理或共用判断。"""
         return (
             f"{workshop_code}|process:{route.process_code}|"
             f"name:{route.process_name}|sequence:{route.sequence}"
@@ -1131,6 +1155,7 @@ class BackendRequestCompletenessValidator:
         fields: tuple[str, str],
         issues: list[BackendValidationIssue],
     ) -> None:
+        """内部辅助步骤【_require_route_fields】，为上层流程提供数据处理或共用判断。"""
         for field in fields:
             if getattr(route, field) is None:
                 issues.append(
@@ -1152,6 +1177,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_served_processes】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         route_codes = {
             route.process_code
             for route in request.process_routes
@@ -1185,6 +1211,7 @@ class BackendRequestCompletenessValidator:
         request: CompletenessRequest,
         issues: list[BackendValidationIssue],
     ) -> None:
+        """校验【_validate_capacity】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         for index, buffer in enumerate(request.buffer_master):
             if buffer.max_capacity <= 0:
                 issues.append(
@@ -1202,6 +1229,7 @@ class BackendRequestCompletenessValidator:
                 )
 
     def _record_key(self, dataset: str, record: Any, index: int) -> str:
+        """内部辅助步骤【_record_key】，为上层流程提供数据处理或共用判断。"""
         field = _RECORD_KEY_FIELDS.get(dataset)
         if field is None:
             return f"index:{index}"
@@ -1210,6 +1238,7 @@ class BackendRequestCompletenessValidator:
 
     @staticmethod
     def _is_running(status: str) -> bool:
+        """内部辅助步骤【_is_running】，为上层流程提供数据处理或共用判断。"""
         normalized = status.strip()
         return normalized == "运行" or normalized.casefold() == "running"
 
@@ -1222,6 +1251,7 @@ class BackendRequestCompletenessValidator:
         record_key: str | None,
         message: str,
     ) -> BackendValidationIssue:
+        """内部辅助步骤【_issue】，为上层流程提供数据处理或共用判断。"""
         return BackendValidationIssue(
             code=code,
             dataset=dataset,

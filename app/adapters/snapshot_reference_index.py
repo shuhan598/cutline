@@ -20,6 +20,7 @@ class MachineMasterIndex:
     """把两种外部机台标识映射到同一台标准机台。"""
 
     def __init__(self, records: Iterable[MachineMasterRequest]):
+        """初始化【__init__】对象的状态、索引和依赖。"""
         self._machine_masters: list[AlgorithmMachineMaster] = []
         self._by_standard_code: dict[str, AlgorithmMachineMaster] = {}
         self._by_realtime_code: dict[str, AlgorithmMachineMaster] = {}
@@ -62,13 +63,16 @@ class MachineMasterIndex:
 
     @property
     def machine_masters(self) -> list[AlgorithmMachineMaster]:
+        """执行【machine_masters】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return list(self._machine_masters)
 
     @property
     def by_standard_code(self) -> dict[str, AlgorithmMachineMaster]:
+        """执行【by_standard_code】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return dict(self._by_standard_code)
 
     def resolve_agv_code(self, equipment_id: str) -> AlgorithmMachineMaster:
+        """根据当前快照和业务规则执行【resolve_agv_code】计算，返回类型标注所声明的结果。"""
         normalized = equipment_id.strip()
         if not normalized:
             raise SnapshotReferenceIndexError(
@@ -86,6 +90,7 @@ class MachineMasterIndex:
         self,
         realtime_code: str,
     ) -> AlgorithmMachineMaster:
+        """根据当前快照和业务规则执行【resolve_realtime_code】计算，返回类型标注所声明的结果。"""
         normalized = realtime_code.strip()
         if not normalized:
             raise SnapshotReferenceIndexError(
@@ -105,6 +110,7 @@ class ProductCatalogIndex:
     """校验产品目录，并按编码和精确名称建立索引。"""
 
     def __init__(self, products: Iterable[AlgorithmProduct]):
+        """初始化【__init__】对象的状态、索引和依赖。"""
         self._products: list[AlgorithmProduct] = []
         self._by_code: dict[str, AlgorithmProduct] = {}
         self._by_name: dict[str, AlgorithmProduct] = {}
@@ -145,13 +151,16 @@ class ProductCatalogIndex:
 
     @property
     def products(self) -> list[AlgorithmProduct]:
+        """执行【products】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return list(self._products)
 
     @property
     def by_code(self) -> dict[str, AlgorithmProduct]:
+        """执行【by_code】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return dict(self._by_code)
 
     def resolve_code(self, product_code: str, *, source: str) -> AlgorithmProduct:
+        """根据当前快照和业务规则执行【resolve_code】计算，返回类型标注所声明的结果。"""
         normalized = product_code.strip()
         product = self._by_code.get(normalized)
         if product is None:
@@ -162,6 +171,7 @@ class ProductCatalogIndex:
         return product
 
     def resolve_name(self, product_name: str, *, source: str) -> AlgorithmProduct:
+        """根据当前快照和业务规则执行【resolve_name】计算，返回类型标注所声明的结果。"""
         normalized = product_name.strip()
         if not normalized:
             raise SnapshotReferenceIndexError(
@@ -180,6 +190,7 @@ _ACTIVE_ASCII_ORDER_STATUSES = frozenset({"running", "open"})
 
 
 def is_current_order_status(status: str) -> bool:
+    """执行【is_current_order_status】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
     normalized = status.strip()
     return (
         normalized.casefold() in _ACTIVE_ASCII_ORDER_STATUSES
@@ -195,6 +206,7 @@ class CurrentOrderIndex:
         orders: Iterable[AlgorithmOrder],
         product_catalog: ProductCatalogIndex,
     ):
+        """初始化【__init__】对象的状态、索引和依赖。"""
         self._orders: list[AlgorithmOrder] = []
         self._by_code: dict[str, AlgorithmOrder] = {}
         self._by_product_name: dict[str, AlgorithmOrder] = {}
@@ -243,10 +255,12 @@ class CurrentOrderIndex:
 
     @property
     def orders(self) -> list[AlgorithmOrder]:
+        """执行【orders】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return list(self._orders)
 
     @property
     def by_code(self) -> dict[str, AlgorithmOrder]:
+        """执行【by_code】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return dict(self._by_code)
 
     def resolve_product_name(
@@ -255,6 +269,7 @@ class CurrentOrderIndex:
         *,
         source: str,
     ) -> AlgorithmOrder:
+        """根据当前快照和业务规则执行【resolve_product_name】计算，返回类型标注所声明的结果。"""
         normalized = product_name.strip()
         if not normalized:
             raise SnapshotReferenceIndexError(
@@ -278,4 +293,5 @@ class CurrentOrderIndex:
         self,
         product_name: str,
     ) -> list[AlgorithmOrder]:
+        """根据当前快照和业务规则执行【resolve_product_name_candidates】计算，返回类型标注所声明的结果。"""
         return list(self._by_product_name_candidates.get(product_name.strip(), ()))

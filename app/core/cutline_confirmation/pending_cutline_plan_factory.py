@@ -47,6 +47,7 @@ class PendingCutlinePlanFactory:
         snapshot: AlgorithmSnapshot,
         decision: AlgorithmCutlineDecisionResult,
     ) -> PendingCutlinePlan | None:
+        """根据当前快照和业务规则执行【create】计算，返回类型标注所声明的结果。"""
         plan = decision.plan
         if plan is None:
             return None
@@ -228,6 +229,7 @@ class PendingCutlinePlanFactory:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> tuple[dict[str, AlgorithmOrder], dict[str, AlgorithmProduct]]:
+        """根据当前快照和业务规则执行【_build_order_product_indexes】计算，返回类型标注所声明的结果。"""
         products: dict[str, AlgorithmProduct] = {}
         product_code_by_name: dict[str, str] = {}
         for product in snapshot.products:
@@ -280,6 +282,7 @@ class PendingCutlinePlanFactory:
         self,
         selected_machines: list[AlgorithmSelectedMachineEvaluation],
     ) -> str:
+        """根据当前快照和业务规则执行【_resolve_selected_process】计算，返回类型标注所声明的结果。"""
         process_codes = {
             item.process_code.strip() for item in selected_machines
         }
@@ -301,6 +304,7 @@ class PendingCutlinePlanFactory:
         workshop_code: str,
         process_code: str,
     ) -> list[AlgorithmMachineMaster]:
+        """根据当前快照和业务规则执行【_resolve_scope_masters】计算，返回类型标注所声明的结果。"""
         masters_by_code: dict[str, AlgorithmMachineMaster] = {}
         for master in snapshot.machine_masters:
             code = master.machine_code.strip()
@@ -345,6 +349,7 @@ class PendingCutlinePlanFactory:
         list[BaselineMachineBinding],
         dict[str, AlgorithmMachineRuntime],
     ]:
+        """内部辅助步骤【_capture_baselines】，为上层业务流程提供数据处理或共用判断。"""
         runtimes_by_machine: dict[str, list[AlgorithmMachineRuntime]] = (
             defaultdict(list)
         )
@@ -442,6 +447,7 @@ class PendingCutlinePlanFactory:
         orders: dict[str, AlgorithmOrder],
         products: dict[str, AlgorithmProduct],
     ) -> list[PendingCandidateMachine]:
+        """根据当前快照和业务规则执行【_create_candidates】计算，返回类型标注所声明的结果。"""
         candidates: list[PendingCandidateMachine] = []
         for selected in plan.selected_machines:
             machine_code = selected.machine_code.strip()
@@ -575,6 +581,7 @@ class PendingCutlinePlanFactory:
         before_codes: list[str],
         monitored_order_code: str,
     ) -> None:
+        """校验【_validate_candidate_direction】所需数据和业务前置条件，失败时按本模块契约报告问题。"""
         before_set = set(before_codes)
         for candidate in candidates:
             if isinstance(plan, AlgorithmStockoutCutlinePlan):
@@ -620,6 +627,7 @@ class PendingCutlinePlanFactory:
         *,
         context: str,
     ) -> tuple[AlgorithmOrder, AlgorithmProduct]:
+        """根据当前快照和业务规则执行【_resolve_order_product】计算，返回类型标注所声明的结果。"""
         normalized = order_code.strip()
         order = orders.get(normalized)
         if order is None:
@@ -638,6 +646,7 @@ class PendingCutlinePlanFactory:
         snapshot: AlgorithmSnapshot,
         buffer_code: str,
     ) -> AlgorithmBufferProcessRelation:
+        """根据当前快照和业务规则执行【_resolve_buffer_relation】计算，返回类型标注所声明的结果。"""
         normalized = buffer_code.strip()
         masters = [
             item
@@ -674,6 +683,7 @@ class PendingCutlinePlanFactory:
         upstream_process_code: str,
         downstream_process_code: str,
     ) -> None:
+        """内部辅助步骤【_require_interval】，为上层业务流程提供数据处理或共用判断。"""
         self._require_interval_scope(
             context=context,
             relation=relation,
@@ -699,6 +709,7 @@ class PendingCutlinePlanFactory:
         workshop_code: str,
         process_code: str,
     ) -> None:
+        """内部辅助步骤【_require_interval_scope】，为上层业务流程提供数据处理或共用判断。"""
         if relation.workshop_code != workshop_code:
             raise PendingCutlinePlanCreationError(
                 f"{context} workshop {relation.workshop_code!r} does not "
@@ -713,6 +724,7 @@ class PendingCutlinePlanFactory:
 
     @staticmethod
     def _single_or_none(values: Iterable[str]) -> str | None:
+        """内部辅助步骤【_single_or_none】，为上层业务流程提供数据处理或共用判断。"""
         unique = set(values)
         if len(unique) == 1:
             return next(iter(unique))
@@ -720,6 +732,7 @@ class PendingCutlinePlanFactory:
 
     @staticmethod
     def _first_duplicate(values: list[str]) -> str:
+        """内部辅助步骤【_first_duplicate】，为上层业务流程提供数据处理或共用判断。"""
         seen: set[str] = set()
         for value in values:
             if value in seen:

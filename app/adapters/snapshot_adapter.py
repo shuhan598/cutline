@@ -254,6 +254,7 @@ class SnapshotAdapter:
         machine_by_code: dict[str, AlgorithmMachineMaster],
         process_routes: Iterable[AlgorithmProcessRoute],
     ) -> None:
+        """校验【_validate_runtime_machine_workshops】所需的数据和业务前置条件，失败时按本模块契约报告问题。"""
         resolver = MachineWorkshopResolver(process_routes)
         for runtime in machine_runtimes:
             machine = machine_by_code[runtime.machine_code]
@@ -263,6 +264,7 @@ class SnapshotAdapter:
                 raise SnapshotConversionError(str(exc)) from exc
 
     def _convert_workshops(self, source: Iterable[Any]) -> list[AlgorithmWorkshop]:
+        """在後端输入与算法内部模型之间执行【_convert_workshops】转换，并保留必要的校验信息。"""
         return [
             AlgorithmWorkshop(
                 workshop_code=item.workshop_code,
@@ -274,6 +276,7 @@ class SnapshotAdapter:
     def _convert_lines(
         self, source: Iterable[Any], workshop_by_code: dict[str, AlgorithmWorkshop]
     ) -> list[AlgorithmLine]:
+        """在後端输入与算法内部模型之间执行【_convert_lines】转换，并保留必要的校验信息。"""
         result: list[AlgorithmLine] = []
         for item in source:
             if item.workshop_code not in workshop_by_code:
@@ -301,6 +304,7 @@ class SnapshotAdapter:
         machine_by_code: dict[str, AlgorithmMachineMaster],
         line_by_code: dict[str, AlgorithmLine],
     ) -> list[AlgorithmMachineLineRelation]:
+        """在後端输入与算法内部模型之间执行【_convert_machine_lines】转换，并保留必要的校验信息。"""
         result: list[AlgorithmMachineLineRelation] = []
         line_by_machine: dict[str, str] = {}
         seen: set[tuple[str, str]] = set()
@@ -341,6 +345,7 @@ class SnapshotAdapter:
         machine_index: MachineMasterIndex,
         agv_by_machine: dict[str, AlgorithmAgvRelation],
     ) -> list[AlgorithmMachineRuntime]:
+        """在後端输入与算法内部模型之间执行【_convert_machine_runtimes】转换，并保留必要的校验信息。"""
         result: list[AlgorithmMachineRuntime] = []
         seen_machine_codes: set[str] = set()
         for item in source:
@@ -378,12 +383,14 @@ class SnapshotAdapter:
 
     @staticmethod
     def _map_machine_status(status: str) -> str:
+        """在後端输入与算法内部模型之间执行【_map_machine_status】转换，并保留必要的校验信息。"""
         normalized = status.strip()
         if normalized == "运行" or normalized.casefold() == "running":
             return "running"
         return "stopped"
 
     def _convert_products(self, source: Iterable[Any]) -> list[AlgorithmProduct]:
+        """在後端输入与算法内部模型之间执行【_convert_products】转换，并保留必要的校验信息。"""
         return [
             AlgorithmProduct(
                 product_code=item.product_code,
@@ -401,6 +408,7 @@ class SnapshotAdapter:
         source: Iterable[Any],
         workshop_by_code: dict[str, AlgorithmWorkshop],
     ) -> list[AlgorithmOrder]:
+        """在後端输入与算法内部模型之间执行【_convert_orders】转换，并保留必要的校验信息。"""
         result: list[AlgorithmOrder] = []
         for item in source:
             if item.workshop_code not in workshop_by_code:
@@ -440,6 +448,7 @@ class SnapshotAdapter:
         machine_by_code: dict[str, AlgorithmMachineMaster],
         product_by_code: dict[str, AlgorithmProduct],
     ) -> list[AlgorithmMachineProductCapacity]:
+        """在後端输入与算法内部模型之间执行【_convert_capacities】转换，并保留必要的校验信息。"""
         result: list[AlgorithmMachineProductCapacity] = []
         seen: set[tuple[str, str]] = set()
         for item in source:
@@ -472,6 +481,7 @@ class SnapshotAdapter:
         source: Iterable[Any],
         workshop_by_code: dict[str, AlgorithmWorkshop],
     ) -> list[AlgorithmProcessRoute]:
+        """在後端输入与算法内部模型之间执行【_convert_process_routes】转换，并保留必要的校验信息。"""
         result: list[AlgorithmProcessRoute] = []
         for item in source:
             if item.sequence < 1:
@@ -511,6 +521,7 @@ class SnapshotAdapter:
     def _convert_buffer_masters(
         self, source: Iterable[Any]
     ) -> list[AlgorithmBufferMaster]:
+        """在後端输入与算法内部模型之间执行【_convert_buffer_masters】转换，并保留必要的校验信息。"""
         result: list[AlgorithmBufferMaster] = []
         for item in source:
             if len(item.served_process_codes) != len(item.served_process_names):
@@ -542,6 +553,7 @@ class SnapshotAdapter:
         buffers: Iterable[AlgorithmBufferMaster],
         routes: Iterable[AlgorithmProcessRoute],
     ) -> list[AlgorithmBufferProcessRelation]:
+        """根据当前快照和业务规则执行【_build_buffer_process_relations】计算，返回类型标注所声明的结果。"""
         all_routes = list(routes)
         resolver = BufferProcessResolver(all_routes)
         result: list[AlgorithmBufferProcessRelation] = []
@@ -571,11 +583,14 @@ class SnapshotAdapter:
         buffer_by_code: dict[str, AlgorithmBufferMaster],
         relation_by_buffer: dict[str, AlgorithmBufferProcessRelation],
     ) -> list[AlgorithmBufferOrderInventory]:
+        """在後端输入与算法内部模型之间执行【_convert_buffer_order_inventories】转换，并保留必要的校验信息。"""
         result: list[AlgorithmBufferOrderInventory] = []
         seen: set[tuple[str, str, str]] = set()
         for item in source:
             if should_ignore_bound_source_name(item.bound_source_name):
-                # 无效绑定无法唯一归属订单，临时忽略整条实时 Buffer 记录。
+                # 快照中的库存必须能唯一落到“主 Buffer + 物理层 + 订单”。
+                # 无效绑定既可能是逗号多值，也可能是不符合产品命名规范的
+                # 单值；两类记录都不能安全生成库存明细，因此整条记录跳过。
                 continue
             if item.buffer_code not in buffer_by_code:
                 continue
@@ -587,6 +602,8 @@ class SnapshotAdapter:
             source_name = normalize_bound_source_product_name(
                 item.bound_source_name
             )
+            # 这里仅把后缀剥离后查找当前订单；若格式正确但目录中没有该
+            # 产品，SnapshotReferenceIndexError 会被隔离，避免阻断其他库存。
             try:
                 order = order_index.resolve_product_name(
                     source_name,
@@ -619,6 +636,7 @@ class SnapshotAdapter:
         order_index: CurrentOrderIndex,
         workshop_resolver: MachineWorkshopResolver,
     ) -> list[AlgorithmAgvRelation]:
+        """在後端输入与算法内部模型之间执行【_convert_agv_relations】转换，并保留必要的校验信息。"""
         effective_by_machine = select_latest_effective_bindings(
             source,
             snapshot_time,
@@ -757,6 +775,7 @@ class SnapshotAdapter:
         relation_by_buffer: dict[str, AlgorithmBufferProcessRelation],
         process_routes: Iterable[AlgorithmProcessRoute],
     ) -> list[AlgorithmActiveCutlineEvent]:
+        """在後端输入与算法内部模型之间执行【_convert_active_cutline_events】转换，并保留必要的校验信息。"""
         routes = list(process_routes)
         workshop_resolver = MachineWorkshopResolver(routes)
         result: list[AlgorithmActiveCutlineEvent] = []
@@ -982,6 +1001,7 @@ class SnapshotAdapter:
         event_time: datetime,
         snapshot_time: datetime,
     ) -> datetime:
+        """在後端输入与算法内部模型之间执行【_normalize_active_event_time】转换，并保留必要的校验信息。"""
         normalized_event_time = normalize_local_time(event_time)
         normalized_snapshot_time = normalize_local_time(snapshot_time)
         if normalized_event_time > normalized_snapshot_time:
@@ -995,6 +1015,7 @@ class SnapshotAdapter:
     def _index_unique(
         self, items: Iterable[ModelT], field: str, label: str
     ) -> dict[str, ModelT]:
+        """内部辅助步骤【_index_unique】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, ModelT] = {}
         for item in items:
             key = getattr(item, field)
@@ -1019,6 +1040,7 @@ class SnapshotAdapter:
     def _index_process_routes(
         self, routes: Iterable[AlgorithmProcessRoute]
     ) -> dict[tuple[str, str], AlgorithmProcessRoute]:
+        """内部辅助步骤【_index_process_routes】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[tuple[str, str], AlgorithmProcessRoute] = {}
         for route in routes:
             key = (route.workshop_code, route.process_code)

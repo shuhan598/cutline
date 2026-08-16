@@ -17,6 +17,7 @@ class StockoutWarningEvaluator:
         snapshot: AlgorithmSnapshot,
         depletion_results: list[AlgorithmDepletionTimeResult],
     ) -> list[AlgorithmStockoutWarningResult]:
+        """函数 ``evaluate_algorithm`` 执行当前业务步骤。参数、返回值和异常语义以类型标注及调用方契约为准。"""
         stockout_warning_lead_minutes = safe_float(
             snapshot.config.stockout_warning_lead_minutes
         )
@@ -106,6 +107,7 @@ class StockoutWarningEvaluator:
         self,
         depletion: AlgorithmDepletionTimeResult,
     ) -> None:
+        """函数 ``_validate_algorithm_depletion`` 执行当前业务步骤。参数、返回值和异常语义以类型标注及调用方契约为准。"""
         context = (
             f"workshop={depletion.workshop_code}, "
             f"main_id={depletion.main_id}, "

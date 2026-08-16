@@ -33,6 +33,7 @@ class OverflowCandidateFinder:
         warnings: list[AlgorithmOverflowWarningResult],
         interval_results: list[AlgorithmIntervalNetRateResult] | None = None,
     ) -> list[AlgorithmOverflowCandidateResult]:
+        """根据当前快照和业务规则执行【find_algorithm】计算，返回类型标注所声明的结果。"""
         context = CandidateContext(snapshot)
         return [
             self._for_algorithm_warning(
@@ -49,6 +50,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmOverflowCandidateResult:
+        """内部辅助步骤【_for_algorithm_warning】，为上层业务流程提供数据处理或共用判断。"""
         if context.main_buffer_batch.groups_by_group_key:
             return self._for_batch_warning(
                 warning=warning,
@@ -170,6 +172,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmOverflowCandidateResult:
+        """内部辅助步骤【_for_batch_warning】，为上层业务流程提供数据处理或共用判断。"""
         context.validate_warning_relation(warning)
         warning_source_group = context.warning_group(warning)
         if warning_source_group is None:
@@ -341,6 +344,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         intervals_by_group,
     ) -> list[tuple[MainBufferGroup, AlgorithmIntervalNetRateResult, float]]:
+        """内部辅助步骤【_batch_target_groups】，为上层业务流程提供数据处理或共用判断。"""
         result = []
         batch = context.main_buffer_batch
         # TargetOrder 只能来自同一物理 main；PhysicalBufferKey 相同也不能跨 main。
@@ -376,6 +380,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         target_groups,
     ) -> list[AlgorithmOverflowTargetOption]:
+        """内部辅助步骤【_batch_target_options】，为上层业务流程提供数据处理或共用判断。"""
         options: list[AlgorithmOverflowTargetOption] = []
         for target_group, target_interval, capacity_gap in target_groups:
             target_order, target_product = context.order_product(
@@ -431,6 +436,7 @@ class OverflowCandidateFinder:
     def _inventory_change_rate(
         result: AlgorithmIntervalNetRateResult,
     ) -> float:
+        """内部辅助步骤【_inventory_change_rate】，为上层业务流程提供数据处理或共用判断。"""
         if result.inventory_change_rate is not None:
             return result.inventory_change_rate
         return -result.net_consumption_rate
@@ -439,6 +445,7 @@ class OverflowCandidateFinder:
         self,
         warning: AlgorithmOverflowWarningResult,
     ) -> AlgorithmOrderGrowthDetail:
+        """根据当前快照和业务规则执行【_select_source_detail】计算，返回类型标注所声明的结果。"""
         positive_details = [
             detail
             for detail in warning.order_growth_details
@@ -469,6 +476,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> list[AlgorithmOverflowTargetOption]:
+        """内部辅助步骤【_algorithm_target_options】，为上层业务流程提供数据处理或共用判断。"""
         options: list[AlgorithmOverflowTargetOption] = []
         for target_detail in warning.order_growth_details:
             if target_detail.order_code == source_detail.order_code:
@@ -555,6 +563,7 @@ class OverflowCandidateFinder:
         target_detail: AlgorithmOrderGrowthDetail,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmIntervalNetRateResult | None:
+        """内部辅助步骤【_unique_target_interval】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             interval
             for interval in interval_results

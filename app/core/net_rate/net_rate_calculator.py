@@ -32,6 +32,7 @@ ModelT = TypeVar("ModelT")
 
 @dataclass(frozen=True)
 class _AlgorithmNetRateContext:
+    """类 【_AlgorithmNetRateContext】封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     machine_by_code: dict[str, AlgorithmMachineMaster]
     order_by_code: dict[str, AlgorithmOrder]
     product_by_code: dict[str, AlgorithmProduct]
@@ -47,12 +48,14 @@ class NetRateCalculator:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmIntervalNetRateResult]:
+        """根据当前快照和业务规则执行【calculate】计算，返回类型标注所声明的结果。"""
         return self._calculate_algorithm_snapshot(snapshot)
 
     def _calculate_algorithm_snapshot(
         self,
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmIntervalNetRateResult]:
+        """根据当前快照和业务规则执行【_calculate_algorithm_snapshot】计算，返回类型标注所声明的结果。"""
         context = self._build_machine_context(snapshot)
         # 新路径直接消费聚合后的 (main_id, order_code) 子状态，避免多
         # buffer 层重复扫描同一批机台产能。
@@ -81,6 +84,7 @@ class NetRateCalculator:
         group: MainBufferGroup,
         context: _AlgorithmNetRateContext,
     ) -> AlgorithmIntervalNetRateResult:
+        """根据当前快照和业务规则执行【_calculate_group_net_rate】计算，返回类型标注所声明的结果。"""
         order = context.order_by_code.get(group.order_code)
         if order is None:
             raise NetRateCalculationError(
@@ -153,6 +157,7 @@ class NetRateCalculator:
         inventories: Iterable[AlgorithmBufferOrderInventory],
         context: _AlgorithmNetRateContext,
     ) -> list[tuple[AlgorithmBufferOrderInventory, list[str]]]:
+        """内部辅助步骤【_group_buffer_inventories】，为上层业务流程提供数据处理或共用判断。"""
         quantities_by_group: dict[
             tuple[str, str, str, str, str], float
         ] = {}
@@ -254,6 +259,7 @@ class NetRateCalculator:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> _AlgorithmNetRateContext:
+        """根据当前快照和业务规则执行【_build_machine_context】计算，返回类型标注所声明的结果。"""
         machine_by_code = self._unique_index(
             snapshot.machine_masters,
             "machine_code",
@@ -314,6 +320,7 @@ class NetRateCalculator:
         order_code: str,
         agv_relations: Iterable[AlgorithmAgvRelation],
     ) -> str:
+        """根据当前快照和业务规则执行【_resolve_order_wafer_spec】计算，返回类型标注所声明的结果。"""
         matching_relations = sorted(
             (
                 relation
@@ -337,6 +344,7 @@ class NetRateCalculator:
         buffer_codes: list[str],
         context: _AlgorithmNetRateContext,
     ) -> AlgorithmIntervalNetRateResult:
+        """根据当前快照和业务规则执行【_calculate_inventory_net_rate】计算，返回类型标注所声明的结果。"""
         if inventory.order_code not in context.order_by_code:
             raise NetRateCalculationError(
                 f"{inventory.order_code} order does not exist for buffer inventory"
@@ -405,6 +413,7 @@ class NetRateCalculator:
         relation: AlgorithmBufferProcessRelation,
         context: _AlgorithmNetRateContext,
     ) -> float:
+        """根据当前快照和业务规则执行【_calculate_upstream_output_rate】计算，返回类型标注所声明的结果。"""
         return sum(
             runtime.output_quantity_30m
             for runtime in self._matching_runtimes(
@@ -425,6 +434,7 @@ class NetRateCalculator:
         relation: AlgorithmBufferProcessRelation,
         context: _AlgorithmNetRateContext,
     ) -> float:
+        """根据当前快照和业务规则执行【_calculate_downstream_input_rate】计算，返回类型标注所声明的结果。"""
         return sum(
             runtime.input_quantity_30m
             for runtime in self._matching_runtimes(
@@ -446,6 +456,7 @@ class NetRateCalculator:
         process_code: str,
         context: _AlgorithmNetRateContext,
     ) -> Iterable[AlgorithmMachineRuntime]:
+        """内部辅助步骤【_matching_runtimes】，为上层业务流程提供数据处理或共用判断。"""
         for runtime in snapshot.machine_runtimes:
             if not self._is_running(runtime):
                 continue
@@ -469,6 +480,7 @@ class NetRateCalculator:
             yield runtime
 
     def _is_running(self, runtime: AlgorithmMachineRuntime) -> bool:
+        """内部辅助步骤【_is_running】，为上层业务流程提供数据处理或共用判断。"""
         return runtime.status == "running"
 
     def _unique_index(
@@ -477,6 +489,7 @@ class NetRateCalculator:
         field: str,
         label: str,
     ) -> dict[str, ModelT]:
+        """内部辅助步骤【_unique_index】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, ModelT] = {}
         for item in items:
             key = getattr(item, field)

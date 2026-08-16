@@ -70,6 +70,7 @@ class CutlinePipeline:
     """轻量编排：构建一次组件，通过 evaluate_algorithm 编排结果。"""
 
     def __init__(self):
+        """初始化【__init__】对象的状态、索引和依赖。"""
         self._net_rate = NetRateCalculator()
         self._depletion = DepletionTimeCalculator()
         self._stockout = StockoutWarningEvaluator()
@@ -91,6 +92,7 @@ class CutlinePipeline:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> AlgorithmEvaluateResult:
+        """根据当前快照和业务规则执行【evaluate_algorithm】计算，返回类型标注所声明的结果。"""
         errors = self._aggregation_errors(snapshot)
         net_rate_results = cast(
             list[AlgorithmIntervalNetRateResult],
@@ -319,6 +321,7 @@ class CutlinePipeline:
     def _aggregation_errors(
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmPipelineError]:
+        """内部辅助步骤【_aggregation_errors】，为上层业务流程提供数据处理或共用判断。"""
         errors: list[AlgorithmPipelineError] = []
         seen: set[tuple[str, str]] = set()
         for issue in snapshot.main_buffer_batch.issues:
@@ -344,6 +347,7 @@ class CutlinePipeline:
         evaluations: list[PendingCutlinePlanEvaluation],
         accepted_new_events: list[AlgorithmActiveCutlineEvent],
     ) -> list[PendingCutlinePlanEvaluation]:
+        """内部辅助步骤【_reconcile_plan_evaluations】，为上层业务流程提供数据处理或共用判断。"""
         plan_by_id = {
             plan.plan_id: plan for plan in snapshot.pending_cutline_plans
         }
@@ -411,6 +415,7 @@ class CutlinePipeline:
         list[AlgorithmActiveCutlineEvent],
         list[AlgorithmPipelineError],
     ]:
+        """根据当前快照和业务规则执行【_create_confirmed_active_cutline_events】计算，返回类型标注所声明的结果。"""
         unique_transitions, errors = self._unique_transitions(transitions)
         plan_by_id = {
             plan.plan_id: plan for plan in snapshot.pending_cutline_plans
@@ -463,6 +468,7 @@ class CutlinePipeline:
         transition: ConfirmedCutlineTransition,
         plan: PendingCutlinePlan,
     ) -> AlgorithmActiveCutlineEvent:
+        """内部辅助步骤【_event_from_transition】，为上层业务流程提供数据处理或共用判断。"""
         return self._active_event_tracker.create_event(
             event_id=(
                 f"CUT-{transition.plan_id}-{transition.machine_code}"
@@ -504,6 +510,7 @@ class CutlinePipeline:
         list[ConfirmedCutlineTransition],
         list[AlgorithmPipelineError],
     ]:
+        """内部辅助步骤【_unique_transitions】，为上层业务流程提供数据处理或共用判断。"""
         identities = [
             (
                 self._transition_event_id(transition),
@@ -542,6 +549,7 @@ class CutlinePipeline:
     def _transition_event_id(
         transition: ConfirmedCutlineTransition,
     ) -> str:
+        """内部辅助步骤【_transition_event_id】，为上层业务流程提供数据处理或共用判断。"""
         return f"CUT-{transition.plan_id}-{transition.machine_code}"
 
     def _merge_active_cutline_events(
@@ -555,6 +563,7 @@ class CutlinePipeline:
         list[AlgorithmActiveCutlineEvent],
         list[AlgorithmPipelineError],
     ]:
+        """内部辅助步骤【_merge_active_cutline_events】，为上层业务流程提供数据处理或共用判断。"""
         tagged_events = [
             *((False, event) for event in existing_events),
             *((True, event) for event in new_events),
@@ -608,15 +617,18 @@ class CutlinePipeline:
     def _identity_components(
         identities: list[tuple[str, tuple[str, datetime]]],
     ) -> list[list[int]]:
+        """内部辅助步骤【_identity_components】，为上层业务流程提供数据处理或共用判断。"""
         parents = list(range(len(identities)))
 
         def find(index: int) -> int:
+            """根据当前快照和业务规则执行【find】计算，返回类型标注所声明的结果。"""
             while parents[index] != index:
                 parents[index] = parents[parents[index]]
                 index = parents[index]
             return index
 
         def union(left: int, right: int) -> None:
+            """执行【union】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
             left_root = find(left)
             right_root = find(right)
             if left_root != right_root:
@@ -642,6 +654,7 @@ class CutlinePipeline:
         left: AlgorithmActiveCutlineEvent,
         right: AlgorithmActiveCutlineEvent,
     ) -> bool:
+        """内部辅助步骤【_same_event_business】，为上层业务流程提供数据处理或共用判断。"""
         excluded_alias_fields = {"event_id"}
         return left.model_dump(
             exclude=excluded_alias_fields
@@ -659,6 +672,7 @@ class CutlinePipeline:
         cutline_start_times: list[datetime],
         business_values: list[str],
     ) -> AlgorithmPipelineError:
+        """内部辅助步骤【_active_event_conflict_error】，为上层业务流程提供数据处理或共用判断。"""
         left_id = event_ids[0]
         right_id = event_ids[-1]
         return AlgorithmPipelineError(
@@ -682,6 +696,7 @@ class CutlinePipeline:
         return_results: list[AlgorithmReturnResult],
         preserve_without_result: bool,
     ) -> list[AlgorithmActiveCutlineEvent]:
+        """内部辅助步骤【_apply_return_state】，为上层业务流程提供数据处理或共用判断。"""
         result_by_event_id = {
             result.event_id: result for result in return_results
         }
@@ -715,6 +730,7 @@ class CutlinePipeline:
         snapshot: AlgorithmSnapshot,
         active_events: list[AlgorithmActiveCutlineEvent],
     ) -> set[tuple[str, str, str, str, str, str]]:
+        """内部辅助步骤【_tracked_business_keys】，为上层业务流程提供数据处理或共用判断。"""
         current_time = normalize_local_time(snapshot.current_time)
         keys = {
             self._pending_business_key(plan)
@@ -732,6 +748,7 @@ class CutlinePipeline:
     def _pending_business_key(
         plan: PendingCutlinePlan,
     ) -> tuple[str, str, str, str, str, str]:
+        """内部辅助步骤【_pending_business_key】，为上层业务流程提供数据处理或共用判断。"""
         return (
             plan.warning_type,
             plan.workshop_code,
@@ -745,6 +762,7 @@ class CutlinePipeline:
     def _active_event_business_key(
         event: AlgorithmActiveCutlineEvent,
     ) -> tuple[str, str, str, str, str, str] | None:
+        """内部辅助步骤【_active_event_business_key】，为上层业务流程提供数据处理或共用判断。"""
         if (
             event.status != "active"
             or event.plan_id is None
@@ -777,6 +795,7 @@ class CutlinePipeline:
         decisions: list[AlgorithmCutlineDecisionResult],
         tracked_keys: set[tuple[str, str, str, str, str, str]],
     ) -> list[AlgorithmCutlineDecisionResult]:
+        """内部辅助步骤【_filter_equivalent_automatic_decisions】，为上层业务流程提供数据处理或共用判断。"""
         filtered: list[AlgorithmCutlineDecisionResult] = []
         for decision in decisions:
             key = self._decision_business_key(decision)
@@ -789,6 +808,7 @@ class CutlinePipeline:
     def _decision_business_key(
         decision: AlgorithmCutlineDecisionResult,
     ) -> tuple[str, str, str, str, str, str] | None:
+        """内部辅助步骤【_decision_business_key】，为上层业务流程提供数据处理或共用判断。"""
         plan = decision.plan
         if plan is None:
             return None
@@ -812,6 +832,7 @@ class CutlinePipeline:
         snapshot: AlgorithmSnapshot,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> tuple[list[AlgorithmReturnResult], list[AlgorithmPipelineError]]:
+        """根据当前快照和业务规则执行【_evaluate_return_events】计算，返回类型标注所声明的结果。"""
         results: list[AlgorithmReturnResult] = []
         errors: list[AlgorithmPipelineError] = []
         for event in snapshot.active_cutline_events:
@@ -854,6 +875,7 @@ class CutlinePipeline:
         list[AlgorithmMixingTraceFailure],
         list[str],
     ]:
+        """根据当前快照和业务规则执行【_calculate_mixing_traces】计算，返回类型标注所声明的结果。"""
         records: list[AlgorithmMixingTraceRecord] = []
         failures: list[AlgorithmMixingTraceFailure] = []
         successful_event_ids: list[str] = []
@@ -889,6 +911,7 @@ class CutlinePipeline:
     def _is_complete_mixing_event(
         event: AlgorithmActiveCutlineEvent,
     ) -> bool:
+        """内部辅助步骤【_is_complete_mixing_event】，为上层业务流程提供数据处理或共用判断。"""
         return (
             event.status in {"active", "return_recommended"}
             and event.plan_id is not None
@@ -904,6 +927,7 @@ class CutlinePipeline:
         events: list[AlgorithmActiveCutlineEvent],
         return_suggested_event_ids: list[str],
     ) -> list[AlgorithmActiveCutlineEvent]:
+        """在後端输入与算法内部模型之间执行【_normalize_return_watermark】转换，并保留必要的校验信息。"""
         suggested_ids = set(return_suggested_event_ids)
         return [
             self._active_event_tracker.mark_return_recommended(event=event)
@@ -919,6 +943,7 @@ class CutlinePipeline:
         interval_results: list[AlgorithmIntervalNetRateResult],
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> tuple[AlgorithmCutlineDecisionResult | None, AlgorithmPipelineError | None]:
+        """根据当前快照和业务规则执行【_build_stockout_decision】计算，返回类型标注所声明的结果。"""
         warning_key = self._stockout_warning_key(warning)
         try:
             candidate_result = self._candidate.find_algorithm(
@@ -973,6 +998,7 @@ class CutlinePipeline:
         interval_results: list[AlgorithmIntervalNetRateResult],
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> tuple[AlgorithmCutlineDecisionResult | None, AlgorithmPipelineError | None]:
+        """根据当前快照和业务规则执行【_build_overflow_decision】计算，返回类型标注所声明的结果。"""
         warning_key = self._overflow_warning_key(warning)
         try:
             candidate_result = self._overflow_candidate.find_algorithm(
@@ -1023,6 +1049,7 @@ class CutlinePipeline:
 
     @staticmethod
     def _stockout_warning_key(warning: AlgorithmStockoutWarningResult) -> str:
+        """内部辅助步骤【_stockout_warning_key】，为上层业务流程提供数据处理或共用判断。"""
         return ":".join(
             (
                 warning.buffer_code,
@@ -1036,6 +1063,7 @@ class CutlinePipeline:
 
     @staticmethod
     def _overflow_warning_key(warning: AlgorithmOverflowWarningResult) -> str:
+        """内部辅助步骤【_overflow_warning_key】，为上层业务流程提供数据处理或共用判断。"""
         return ":".join(
             (
                 warning.buffer_code,
@@ -1052,6 +1080,7 @@ class CutlinePipeline:
         warning_key: str,
         error: Exception,
     ) -> AlgorithmPipelineError:
+        """内部辅助步骤【_decision_error】，为上层业务流程提供数据处理或共用判断。"""
         reason = re.sub(
             r"([a-z0-9])([A-Z])",
             r"\1_\2",

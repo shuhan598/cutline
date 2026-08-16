@@ -45,10 +45,12 @@ _PUBLIC_MANUAL_REASON_BY_INTERNAL = {
 
 
 class AlgorithmResponseMapper:
+    """类 【AlgorithmResponseMapper】 封装该领域的数据或服务能力，对外提供稳定的业务契约。"""
     def to_response(
         self,
         result: AlgorithmEvaluateResult,
     ) -> CutlineAlgorithmResponse:
+        """执行【to_response】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         recommendations, updates, closed_ids = self._map_return_results(
             result.return_results,
             new_event_ids={
@@ -109,6 +111,7 @@ class AlgorithmResponseMapper:
         self,
         result: AlgorithmEvaluateResult,
     ) -> CutlineEvaluateResponse:
+        """执行【to_evaluate_response】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         business_response = self.to_response(result)
         state = result.persistence_state
         return CutlineEvaluateResponse(
@@ -145,6 +148,7 @@ class AlgorithmResponseMapper:
         self,
         item: AlgorithmStockoutWarningResult,
     ) -> StockoutWarningResponse:
+        """在後端输入与算法内部模型之间执行【_map_stockout_warning】转换，并保留必要的校验信息。"""
         return StockoutWarningResponse(
             warning_id=self._stockout_warning_id(
                 item.warning_time,
@@ -174,6 +178,7 @@ class AlgorithmResponseMapper:
         self,
         item: AlgorithmOverflowWarningResult,
     ) -> OverflowWarningResponse:
+        """在後端输入与算法内部模型之间执行【_map_overflow_warning】转换，并保留必要的校验信息。"""
         return OverflowWarningResponse(
             warning_id=self._overflow_warning_id(
                 item.warning_time,
@@ -194,6 +199,7 @@ class AlgorithmResponseMapper:
         )
 
     def _map_cutline_decision(self, item: AlgorithmCutlineDecisionResult):
+        """在後端输入与算法内部模型之间执行【_map_cutline_decision】转换，并保留必要的校验信息。"""
         if item.plan is not None:
             return AutomaticCutlineDecisionResponse(
                 warning_id=self._plan_warning_id(item.plan),
@@ -229,6 +235,7 @@ class AlgorithmResponseMapper:
         self,
         plan: AlgorithmStockoutCutlinePlan | AlgorithmOverflowCutlinePlan,
     ) -> StockoutCutlinePlanResponse | OverflowCutlinePlanResponse:
+        """在後端输入与算法内部模型之间执行【_map_plan】转换，并保留必要的校验信息。"""
         if isinstance(plan, AlgorithmStockoutCutlinePlan):
             return StockoutCutlinePlanResponse(
                 plan_id=plan.plan_id,
@@ -312,6 +319,7 @@ class AlgorithmResponseMapper:
         list[ActiveCutlineEventUpdateResponse],
         list[str],
     ]:
+        """在後端输入与算法内部模型之间执行【_map_return_results】转换，并保留必要的校验信息。"""
         recommendations: list[ReturnRecommendationResponse] = []
         updates: list[ActiveCutlineEventUpdateResponse] = []
         closed_ids: list[str] = []
@@ -347,6 +355,7 @@ class AlgorithmResponseMapper:
         self,
         item: AlgorithmActiveCutlineEvent,
     ) -> ActiveCutlineEventResponse:
+        """在後端输入与算法内部模型之间执行【_map_active_event】转换，并保留必要的校验信息。"""
         return ActiveCutlineEventResponse(
             event_id=item.event_id,
             machine_code=item.machine_code,
@@ -368,6 +377,7 @@ class AlgorithmResponseMapper:
         *,
         calculation_time,
     ) -> SilkScreenClearanceResponse:
+        """在後端输入与算法内部模型之间执行【_map_silk_screen_result】转换，并保留必要的校验信息。"""
         return SilkScreenClearanceResponse(
             workshop_code=item.workshop_code,
             current_order_code=item.current_order_code,
@@ -384,6 +394,7 @@ class AlgorithmResponseMapper:
         self,
         item: AlgorithmMixingTraceRecord,
     ) -> MixingTraceRecordResponse:
+        """在後端输入与算法内部模型之间执行【_map_mixing_trace_record】转换，并保留必要的校验信息。"""
         return MixingTraceRecordResponse(
             mix_trace_id=item.mix_trace_id,
             plan_id=item.plan_id,
@@ -419,6 +430,7 @@ class AlgorithmResponseMapper:
         self,
         item: AlgorithmPipelineError,
     ) -> PipelineErrorResponse:
+        """在後端输入与算法内部模型之间执行【_map_pipeline_error】转换，并保留必要的校验信息。"""
         return PipelineErrorResponse(
             stage=item.stage,
             warning_type=item.warning_type,
@@ -431,6 +443,7 @@ class AlgorithmResponseMapper:
         self,
         plan: AlgorithmStockoutCutlinePlan | AlgorithmOverflowCutlinePlan,
     ) -> str:
+        """内部辅助步骤【_plan_warning_id】，为上层业务流程提供数据处理或共用判断。"""
         if isinstance(plan, AlgorithmStockoutCutlinePlan):
             return self._stockout_warning_id(
                 plan.calculation_time,
@@ -444,6 +457,7 @@ class AlgorithmResponseMapper:
 
     @staticmethod
     def _stockout_warning_id(warning_time, buffer_code, order_code) -> str:
+        """内部辅助步骤【_stockout_warning_id】，为上层业务流程提供数据处理或共用判断。"""
         return (
             f"stockout:{warning_time.isoformat()}:"
             f"{buffer_code}:{order_code}"
@@ -451,10 +465,12 @@ class AlgorithmResponseMapper:
 
     @staticmethod
     def _overflow_warning_id(warning_time, buffer_code) -> str:
+        """内部辅助步骤【_overflow_warning_id】，为上层业务流程提供数据处理或共用判断。"""
         return f"overflow:{warning_time.isoformat()}:{buffer_code}"
 
     @staticmethod
     def _required_capacity(value: float | None, label: str) -> float:
+        """内部辅助步骤【_required_capacity】，为上层业务流程提供数据处理或共用判断。"""
         if value is None:
             raise ValueError(f"{label} capacity is required")
         return value

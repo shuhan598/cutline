@@ -19,6 +19,7 @@ class MachineWorkshopResolver:
     """以工艺路线为权威来源解析工序和机台所属车间。"""
 
     def __init__(self, process_routes: Iterable[AlgorithmProcessRoute]):
+        """初始化【__init__】对象的状态、索引和依赖。"""
         workshops_by_process: dict[str, set[str]] = defaultdict(set)
         for route in process_routes:
             workshops_by_process[route.process_code].add(
