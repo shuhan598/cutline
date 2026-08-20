@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalog_version", "catalog_hash", "published_at", "retained_versions"],
+  "properties": {"catalog_version": {"type": "string"}, "catalog_hash": {"type": "string", "pattern": "^sha256:"}, "published_at": {"type": "string", "format": "date-time"}, "retained_versions": {"type": "array", "items": {"type": "string"}}}
+}

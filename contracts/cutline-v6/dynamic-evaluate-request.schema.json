@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalog_version", "snapshot_meta", "dynamic"],
+  "properties": {
+    "catalog_version": {"type": "string", "minLength": 1},
+    "snapshot_meta": {"type": "object", "additionalProperties": false, "required": ["run_id", "trigger_type", "workshop_id", "snapshot_time", "params_version", "degraded_flags"]},
+    "dynamic": {"type": "object", "additionalProperties": false, "required": ["machine_realtime", "buffer_realtime", "agv_relations"]}
+  }
+}

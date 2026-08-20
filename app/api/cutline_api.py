@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, NoReturn
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
@@ -19,11 +19,20 @@ from app.adapters.backend_request_validator import (
 )
 from app.adapters.snapshot_adapter import SnapshotConversionError
 from app.schemas.request_schema import CutlineAlgorithmRequest
+from app.schemas.v6_schema import (
+    CatalogPatchRequest,
+    CatalogResponse,
+    FullCatalogRequest,
+    V6EvaluateRequest,
+    V6EvaluateResponse,
+)
 from app.schemas.response_schema import (
     CutlineAlgorithmResponse,
     CutlineEvaluateResponse,
 )
 from app.service.cutline_service import CutlineService
+from app.service.algorithm_state_store import AlgorithmStateStore
+from app.service.catalog_store import CatalogStore, CatalogStoreError
 from app.utils.algorithm_exception_logger import log_algorithm_exception
 
 
@@ -32,11 +41,42 @@ router = APIRouter(tags=["cutline"])
 _backend_loader = BackendRequestLoader()
 _backend_validator = BackendRequestCompletenessValidator()
 _cutline_service = CutlineService()
+_catalog_store = CatalogStore(strict=True)
+_state_store = AlgorithmStateStore()
+
+
+def configure_v6_stores() -> None:
+    """Reset process-local V6 state when a new application instance is created."""
+    global _catalog_store, _state_store
+    _catalog_store = CatalogStore(strict=True)
+    _state_store = AlgorithmStateStore()
 
 
 def get_cutline_service() -> CutlineService:
     """执行【get_cutline_service】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
     return _cutline_service
+
+
+def get_catalog_store() -> CatalogStore:
+    return _catalog_store
+
+
+def get_state_store() -> AlgorithmStateStore:
+    return _state_store
+
+
+def _catalog_http_error(exc: CatalogStoreError) -> HTTPException:
+    status = 422 if exc.code == "STATIC_DATA_INVALID" else 409
+    return HTTPException(status_code=status, detail={"code": exc.code, "message": str(exc), "retryable": status == 409})
+
+
+def _catalog_response(record, store: CatalogStore) -> CatalogResponse:
+    return CatalogResponse(
+        catalog_version=record.catalog_version,
+        catalog_hash=record.catalog_hash,
+        published_at=record.published_at,
+        retained_versions=store.retained_versions(),
+    )
 
 
 def _raise_request_validation_error(

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["detail"],
+  "properties": {"detail": {"type": "object", "required": ["code", "message"], "properties": {"code": {"type": "string"}, "message": {"type": "string"}, "catalog_version": {"type": "string"}, "retryable": {"type": "boolean"}, "missing_references": {"type": "array"}}, "additionalProperties": true}}
+}

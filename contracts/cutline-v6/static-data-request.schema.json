@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalog_version", "catalog"],
+  "properties": {
+    "catalog_version": {"type": "string", "minLength": 1},
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine_master", "machine_process_times", "workshops", "orders", "products", "process_routes", "buffer_master"],
+      "properties": {
+        "machine_master": {"type": "array"},
+        "machine_process_times": {"type": "array"},
+        "workshops": {"type": "array"},
+        "orders": {"type": "array"},
+        "products": {"type": "array"},
+        "process_routes": {"type": "array"},
+        "buffer_master": {"type": "array"}
+      }
+    }
+  }
+}

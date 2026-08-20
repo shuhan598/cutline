@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["base_catalog_version", "next_catalog_version", "changes"],
+  "properties": {
+    "base_catalog_version": {"type": "string", "minLength": 1},
+    "next_catalog_version": {"type": "string", "minLength": 1},
+    "changes": {"type": "object", "additionalProperties": {"$ref": "#/$defs/change"}}
+  },
+  "$defs": {"change": {"type": "object", "additionalProperties": false, "required": ["upserts", "deleted_keys"], "properties": {"upserts": {"type": "array"}, "deleted_keys": {"type": "array"}}}}
+}
