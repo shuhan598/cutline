@@ -48,14 +48,18 @@ class NetRateCalculator:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmIntervalNetRateResult]:
-        """根据当前快照和业务规则执行【calculate】计算，返回类型标注所声明的结果。"""
+        """计算快照内每个可参与预警的订单库存区间的净消耗速率。
+
+        当聚合批次存在时优先使用物理 main 的订单分组；旧数据路径才按单个
+        Buffer 库存记录计算。两条路径最终返回相同语义的区间结果。
+        """
         return self._calculate_algorithm_snapshot(snapshot)
 
     def _calculate_algorithm_snapshot(
         self,
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmIntervalNetRateResult]:
-        """根据当前快照和业务规则执行【_calculate_algorithm_snapshot】计算，返回类型标注所声明的结果。"""
+        """建立机台关联上下文，并根据聚合数据是否可用选择计算粒度。"""
         context = self._build_machine_context(snapshot)
         # 新路径直接消费聚合后的 (main_id, order_code) 子状态，避免多
         # buffer 层重复扫描同一批机台产能。
@@ -84,7 +88,11 @@ class NetRateCalculator:
         group: MainBufferGroup,
         context: _AlgorithmNetRateContext,
     ) -> AlgorithmIntervalNetRateResult:
-        """根据当前快照和业务规则执行【_calculate_group_net_rate】计算，返回类型标注所声明的结果。"""
+        """计算一个物理 main 内单订单、单规格、单工艺区间的库存变化速率。
+
+        净消耗速率等于匹配下游机台的小时投入减去上游机台的小时产出；正值说明
+        该订单库存正在减少，负值说明库存正在积压。
+        """
         order = context.order_by_code.get(group.order_code)
         if order is None:
             raise NetRateCalculationError(
@@ -157,7 +165,11 @@ class NetRateCalculator:
         inventories: Iterable[AlgorithmBufferOrderInventory],
         context: _AlgorithmNetRateContext,
     ) -> list[tuple[AlgorithmBufferOrderInventory, list[str]]]:
-        """内部辅助步骤【_group_buffer_inventories】，为上层业务流程提供数据处理或共用判断。"""
+        """在兼容路径将同一 main、订单和工艺区间的 Buffer 库存合并。
+
+        同一物理 Buffer、订单组合出现重复记录会使库存翻倍，因此直接拒绝；同一
+        main 关联不同工艺区间同样不可计算，必须由上游数据修正。
+        """
         quantities_by_group: dict[
             tuple[str, str, str, str, str], float
         ] = {}
@@ -259,7 +271,7 @@ class NetRateCalculator:
         self,
         snapshot: AlgorithmSnapshot,
     ) -> _AlgorithmNetRateContext:
-        """根据当前快照和业务规则执行【_build_machine_context】计算，返回类型标注所声明的结果。"""
+        """构造计算速率所需的唯一索引，并预校验机台主数据和车间归属。"""
         machine_by_code = self._unique_index(
             snapshot.machine_masters,
             "machine_code",
@@ -320,7 +332,10 @@ class NetRateCalculator:
         order_code: str,
         agv_relations: Iterable[AlgorithmAgvRelation],
     ) -> str:
-        """根据当前快照和业务规则执行【_resolve_order_wafer_spec】计算，返回类型标注所声明的结果。"""
+        """从当前生效 AGV 绑定中取得订单的硅片规格。
+
+        产品表只描述尺寸，规格以 AGV 实际绑定为准；缺失绑定时不能假定默认规格。
+        """
         matching_relations = sorted(
             (
                 relation
@@ -344,7 +359,7 @@ class NetRateCalculator:
         buffer_codes: list[str],
         context: _AlgorithmNetRateContext,
     ) -> AlgorithmIntervalNetRateResult:
-        """根据当前快照和业务规则执行【_calculate_inventory_net_rate】计算，返回类型标注所声明的结果。"""
+        """按兼容数据结构计算一个合并库存记录的上下游速率和库存变化。"""
         if inventory.order_code not in context.order_by_code:
             raise NetRateCalculationError(
                 f"{inventory.order_code} order does not exist for buffer inventory"
@@ -413,7 +428,7 @@ class NetRateCalculator:
         relation: AlgorithmBufferProcessRelation,
         context: _AlgorithmNetRateContext,
     ) -> float:
-        """根据当前快照和业务规则执行【_calculate_upstream_output_rate】计算，返回类型标注所声明的结果。"""
+        """汇总匹配库存区间的上游运行机台半小时产出，并换算为小时速率。"""
         return sum(
             runtime.output_quantity_30m
             for runtime in self._matching_runtimes(
@@ -434,7 +449,7 @@ class NetRateCalculator:
         relation: AlgorithmBufferProcessRelation,
         context: _AlgorithmNetRateContext,
     ) -> float:
-        """根据当前快照和业务规则执行【_calculate_downstream_input_rate】计算，返回类型标注所声明的结果。"""
+        """汇总匹配库存区间的下游运行机台半小时投入，并换算为小时速率。"""
         return sum(
             runtime.input_quantity_30m
             for runtime in self._matching_runtimes(
@@ -456,7 +471,7 @@ class NetRateCalculator:
         process_code: str,
         context: _AlgorithmNetRateContext,
     ) -> Iterable[AlgorithmMachineRuntime]:
-        """内部辅助步骤【_matching_runtimes】，为上层业务流程提供数据处理或共用判断。"""
+        """产出与指定订单、规格、车间和工序完全一致的运行机台实时记录。"""
         for runtime in snapshot.machine_runtimes:
             if not self._is_running(runtime):
                 continue
@@ -480,7 +495,7 @@ class NetRateCalculator:
             yield runtime
 
     def _is_running(self, runtime: AlgorithmMachineRuntime) -> bool:
-        """内部辅助步骤【_is_running】，为上层业务流程提供数据处理或共用判断。"""
+        """判断标准化后的机台状态是否允许计入实时产能。"""
         return runtime.status == "running"
 
     def _unique_index(
@@ -489,7 +504,7 @@ class NetRateCalculator:
         field: str,
         label: str,
     ) -> dict[str, ModelT]:
-        """内部辅助步骤【_unique_index】，为上层业务流程提供数据处理或共用判断。"""
+        """按业务键构建唯一索引；重复键会使后续引用不可确定，因此立即失败。"""
         result: dict[str, ModelT] = {}
         for item in items:
             key = getattr(item, field)

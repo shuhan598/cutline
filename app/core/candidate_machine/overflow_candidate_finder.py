@@ -33,6 +33,7 @@ class OverflowCandidateFinder:
         warnings: list[AlgorithmOverflowWarningResult],
         interval_results: list[AlgorithmIntervalNetRateResult] | None = None,
     ) -> list[AlgorithmOverflowCandidateResult]:
+        # 对每条物理 main 溢满预警找出可从增长订单切出的机台及其可接收目标订单。
         """根据当前快照和业务规则执行【find_algorithm】计算，返回类型标注所声明的结果。"""
         context = CandidateContext(snapshot)
         return [
@@ -50,6 +51,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmOverflowCandidateResult:
+        # 非聚合兼容路径根据预警增长明细选择最主要来源订单，再构造跨订单候选切换。
         """内部辅助步骤【_for_algorithm_warning】，为上层业务流程提供数据处理或共用判断。"""
         if context.main_buffer_batch.groups_by_group_key:
             return self._for_batch_warning(
@@ -172,6 +174,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmOverflowCandidateResult:
+        # 聚合路径允许同一 main 的多个可捐出订单参与，选型器会在每步虚拟切换后重算优先级。
         """内部辅助步骤【_for_batch_warning】，为上层业务流程提供数据处理或共用判断。"""
         context.validate_warning_relation(warning)
         warning_source_group = context.warning_group(warning)
@@ -344,6 +347,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         intervals_by_group,
     ) -> list[tuple[MainBufferGroup, AlgorithmIntervalNetRateResult, float]]:
+        # 溢满转移目标严格限制在同一物理 main，防止名义上相同的 Buffer 跨实体借用产能。
         """内部辅助步骤【_batch_target_groups】，为上层业务流程提供数据处理或共用判断。"""
         result = []
         batch = context.main_buffer_batch
@@ -380,6 +384,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         target_groups,
     ) -> list[AlgorithmOverflowTargetOption]:
+        # 每台来源机台只保留同时满足尺寸、规格、片源等级和目标库存资格的可切订单。
         """内部辅助步骤【_batch_target_options】，为上层业务流程提供数据处理或共用判断。"""
         options: list[AlgorithmOverflowTargetOption] = []
         for target_group, target_interval, capacity_gap in target_groups:
@@ -436,6 +441,7 @@ class OverflowCandidateFinder:
     def _inventory_change_rate(
         result: AlgorithmIntervalNetRateResult,
     ) -> float:
+        # 新模型直接保存库存变化率；兼容结果通过净消耗速率取反得到相同语义。
         """内部辅助步骤【_inventory_change_rate】，为上层业务流程提供数据处理或共用判断。"""
         if result.inventory_change_rate is not None:
             return result.inventory_change_rate
@@ -445,6 +451,7 @@ class OverflowCandidateFinder:
         self,
         warning: AlgorithmOverflowWarningResult,
     ) -> AlgorithmOrderGrowthDetail:
+        # 兼容路径以增长速率最大的订单作为溢满的首要来源，增长相同按订单号稳定选择。
         """根据当前快照和业务规则执行【_select_source_detail】计算，返回类型标注所声明的结果。"""
         positive_details = [
             detail
@@ -476,6 +483,7 @@ class OverflowCandidateFinder:
         context: CandidateContext,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> list[AlgorithmOverflowTargetOption]:
+        # 仅将当前存在断料需求的同尺寸订单列为目标，并关联其唯一库存区间以供影响评估。
         """内部辅助步骤【_algorithm_target_options】，为上层业务流程提供数据处理或共用判断。"""
         options: list[AlgorithmOverflowTargetOption] = []
         for target_detail in warning.order_growth_details:
@@ -563,6 +571,7 @@ class OverflowCandidateFinder:
         target_detail: AlgorithmOrderGrowthDetail,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmIntervalNetRateResult | None:
+        # 目标库存区间无法唯一定位时不猜测关联 Buffer，返回空由上游保守处理。
         """内部辅助步骤【_unique_target_interval】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             interval

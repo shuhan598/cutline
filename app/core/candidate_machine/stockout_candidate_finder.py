@@ -19,6 +19,7 @@ from app.schemas.result_schema import (
 
 
 class StockoutCandidateFinder:
+    # 为断料目标库存筛选可切入的运行机台，并将机台当前订单作为供给侧影响对象。
     """为触发的断料预警，按全局耗尽紧迫度顺序查找同工序同尺寸同形状的在产机台。"""
 
     def find_algorithm(
@@ -26,6 +27,7 @@ class StockoutCandidateFinder:
         snapshot: AlgorithmSnapshot,
         warnings: list[AlgorithmStockoutWarningResult],
     ) -> list[AlgorithmStockoutCandidateResult]:
+        # 入口同时兼容快照粒度和已聚合批次粒度，最终统一产出按断料预警分组的候选集。
         """根据当前快照和业务规则执行【find_algorithm】计算，返回类型标注所声明的结果。"""
         context = CandidateContext(snapshot)
         return [
@@ -38,6 +40,7 @@ class StockoutCandidateFinder:
         warning: AlgorithmStockoutWarningResult,
         context: CandidateContext,
     ) -> AlgorithmStockoutCandidateResult:
+        # 按车间、工序、规格、产品和库存区间逐项过滤，确保候选切换不会破坏目标或来源库存。
         """内部辅助步骤【_for_algorithm_warning】，为上层业务流程提供数据处理或共用判断。"""
         context.validate_warning_relation(warning)
         receiver_group = context.warning_group(warning)

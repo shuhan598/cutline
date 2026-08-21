@@ -24,6 +24,7 @@ class CutlinePlanBuilder:
         warning: AlgorithmStockoutWarningResult,
         selection_result: AlgorithmStockoutSelectionResult,
     ) -> AlgorithmCutlineDecisionResult:
+        # 只有候选机台累积贡献完全填平断料产能缺口时才生成自动计划，否则保留完整诊断供人工处理。
         """根据当前快照和业务规则执行【build_stockout_decision】计算，返回类型标注所声明的结果。"""
         if selection_result.risk_resolved:
             return AlgorithmCutlineDecisionResult(
@@ -90,6 +91,7 @@ class CutlinePlanBuilder:
         warning: AlgorithmOverflowWarningResult,
         selection_result: AlgorithmOverflowSelectionResult,
     ) -> AlgorithmCutlineDecisionResult:
+        # 只有切出产能足以消除物理 main 的增长风险时才生成自动计划。
         """根据当前快照和业务规则执行【build_overflow_decision】计算，返回类型标注所声明的结果。"""
         if selection_result.risk_resolved:
             return AlgorithmCutlineDecisionResult(
@@ -167,6 +169,7 @@ class CutlinePlanBuilder:
         remaining_risk_value: float,
         selection_result,
     ) -> AlgorithmManualInterventionResult:
+        # 将已通过和被拒绝的候选评估都保留在人工干预结果中，保证操作人员能追溯未自动执行的原因。
         """内部辅助步骤【_algorithm_manual_intervention】，为上层业务流程提供数据处理或共用判断。"""
         passed = [
             item.model_copy(deep=True)
@@ -209,6 +212,7 @@ class CutlinePlanBuilder:
         buffer_code: str,
         order_code: str,
     ) -> str:
+        # 计划编号由风险类别、快照时间、库存和订单上下文构成，同一轮重复计算可得到稳定 ID。
         """内部辅助步骤【_algorithm_plan_id】，为上层业务流程提供数据处理或共用判断。"""
         return (
             f"{warning_type}:{snapshot.current_time.isoformat()}:"

@@ -1,0 +1,123 @@
+{
+  "calculation_time": "2026-08-15T19:11:18.421220+08:00",
+  "stockout_warnings": [],
+  "overflow_warnings": [
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310110101",
+      "warning_type": "overflow",
+      "warning_time": "2026-08-15T19:11:18.421220+08:00",
+      "buffer_code": "310110101",
+      "workshop_code": "S2-002",
+      "total_inventory": 24000.0,
+      "max_capacity": 24000.0,
+      "remaining_capacity": 0.0,
+      "buffer_growth_rate": 0.0,
+      "overflow_minutes": 0.0,
+      "overflow_warning_lead_minutes": 30.0
+    },
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310110202",
+      "warning_type": "overflow",
+      "warning_time": "2026-08-15T19:11:18.421220+08:00",
+      "buffer_code": "310110202",
+      "workshop_code": "S2-002",
+      "total_inventory": 14400.0,
+      "max_capacity": 14400.0,
+      "remaining_capacity": 0.0,
+      "buffer_growth_rate": 0.0,
+      "overflow_minutes": 0.0,
+      "overflow_warning_lead_minutes": 30.0
+    },
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310112001",
+      "warning_type": "overflow",
+      "warning_time": "2026-08-15T19:11:18.421220+08:00",
+      "buffer_code": "310112001",
+      "workshop_code": "S2-002",
+      "total_inventory": 24000.0,
+      "max_capacity": 24000.0,
+      "remaining_capacity": 0.0,
+      "buffer_growth_rate": 0.0,
+      "overflow_minutes": 0.0,
+      "overflow_warning_lead_minutes": 30.0
+    },
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310112101",
+      "warning_type": "overflow",
+      "warning_time": "2026-08-15T19:11:18.421220+08:00",
+      "buffer_code": "310112101",
+      "workshop_code": "S2-002",
+      "total_inventory": 24000.0,
+      "max_capacity": 24000.0,
+      "remaining_capacity": 0.0,
+      "buffer_growth_rate": 0.0,
+      "overflow_minutes": 0.0,
+      "overflow_warning_lead_minutes": 30.0
+    }
+  ],
+  "cutline_decisions": [
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310110101",
+      "manual_intervention": {
+        "reason": "current_buffer_already_over_capacity"
+      }
+    },
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310110202",
+      "manual_intervention": {
+        "reason": "current_buffer_already_over_capacity"
+      }
+    },
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310112001",
+      "manual_intervention": {
+        "reason": "current_buffer_already_over_capacity"
+      }
+    },
+    {
+      "warning_id": "overflow:2026-08-15T19:11:18.421220+08:00:310112101",
+      "manual_intervention": {
+        "reason": "current_buffer_already_over_capacity"
+      }
+    }
+  ],
+  "return_recommendations": [],
+  "silk_screen_results": [],
+  "mixing_trace_records": [],
+  "new_active_cutline_events": [],
+  "updated_active_cutline_events": [],
+  "closed_active_cutline_event_ids": [],
+  "errors": [
+    {
+      "stage": "main_buffer_aggregation",
+      "warning_type": null,
+      "warning_key": "31011010",
+      "reason": "inventory_at_or_above_capacity",
+      "message": "Inventory 24000 is at or above capacity 24000"
+    },
+    {
+      "stage": "main_buffer_aggregation",
+      "warning_type": null,
+      "warning_key": "31011020",
+      "reason": "inventory_at_or_above_capacity",
+      "message": "Inventory 14400 is at or above capacity 14400"
+    },
+    {
+      "stage": "main_buffer_aggregation",
+      "warning_type": null,
+      "warning_key": "31011200",
+      "reason": "inventory_at_or_above_capacity",
+      "message": "Inventory 24000 is at or above capacity 24000"
+    },
+    {
+      "stage": "main_buffer_aggregation",
+      "warning_type": null,
+      "warning_key": "31011210",
+      "reason": "inventory_at_or_above_capacity",
+      "message": "Inventory 24000 is at or above capacity 24000"
+    }
+  ],
+  "catalog_version": "cutline-v6:current-format-20260821",
+  "state_generation": "471f674da37f4851b4e687048bb44471",
+  "state_reset": true
+}

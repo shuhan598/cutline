@@ -1,0 +1,4264 @@
+{
+  "catalog_version": "cutline-v6:current-format-20260821",
+  "snapshot_meta": {
+    "run_id": "algo-run-20260815-0025",
+    "trigger_type": "manual",
+    "workshop_id": "S2-002",
+    "snapshot_time": "2026-08-15T11:11:18.421220Z",
+    "params_version": 3,
+    "degraded_flags": [
+      "TEST_AGV_DERIVED_CATALOG",
+      "TEST_FIXED_MACHINE_PRODUCT_CAPACITY",
+      "TEST_RANDOM_MACHINE_THROUGHPUT",
+      "TEST_RANDOM_ORDER_QUANTITIES",
+      "TEST_RANDOM_SOURCE_GRADE",
+      "TEST_UNAVAILABLE_BUFFER_ROWS_EXCLUDED",
+      "TEST_UNMAPPED_AGV_MACHINES_EXCLUDED",
+      "TEST_FABRICATED_AGV_BINDINGS"
+    ]
+  },
+  "dynamic": {
+    "machine_realtime": [
+      {
+        "machine_code": "E10SA2U020G01EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G02EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G03EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G04EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G05EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G06EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G07EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G08EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G09EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G10EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G11EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G12EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U020G13EA02",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 600,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G06EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G07EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G09EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G13EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G14EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G15EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G16EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G17EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U030G18EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G06EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G07EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G09EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G13EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G14EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G15EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G16EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G17EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G21EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G22EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G23EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G24EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G25EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G28EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G29EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U050G31EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G06EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G07EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G09EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U070G13EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G07EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G13EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G14EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G15EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G17EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G18EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G19EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G20EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G24EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G25EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G26EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G27EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G28EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G29EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G30EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G31EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G32EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G33EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G34EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G35EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G36EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U080G37EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 3,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 600,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G06EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G09EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G14EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G15EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G16EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G17EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G18EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G19EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G21EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U090G22EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 800,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G06EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G09EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U110G13EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G07EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G09EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G13EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U120G15EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G06EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G07EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G14EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G15EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G16EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G17EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G18EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G19EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G20EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G25EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G26EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G27EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G28EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G29EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G30EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G31EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G32EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G33EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G34EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G35EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U130G36EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G01EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G02EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G03EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G04EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G05EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G06EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G07EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G08EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G09EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G10EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G11EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G12EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 320,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G13EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 539,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G14EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 150,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G15EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G16EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G17EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G18EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G19EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G20EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G27EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G28EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G29EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G31EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U140G32EA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G01AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G01BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G02AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G02BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G03AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G03BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G04AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G04BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G05AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G06BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G07AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G07BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G08AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G08BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G09AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G10AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G10BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G11AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G11BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G12AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G12BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G13AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G13BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G14AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G14BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G15AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G15BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G16AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G16BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G17AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G17BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G18AEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      },
+      {
+        "machine_code": "E10SA2U150G18BEA01",
+        "status": "停机",
+        "tangent_time": null,
+        "input_quantity": 0,
+        "output_quantity": 0,
+        "out_time": "2026-08-15T11:00Z"
+      }
+    ],
+    "buffer_realtime": [
+      {
+        "main_id": "31011010",
+        "buffer_code": "310110101",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011010",
+        "buffer_code": "310110102",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011010",
+        "buffer_code": "310110103",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011010",
+        "buffer_code": "310110104",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011020",
+        "buffer_code": "310110202",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011020",
+        "buffer_code": "310110204",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011030",
+        "buffer_code": "310110302",
+        "bound_source_name": "210N艺馨-210N氧化下-AUTO",
+        "current_quantity": 6000,
+        "current_utilization_rate": 0.75
+      },
+      {
+        "main_id": "31011030",
+        "buffer_code": "310110304",
+        "bound_source_name": "210N艺馨-210N氧化下-AUTO",
+        "current_quantity": 6000,
+        "current_utilization_rate": 0.75
+      },
+      {
+        "main_id": "31011040",
+        "buffer_code": "310110402",
+        "bound_source_name": "210R天合代工-氧化下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011040",
+        "buffer_code": "310110404",
+        "bound_source_name": "210R天合代工-氧化下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011050",
+        "buffer_code": "310110502",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 2400,
+        "current_utilization_rate": 0.3333
+      },
+      {
+        "main_id": "31011050",
+        "buffer_code": "310110504",
+        "bound_source_name": "210R公版-氧化下-AUTO",
+        "current_quantity": 3600,
+        "current_utilization_rate": 0.5
+      },
+      {
+        "main_id": "31011060",
+        "buffer_code": "310110602",
+        "bound_source_name": "210N艺馨-210N氧化下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011060",
+        "buffer_code": "310110604",
+        "bound_source_name": "210N艺馨-210N氧化下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011070",
+        "buffer_code": "310110702",
+        "bound_source_name": "210N艺馨-210N氧化下-AUTO",
+        "current_quantity": 6000,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011070",
+        "buffer_code": "310110704",
+        "bound_source_name": "210N艺馨-210N氧化下-AUTO",
+        "current_quantity": 4000,
+        "current_utilization_rate": 0.6667
+      },
+      {
+        "main_id": "31011080",
+        "buffer_code": "310110801",
+        "bound_source_name": "210R明豪试制-氧化下-AUTO",
+        "current_quantity": 1200,
+        "current_utilization_rate": 0.25
+      },
+      {
+        "main_id": "31011080",
+        "buffer_code": "310110802",
+        "bound_source_name": "210R明豪试制-氧化下-AUTO",
+        "current_quantity": 3600,
+        "current_utilization_rate": 0.75
+      },
+      {
+        "main_id": "31011080",
+        "buffer_code": "310110803",
+        "bound_source_name": "210R明豪试制-氧化下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011080",
+        "buffer_code": "310110804",
+        "bound_source_name": "210R明豪试制-氧化下-AUTO",
+        "current_quantity": 6000,
+        "current_utilization_rate": 0.8333
+      },
+      {
+        "main_id": "31011090",
+        "buffer_code": "310110901",
+        "bound_source_name": "111010311,111010312,111010411,111010412,111010511,111010512,111010611,111010612,111010711,111010712,111010811,111010812,111010911,111010912,111011011,111011012,111011111,111011112,111011211,111011212,111011311,111011312,111610111,111610112",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011090",
+        "buffer_code": "310110902",
+        "bound_source_name": "111010311,111010312,111010411,111010412,111010511,111010512,111010611,111010612,111010711,111010712,111010811,111010812,111010911,111010912,111011011,111011012,111011111,111011112,111011211,111011212,111011311,111011312,111610111,111610112",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011090",
+        "buffer_code": "310110903",
+        "bound_source_name": "111010311,111010312,111010411,111010412,111010511,111010512,111010611,111010612,111010711,111010712,111010811,111010812,111010911,111010912,111011011,111011012,111011111,111011112,111011211,111011212,111011311,111011312,111610111,111610112",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011090",
+        "buffer_code": "310110904",
+        "bound_source_name": "111010311,111010312,111010411,111010412,111010511,111010512,111010611,111010612,111010711,111010712,111010811,111010812,111010911,111010912,111011011,111011012,111011111,111011112,111011211,111011212,111011311,111011312,111610111,111610112",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011100",
+        "buffer_code": "310111002",
+        "bound_source_name": "210R明豪试制-退火下-AUTO",
+        "current_quantity": 1200,
+        "current_utilization_rate": 0.1667
+      },
+      {
+        "main_id": "31011100",
+        "buffer_code": "310111004",
+        "bound_source_name": "210R明豪试制-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011110",
+        "buffer_code": "310111102",
+        "bound_source_name": "天合返洗验证-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011110",
+        "buffer_code": "310111104",
+        "bound_source_name": "天合返洗验证-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011120",
+        "buffer_code": "310111201",
+        "bound_source_name": "210R天合代工-退火下-AUTO",
+        "current_quantity": 1200,
+        "current_utilization_rate": 0.1667
+      },
+      {
+        "main_id": "31011120",
+        "buffer_code": "310111202",
+        "bound_source_name": "210R天合代工-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011120",
+        "buffer_code": "310111203",
+        "bound_source_name": "210R天合代工-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011120",
+        "buffer_code": "310111204",
+        "bound_source_name": "210R天合代工-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011130",
+        "buffer_code": "310111302",
+        "bound_source_name": "210R公版-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011130",
+        "buffer_code": "310111304",
+        "bound_source_name": "210R公版-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011140",
+        "buffer_code": "310111402",
+        "bound_source_name": "210R公版-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011140",
+        "buffer_code": "310111404",
+        "bound_source_name": "210R公版-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011150",
+        "buffer_code": "310111502",
+        "bound_source_name": "210N艺馨-210N退火下-AUTO",
+        "current_quantity": 3000,
+        "current_utilization_rate": 0.5
+      },
+      {
+        "main_id": "31011150",
+        "buffer_code": "310111504",
+        "bound_source_name": "210N艺馨-210N退火下-AUTO",
+        "current_quantity": 4000,
+        "current_utilization_rate": 0.6667
+      },
+      {
+        "main_id": "31011160",
+        "buffer_code": "310111602",
+        "bound_source_name": "210R公版-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011160",
+        "buffer_code": "310111604",
+        "bound_source_name": "210R公版-退火下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011170",
+        "buffer_code": "310111702",
+        "bound_source_name": "210R公版-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 0.6667
+      },
+      {
+        "main_id": "31011170",
+        "buffer_code": "310111704",
+        "bound_source_name": "210R公版-背膜下-AUTO",
+        "current_quantity": 3600,
+        "current_utilization_rate": 0.5
+      },
+      {
+        "main_id": "31011180",
+        "buffer_code": "310111802",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 0.6667
+      },
+      {
+        "main_id": "31011180",
+        "buffer_code": "310111804",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 3600,
+        "current_utilization_rate": 0.5
+      },
+      {
+        "main_id": "31011190",
+        "buffer_code": "310111901",
+        "bound_source_name": "210N艺馨-210N背膜下-AUTO",
+        "current_quantity": 2000,
+        "current_utilization_rate": 0.5
+      },
+      {
+        "main_id": "31011190",
+        "buffer_code": "310111902",
+        "bound_source_name": "210N艺馨-210N背膜下-AUTO",
+        "current_quantity": 1000,
+        "current_utilization_rate": 0.25
+      },
+      {
+        "main_id": "31011190",
+        "buffer_code": "310111903",
+        "bound_source_name": "210N艺馨-210N背膜下-AUTO",
+        "current_quantity": 1000,
+        "current_utilization_rate": 0.1667
+      },
+      {
+        "main_id": "31011190",
+        "buffer_code": "310111904",
+        "bound_source_name": "210N艺馨-210N背膜下-AUTO",
+        "current_quantity": 1000,
+        "current_utilization_rate": 0.1667
+      },
+      {
+        "main_id": "31011200",
+        "buffer_code": "310112001",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011200",
+        "buffer_code": "310112002",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011200",
+        "buffer_code": "310112003",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011200",
+        "buffer_code": "310112004",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011210",
+        "buffer_code": "310112101",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011210",
+        "buffer_code": "310112102",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011210",
+        "buffer_code": "310112103",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011210",
+        "buffer_code": "310112104",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011220",
+        "buffer_code": "310112201",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011220",
+        "buffer_code": "310112202",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 3600,
+        "current_utilization_rate": 0.75
+      },
+      {
+        "main_id": "31011220",
+        "buffer_code": "310112203",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011220",
+        "buffer_code": "310112204",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011230",
+        "buffer_code": "310112301",
+        "bound_source_name": "111510111,111510112,111510211,111510212,111510311,111510312,111510411,111510412,111510511,111510512,111510611,111510612,111510711,111510712,111510811,111510812,111510911,111510912,111511011,111511012,111511111,111511112,111511211,111511212,111511311,111511312,111511411,111511412,111511511,111511512,111511611,111511812,111511911",
+        "current_quantity": 3600,
+        "current_utilization_rate": 0.75
+      },
+      {
+        "main_id": "31011230",
+        "buffer_code": "310112302",
+        "bound_source_name": "111510111,111510112,111510211,111510212,111510311,111510312,111510411,111510412,111510511,111510512,111510611,111510612,111510711,111510712,111510811,111510812,111510911,111510912,111511011,111511012,111511111,111511112,111511211,111511212,111511311,111511312,111511411,111511412,111511511,111511512,111511611,111511812,111511911",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011230",
+        "buffer_code": "310112303",
+        "bound_source_name": "111510111,111510112,111510211,111510212,111510311,111510312,111510411,111510412,111510511,111510512,111510611,111510612,111510711,111510712,111510811,111510812,111510911,111510912,111511011,111511012,111511111,111511112,111511211,111511212,111511311,111511312,111511411,111511412,111511511,111511512,111511611,111511812,111511911",
+        "current_quantity": 6000,
+        "current_utilization_rate": 0.8333
+      },
+      {
+        "main_id": "31011230",
+        "buffer_code": "310112304",
+        "bound_source_name": "111510111,111510112,111510211,111510212,111510311,111510312,111510411,111510412,111510511,111510512,111510611,111510612,111510711,111510712,111510811,111510812,111510911,111510912,111511011,111511012,111511111,111511112,111511211,111511212,111511311,111511312,111511411,111511412,111511511,111511512,111511611,111511812,111511911",
+        "current_quantity": 2400,
+        "current_utilization_rate": 0.3333
+      },
+      {
+        "main_id": "31011240",
+        "buffer_code": "310112401",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011240",
+        "buffer_code": "310112402",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011240",
+        "buffer_code": "310112403",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011240",
+        "buffer_code": "310112404",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 6000,
+        "current_utilization_rate": 0.8333
+      },
+      {
+        "main_id": "31011250",
+        "buffer_code": "310112501",
+        "bound_source_name": "111511612,111511711,111511712,111511811",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011250",
+        "buffer_code": "310112502",
+        "bound_source_name": "111511612,111511711,111511712,111511811",
+        "current_quantity": 1000,
+        "current_utilization_rate": 0.25
+      },
+      {
+        "main_id": "31011250",
+        "buffer_code": "310112503",
+        "bound_source_name": "111511612,111511711,111511712,111511811",
+        "current_quantity": 6000,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011250",
+        "buffer_code": "310112504",
+        "bound_source_name": "111511612,111511711,111511712,111511811",
+        "current_quantity": 6000,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011260",
+        "buffer_code": "310112601",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011260",
+        "buffer_code": "310112602",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 4800,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011260",
+        "buffer_code": "310112603",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 7200,
+        "current_utilization_rate": 1
+      },
+      {
+        "main_id": "31011260",
+        "buffer_code": "310112604",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 6000,
+        "current_utilization_rate": 0.8333
+      },
+      {
+        "main_id": "31011270",
+        "buffer_code": "310112701",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011270",
+        "buffer_code": "310112702",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011270",
+        "buffer_code": "310112703",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011270",
+        "buffer_code": "310112704",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011280",
+        "buffer_code": "310112801",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 1200,
+        "current_utilization_rate": 0.1667
+      },
+      {
+        "main_id": "31011280",
+        "buffer_code": "310112802",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011280",
+        "buffer_code": "310112803",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 0,
+        "current_utilization_rate": 0
+      },
+      {
+        "main_id": "31011280",
+        "buffer_code": "310112804",
+        "bound_source_name": "210R天合代工-背膜下-AUTO",
+        "current_quantity": 1200,
+        "current_utilization_rate": 0.1667
+      }
+    ],
+    "agv_relations": [
+      {
+        "equipmentid": "E10SA2U020G01EP02",
+        "equipmentname": "制绒1线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G02EP02",
+        "equipmentname": "制绒2线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G03EP02",
+        "equipmentname": "制绒3线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G04EP02",
+        "equipmentname": "制绒4线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G05EP02",
+        "equipmentname": "制绒5线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G06EP02",
+        "equipmentname": "制绒6线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G07EP02",
+        "equipmentname": "制绒7线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G08EP02",
+        "equipmentname": "制绒8线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G09EP02",
+        "equipmentname": "制绒9线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G10EP02",
+        "equipmentname": "制绒10线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G11EP02",
+        "equipmentname": "制绒11线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G12EP02",
+        "equipmentname": "制绒12线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U020G13EP02",
+        "equipmentname": "制绒13线210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G01EP01",
+        "equipmentname": "硼扩1线210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G02EP01",
+        "equipmentname": "硼扩2线210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G03EP01",
+        "equipmentname": "硼扩3线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G04EP01",
+        "equipmentname": "硼扩4线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G05EP01",
+        "equipmentname": "硼扩5线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G06EP01",
+        "equipmentname": "硼扩6线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G07EP01",
+        "equipmentname": "硼扩7线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G08EP01",
+        "equipmentname": "硼扩8线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G09EP01",
+        "equipmentname": "硼扩9线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G10EP01",
+        "equipmentname": "硼扩10线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G11EP01",
+        "equipmentname": "硼扩11线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G12EP01",
+        "equipmentname": "硼扩12线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G13EP01",
+        "equipmentname": "硼扩13线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G14EP01",
+        "equipmentname": "硼扩14线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G15EP01",
+        "equipmentname": "硼扩15线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G16EP01",
+        "equipmentname": "硼扩16线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G17EP01",
+        "equipmentname": "硼扩17线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U030G18EP01",
+        "equipmentname": "硼扩18线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G01EP01",
+        "equipmentname": "氧化1线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G02EP01",
+        "equipmentname": "氧化2线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G03EP01",
+        "equipmentname": "氧化3线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G04EP01",
+        "equipmentname": "氧化4线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G05EP01",
+        "equipmentname": "氧化5线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G06EP01",
+        "equipmentname": "氧化6线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G07EP01",
+        "equipmentname": "氧化7线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G08EP01",
+        "equipmentname": "氧化8线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G09EP01",
+        "equipmentname": "氧化9线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G10EP01",
+        "equipmentname": "氧化10线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G11EP01",
+        "equipmentname": "氧化11线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G12EP01",
+        "equipmentname": "氧化12线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G13EP01",
+        "equipmentname": "氧化13线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G14EP01",
+        "equipmentname": "氧化14线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G15EP01",
+        "equipmentname": "氧化15线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G16EP01",
+        "equipmentname": "氧化16线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G17EP01",
+        "equipmentname": "氧化17线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G21EP01",
+        "equipmentname": "氧化21线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G22EP01",
+        "equipmentname": "氧化22线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G23EP01",
+        "equipmentname": "氧化23线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G24EP01",
+        "equipmentname": "氧化24线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G25EP01",
+        "equipmentname": "氧化25线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G28EP01",
+        "equipmentname": "氧化28线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G29EP01",
+        "equipmentname": "氧化29线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U050G31EP01",
+        "equipmentname": "氧化31线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G01EP01",
+        "equipmentname": "碱抛1线210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G02EP01",
+        "equipmentname": "碱抛2线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G03EP01",
+        "equipmentname": "碱抛3线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G04EP01",
+        "equipmentname": "碱抛4线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G05EP01",
+        "equipmentname": "碱抛5线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G06EP01",
+        "equipmentname": "碱抛6线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G07EP01",
+        "equipmentname": "碱抛7线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G09EP01",
+        "equipmentname": "碱抛9线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G11EP01",
+        "equipmentname": "碱抛11线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G12EP01",
+        "equipmentname": "碱抛12线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U070G13EP01",
+        "equipmentname": "碱抛13线210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G01EP01",
+        "equipmentname": "POLY1线210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G02EP01",
+        "equipmentname": "POLY2线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G03EP01",
+        "equipmentname": "POLY3线210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G04EP01",
+        "equipmentname": "POLY4线210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G05EP01",
+        "equipmentname": "POLY5线210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G07EP01",
+        "equipmentname": "POLY7线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G08EP01",
+        "equipmentname": "POLY8线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G10EP01",
+        "equipmentname": "POLY10线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G11EP01",
+        "equipmentname": "POLY11线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G12EP01",
+        "equipmentname": "POLY12线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G13EP01",
+        "equipmentname": "POLY13线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G14EP01",
+        "equipmentname": "POLY14线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G15EP01",
+        "equipmentname": "POLY15线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G17EP01",
+        "equipmentname": "POLY17线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G18EP01",
+        "equipmentname": "POLY18线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G19EP01",
+        "equipmentname": "POLY19线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G20EP01",
+        "equipmentname": "POLY20线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G24EP01",
+        "equipmentname": "POLY24线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G25EP01",
+        "equipmentname": "POLY25线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G26EP01",
+        "equipmentname": "POLY26线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G27EP01",
+        "equipmentname": "POLY27线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G28EP01",
+        "equipmentname": "POLY28线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G29EP01",
+        "equipmentname": "POLY29线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G30EP01",
+        "equipmentname": "POLY30线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G31EP01",
+        "equipmentname": "POLY31线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G32EP01",
+        "equipmentname": "POLY32线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G33EP01",
+        "equipmentname": "POLY33线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G34EP01",
+        "equipmentname": "POLY34线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G35EP01",
+        "equipmentname": "POLY35线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G36EP01",
+        "equipmentname": "POLY36线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U080G37EP01",
+        "equipmentname": "POLY37线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G01EP01",
+        "equipmentname": "退火1线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G02EP01",
+        "equipmentname": "退火2线210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G03EP01",
+        "equipmentname": "退火3线210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G04EP01",
+        "equipmentname": "退火4线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G05EP01",
+        "equipmentname": "退火5线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G06EP01",
+        "equipmentname": "退火6线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G08EP01",
+        "equipmentname": "退火8线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G09EP01",
+        "equipmentname": "退火9线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G10EP01",
+        "equipmentname": "退火10线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G11EP01",
+        "equipmentname": "退火11线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G12EP01",
+        "equipmentname": "退火12线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G14EP01",
+        "equipmentname": "退火14线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G15EP01",
+        "equipmentname": "退火15线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G16EP01",
+        "equipmentname": "退火16线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G17EP01",
+        "equipmentname": "退火17线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G18EP01",
+        "equipmentname": "退火18线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G19EP01",
+        "equipmentname": "退火19线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G21EP01",
+        "equipmentname": "退火21线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U090G22EP01",
+        "equipmentname": "退火22线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G01EP01",
+        "equipmentname": "RCA1线210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G02EP01",
+        "equipmentname": "RCA2线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G04EP01",
+        "equipmentname": "RCA4线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G05EP01",
+        "equipmentname": "RCA5线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G06EP01",
+        "equipmentname": "RCA6线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G08EP01",
+        "equipmentname": "RCA8线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G09EP01",
+        "equipmentname": "RCA9线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G10EP01",
+        "equipmentname": "RCA10线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G11EP01",
+        "equipmentname": "RCA11线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G12EP01",
+        "equipmentname": "RCA12线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U110G13EP01",
+        "equipmentname": "RCA13线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G01EP01",
+        "equipmentname": "ALD1线210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G02EP01",
+        "equipmentname": "ALD2线210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G03EP01",
+        "equipmentname": "ALD3线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G04EP01",
+        "equipmentname": "ALD4线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G05EP01",
+        "equipmentname": "ALD5线210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G07EP01",
+        "equipmentname": "ALD7线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G08EP01",
+        "equipmentname": "ALD8线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G09EP01",
+        "equipmentname": "ALD9线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G10EP01",
+        "equipmentname": "ALD10线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G11EP01",
+        "equipmentname": "ALD11线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G12EP01",
+        "equipmentname": "ALD12线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G13EP01",
+        "equipmentname": "ALD13线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U120G15EP01",
+        "equipmentname": "ALD15线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G01EP01",
+        "equipmentname": "正膜1线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G02EP01",
+        "equipmentname": "正膜2线210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G03EP01",
+        "equipmentname": "正膜3线210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G04EP01",
+        "equipmentname": "正膜4线210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G05EP01",
+        "equipmentname": "正膜5线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G06EP01",
+        "equipmentname": "正膜6线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G07EP01",
+        "equipmentname": "正膜7线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G08EP01",
+        "equipmentname": "正膜8线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G10EP01",
+        "equipmentname": "正膜10线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G11EP01",
+        "equipmentname": "正膜11线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G14EP01",
+        "equipmentname": "正膜14线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G15EP01",
+        "equipmentname": "正膜15线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G16EP01",
+        "equipmentname": "正膜16线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G17EP01",
+        "equipmentname": "正膜17线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G18EP01",
+        "equipmentname": "正膜18线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G19EP01",
+        "equipmentname": "正膜19线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G20EP01",
+        "equipmentname": "正膜20线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G25EP01",
+        "equipmentname": "正膜25线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G26EP01",
+        "equipmentname": "正膜26线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G27EP01",
+        "equipmentname": "正膜27线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G28EP01",
+        "equipmentname": "正膜28线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G29EP01",
+        "equipmentname": "正膜29线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G30EP01",
+        "equipmentname": "正膜30线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G31EP01",
+        "equipmentname": "正膜31线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G32EP01",
+        "equipmentname": "正膜32线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G33EP01",
+        "equipmentname": "正膜33线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G34EP01",
+        "equipmentname": "正膜34线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G35EP01",
+        "equipmentname": "正膜35线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U130G36EP01",
+        "equipmentname": "正膜36线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G01EP01",
+        "equipmentname": "背膜1线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G02EP01",
+        "equipmentname": "背膜2线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G03EP01",
+        "equipmentname": "背膜3线210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G04EP01",
+        "equipmentname": "背膜4线210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G05EP01",
+        "equipmentname": "背膜5线210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G06EP01",
+        "equipmentname": "背膜6线210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G07EP01",
+        "equipmentname": "背膜7线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G08EP01",
+        "equipmentname": "背膜8线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G09EP01",
+        "equipmentname": "背膜9线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G10EP01",
+        "equipmentname": "背膜10线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G11EP01",
+        "equipmentname": "背膜11线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G12EP01",
+        "equipmentname": "背膜12线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G13EP01",
+        "equipmentname": "背膜13线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G14EP01",
+        "equipmentname": "背膜14线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G15EP01",
+        "equipmentname": "背膜15线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G16EP01",
+        "equipmentname": "背膜16线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G17EP01",
+        "equipmentname": "背膜17线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G18EP01",
+        "equipmentname": "背膜18线210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G19EP01",
+        "equipmentname": "背膜19线210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G20EP01",
+        "equipmentname": "背膜20线210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G27EP01",
+        "equipmentname": "背膜27线210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G28EP01",
+        "equipmentname": "背膜28线210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G29EP01",
+        "equipmentname": "背膜29线210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G31EP01",
+        "equipmentname": "背膜31线210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U140G32EP01",
+        "equipmentname": "背膜32线210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G01AEP01",
+        "equipmentname": "丝网01A210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G01BEP01",
+        "equipmentname": "丝网01B210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G02AEP01",
+        "equipmentname": "丝网02A210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G02BEP01",
+        "equipmentname": "丝网02B210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G03AEP01",
+        "equipmentname": "丝网03A210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G03BEP01",
+        "equipmentname": "丝网03B210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G04AEP01",
+        "equipmentname": "丝网04A210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G04BEP01",
+        "equipmentname": "丝网04B210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G05AEP01",
+        "equipmentname": "丝网05A210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G06BEP01",
+        "equipmentname": "丝网06B210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G07AEP01",
+        "equipmentname": "丝网07A210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G07BEP01",
+        "equipmentname": "丝网07B210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G08AEP01",
+        "equipmentname": "丝网08A210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G08BEP01",
+        "equipmentname": "丝网08B210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G09AEP01",
+        "equipmentname": "丝网09A210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G10AEP01",
+        "equipmentname": "丝网10A210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G10BEP01",
+        "equipmentname": "丝网10B210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G11AEP01",
+        "equipmentname": "丝网11A210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G11BEP01",
+        "equipmentname": "丝网11B210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G12AEP01",
+        "equipmentname": "丝网12A210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G12BEP01",
+        "equipmentname": "丝网12B210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G13AEP01",
+        "equipmentname": "丝网13A210R",
+        "linename": "210R公版2",
+        "lastlinename": "210R公版",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G13BEP01",
+        "equipmentname": "丝网13B210R",
+        "linename": "210R天合代工",
+        "lastlinename": "210R公版2",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G14AEP01",
+        "equipmentname": "丝网14A210R",
+        "linename": "210R天合返工",
+        "lastlinename": "210R天合代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G14BEP01",
+        "equipmentname": "丝网14B210R",
+        "linename": "210R好时代工",
+        "lastlinename": "210R天合返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G15AEP01",
+        "equipmentname": "丝网15A210R",
+        "linename": "210R明豪试制",
+        "lastlinename": "210R好时代工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G15BEP01",
+        "equipmentname": "丝网15B210R",
+        "linename": "210R环晟低少子",
+        "lastlinename": "210R明豪试制",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G16AEP01",
+        "equipmentname": "丝网16A210R",
+        "linename": "210R低少子返工",
+        "lastlinename": "210R环晟低少子",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G16BEP01",
+        "equipmentname": "丝网16B210N",
+        "linename": "210N英利试制",
+        "lastlinename": "210N艺馨",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G17AEP01",
+        "equipmentname": "丝网17A210N",
+        "linename": "210N高景试制",
+        "lastlinename": "210N英利试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G17BEP01",
+        "equipmentname": "丝网17B210N",
+        "linename": "210N工艺效率验证",
+        "lastlinename": "210N高景试制",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G18AEP01",
+        "equipmentname": "丝网18A210N",
+        "linename": "210N艺馨",
+        "lastlinename": "210N工艺效率验证",
+        "waferspec": "N",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      },
+      {
+        "equipmentid": "E10SA2U150G18BEP01",
+        "equipmentname": "丝网18B210R",
+        "linename": "210R公版",
+        "lastlinename": "210R低少子返工",
+        "waferspec": "R",
+        "createtime": "2026-08-15T11:06:18.421220Z"
+      }
+    ]
+  }
+}

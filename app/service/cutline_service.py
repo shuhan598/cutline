@@ -18,6 +18,7 @@ class CutlineService:
         adapter: Optional[SnapshotAdapter] = None,
         mapper: Optional[AlgorithmResponseMapper] = None,
     ):
+        # 允许注入管道、快照适配器和响应映射器，便于测试及不同宿主替换基础设施。
         """初始化【__init__】对象的状态、索引和依赖。"""
         self._pipeline = pipeline if pipeline is not None else CutlinePipeline()
         self._adapter = adapter if adapter is not None else SnapshotAdapter()
@@ -27,6 +28,7 @@ class CutlineService:
         self,
         request: CutlineAlgorithmRequest,
     ) -> CutlineEvaluateResponse:
+        # 服务层只编排“传输模型 -> 内部快照 -> 算法结果 -> 对外响应”，不承载具体业务决策。
         """根据当前快照和业务规则执行【evaluate_algorithm】计算，返回类型标注所声明的结果。"""
         snapshot = self._adapter.to_algorithm_snapshot(request)
         result = self._pipeline.evaluate_algorithm(snapshot)

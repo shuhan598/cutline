@@ -1,11 +1,17 @@
 from fastapi.testclient import TestClient
 
-from app.main import create_app
 from tests.fixtures.v3_full_route_factory import build_stockout_auto_payload
+from tests.utils.legacy_evaluate_client import (
+    LegacyEvaluateTestClient,
+    create_legacy_evaluate_test_app,
+)
 
 
 def _client() -> TestClient:
-    return TestClient(create_app(), raise_server_exceptions=False)
+    return LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    )
 
 
 def test_complete_formal_payload_runs_the_real_service_chain():

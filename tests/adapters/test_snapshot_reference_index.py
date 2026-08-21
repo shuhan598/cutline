@@ -4,10 +4,12 @@ import pytest
 
 from app.adapters.snapshot_reference_index import (
     CurrentOrderIndex,
+    MachineMasterIndex,
     ProductCatalogIndex,
     SnapshotReferenceIndexError,
 )
 from app.schemas.common_schema import AlgorithmOrder, AlgorithmProduct
+from app.schemas.request_schema import MachineMasterRequest
 
 
 def _product() -> AlgorithmProduct:
@@ -34,6 +36,24 @@ def _order(order_code: str, status: str) -> AlgorithmOrder:
         piece_source="A",
         estimated_yield="99%",
     )
+
+
+def test_realtime_and_agv_codes_resolve_to_the_same_machine_master() -> None:
+    index = MachineMasterIndex([
+        MachineMasterRequest(
+            machine_code="M001",
+            p166_jt_group="JT001",
+            machine_name="Machine One",
+            process_code="P001",
+            process_name="Process One",
+        )
+    ])
+
+    realtime_machine = index.resolve_realtime_code("JT001")
+    agv_machine = index.resolve_agv_code("M001")
+
+    assert realtime_machine is agv_machine
+    assert realtime_machine.machine_code == "M001"
 
 
 @pytest.mark.parametrize("active_status", [" running ", "OpEn", "生产中"])

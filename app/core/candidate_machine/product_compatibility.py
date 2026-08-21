@@ -9,6 +9,7 @@ SOURCE_GRADE_RANK = {
 }
 
 
+# 规格完全相同始终兼容；S2 非丝网工序额外允许 R/P 两种规格互切。
 def is_wafer_spec_compatible(
     *,
     current_wafer_spec: str,
@@ -27,6 +28,7 @@ def is_wafer_spec_compatible(
     )
 
 
+# 片源等级只能从同级或更高等级切换到目标订单，未知等级一律拒绝。
 def is_source_grade_compatible(
     *,
     current_source_grade: str,

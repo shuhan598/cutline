@@ -1,3 +1,5 @@
+"""将未捕获的算法异常追加写入独立日志文件，且不影响原异常传播。"""
+
 import logging
 import os
 import time
@@ -13,6 +15,11 @@ _LOGGER_LOCK = Lock()
 
 
 def log_algorithm_exception(request_path: str) -> None:
+    """记录当前异常的完整堆栈，并保证日志失败不会覆盖业务异常。
+
+    日志目录优先使用 ``CUTLINE_LOG_DIR`` 环境变量；每次调用临时挂载文件处理器，
+    在锁内完成写入和移除，避免并发请求混用处理器或留下重复日志配置。
+    """
     handler = None
 
     try:

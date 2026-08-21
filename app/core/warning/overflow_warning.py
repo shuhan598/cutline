@@ -17,6 +17,7 @@ class OverflowWarningEvaluator:
         snapshot: AlgorithmSnapshot,
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> list[AlgorithmOverflowWarningResult]:
+        # 物理 main 的溢满时间进入提前量窗口才预警；每个物理 main 最多输出一条风险记录。
         """函数 ``evaluate_algorithm`` 执行当前业务步骤。参数、返回值和异常语义以类型标注及调用方契约为准。"""
         overflow_warning_lead_minutes = safe_float(
             snapshot.config.overflow_warning_lead_minutes

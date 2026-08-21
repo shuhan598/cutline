@@ -39,6 +39,7 @@ class PersistenceStateBuilder:
         new_mixing_trace_records: list[AlgorithmMixingTraceRecord],
         successful_mixed_event_ids: list[str],
     ) -> AlgorithmPersistenceState:
+        # 合并输入状态与本轮结果时按对象标识去重，并拒绝同一标识携带不同业务内容的情况。
         """根据当前快照和业务规则执行【build】计算，返回类型标注所声明的结果。"""
         plans_by_id = self._unique_plans(
             incoming_pending_plans,
@@ -119,6 +120,7 @@ class PersistenceStateBuilder:
                 active_ids_by_plan.setdefault(event.plan_id, set()).add(
                     event.event_id
                 )
+        # 已确认计划关联的所有活跃事件均进入回流建议后，计划随之转为终态，避免下轮重复确认。
         for plan_id, plan in list(updated_plans.items()):
             associated_ids = active_ids_by_plan.get(plan_id, set())
             if (
@@ -174,6 +176,7 @@ class PersistenceStateBuilder:
         *,
         source: str,
     ) -> dict[str, PendingCutlinePlan]:
+        # 同一计划 ID 的完全相同副本可以合并；内容不一致说明上游状态已失去确定性。
         """内部辅助步骤【_unique_plans】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, PendingCutlinePlan] = {}
         for plan in plans:
@@ -189,6 +192,7 @@ class PersistenceStateBuilder:
         self,
         evaluations: Iterable[PendingCutlinePlanEvaluation],
     ) -> dict[str, PendingCutlinePlanEvaluation]:
+        # 一轮内每个待确认计划只能有一个评估结论。
         """内部辅助步骤【_unique_evaluations】，为上层业务流程提供数据处理或共用判断。"""
         result: dict[str, PendingCutlinePlanEvaluation] = {}
         for evaluation in evaluations:
@@ -204,6 +208,7 @@ class PersistenceStateBuilder:
         self,
         events: Iterable[AlgorithmActiveCutlineEvent],
     ) -> list[AlgorithmActiveCutlineEvent]:
+        # 活跃事件按事件 ID 合并并稳定排序，使持久化结果可重复比较。
         """内部辅助步骤【_unique_active_events】，为上层业务流程提供数据处理或共用判断。"""
         by_id: dict[str, AlgorithmActiveCutlineEvent] = {}
         for event in events:
@@ -217,5 +222,6 @@ class PersistenceStateBuilder:
 
     @staticmethod
     def _sorted_unique(values: Iterable[str]) -> list[str]:
+        # 集合字段输出稳定排序，减少同一业务状态因输入顺序不同造成的无意义差异。
         """内部辅助步骤【_sorted_unique】，为上层业务流程提供数据处理或共用判断。"""
         return sorted(set(values))

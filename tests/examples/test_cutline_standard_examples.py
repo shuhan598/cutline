@@ -10,11 +10,14 @@ from app.adapters.backend_request_validator import (
     BackendRequestCompletenessValidator,
 )
 from app.adapters.snapshot_adapter import SnapshotAdapter
-from app.main import create_app
 from app.schemas.response_schema import CutlineEvaluateResponse
 from app.utils.time_utils import normalize_local_time
 from examples.generate_cutline_standard_examples import (
     localize_standard_payload,
+)
+from tests.utils.legacy_evaluate_client import (
+    LegacyEvaluateTestClient,
+    create_legacy_evaluate_test_app,
 )
 
 
@@ -85,8 +88,8 @@ def test_standard_input_passes_every_pre_pipeline_stage(path: Path):
 
 @pytest.mark.parametrize("path", (FIRST_ROUND_INPUT, NEXT_ROUND_INPUT))
 def test_standard_input_runs_through_formal_api(path: Path):
-    response = TestClient(
-        create_app(),
+    response = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
         raise_server_exceptions=False,
     ).post("/cutline/evaluate", json=_load_json(path))
 
@@ -311,7 +314,10 @@ def test_standard_success_output_is_the_current_formal_api_response(
     output_path: Path,
     input_factory,
 ):
-    response = TestClient(create_app(), raise_server_exceptions=False).post(
+    response = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    ).post(
         "/cutline/evaluate",
         json=input_factory(),
     )
@@ -338,7 +344,10 @@ def test_standard_422_error_uses_formal_error_envelope(path: Path, code: str):
 def test_standard_backend_data_invalid_example_is_the_formal_api_response():
     payload = _load_json(FIRST_ROUND_INPUT)
     payload["orders"][0]["total_quantity"] = "not-a-number"
-    response = TestClient(create_app(), raise_server_exceptions=False).post(
+    response = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    ).post(
         "/cutline/evaluate",
         json=payload,
     )
@@ -360,7 +369,10 @@ def test_standard_snapshot_conversion_example_is_the_formal_api_response():
         }
     ]
     payload["lines"] = []
-    response = TestClient(create_app(), raise_server_exceptions=False).post(
+    response = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    ).post(
         "/cutline/evaluate",
         json=payload,
     )

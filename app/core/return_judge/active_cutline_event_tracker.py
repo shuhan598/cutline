@@ -15,6 +15,7 @@ class ActiveCutlineEventTracker:
         self,
         event_id_factory: Callable[[], str] | None = None,
     ) -> None:
+        # 注入事件 ID 工厂可使跨轮状态恢复和测试使用确定性编号；默认使用 UUID。
         """内部辅助步骤【__init__】，为上层业务流程提供数据处理或共用判断。"""
         self._event_id_factory = event_id_factory or (lambda: str(uuid4()))
 
@@ -45,6 +46,7 @@ class ActiveCutlineEventTracker:
         is_recommended_candidate: bool | None = None,
         event_id: str | None = None,
     ) -> AlgorithmActiveCutlineEvent:
+        # 新事件以 active 状态开始，负向开始时间在后续回流判断阶段再填充。
         """根据当前快照和业务规则执行【create_event】计算，返回类型标注所声明的结果。"""
         return AlgorithmActiveCutlineEvent(
             event_id=(
@@ -88,6 +90,7 @@ class ActiveCutlineEventTracker:
         event: AlgorithmActiveCutlineEvent,
         negative_start_time: datetime | None,
     ) -> AlgorithmActiveCutlineEvent:
+        # 使用深拷贝返回新状态，不原地修改已持久化事件快照。
         """执行【update_negative_start_time】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return event.model_copy(
             update={"negative_start_time": negative_start_time},
@@ -99,6 +102,7 @@ class ActiveCutlineEventTracker:
         *,
         event: AlgorithmActiveCutlineEvent,
     ) -> AlgorithmActiveCutlineEvent:
+        # 标记为建议回流但仍保留事件，等待实际回流操作确认。
         """执行【mark_return_recommended】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return event.model_copy(
             update={"status": "return_recommended"},
@@ -111,6 +115,7 @@ class ActiveCutlineEventTracker:
         event: AlgorithmActiveCutlineEvent,
         returned_time: datetime | None = None,
     ) -> AlgorithmActiveCutlineEvent:
+        # 回流完成后清除预估负向开始时间，避免终态事件继续参与风险时间判断。
         """执行【mark_returned】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         _ = returned_time
         return event.model_copy(
@@ -126,6 +131,7 @@ class ActiveCutlineEventTracker:
         *,
         event: AlgorithmActiveCutlineEvent,
     ) -> AlgorithmActiveCutlineEvent:
+        # 取消仅改变生命周期状态，保留原始切线信息以便审计。
         """执行【mark_cancelled】业务操作；参数、返回值和异常语义以类型标注及调用方契约为准。"""
         return event.model_copy(
             update={"status": "cancelled"},

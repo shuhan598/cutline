@@ -40,6 +40,7 @@ _PROCESS_LOOP_CATALOG: Final[
 _CASE_INSENSITIVE_PROCESS_NAMES = frozenset({"POLY", "RCA", "ALD"})
 
 
+# 中文工序名严格匹配，英文缩写按不区分大小写规则归一，防止同一工序形成多个目录键。
 def normalize_process_name(process_name: str) -> str:
     """去除工序名称空白，并标准化支持的 ASCII 缩写。"""
     normalized_name = process_name.strip()
@@ -49,6 +50,7 @@ def normalize_process_name(process_name: str) -> str:
     return normalized_name
 
 
+# 从集中维护的工序目录取得循环归属；未知名称必须失败，避免使用猜测的车间或循环。
 def resolve_process_loop(process_name: str) -> ProcessLoopAssignment:
     """返回工序在中央目录中的精确循环分配。"""
     normalized_name = normalize_process_name(process_name)

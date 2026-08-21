@@ -62,6 +62,7 @@ class MachineSelectionEvaluator:
         interval_results: list[AlgorithmIntervalNetRateResult],
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> AlgorithmStockoutSelectionResult:
+        # 断料选型逐台模拟把候选机台切入目标订单后的来源与目标库存影响，直到填平缺口或候选耗尽。
         """根据当前快照和业务规则执行【select_stockout_machines】计算，返回类型标注所声明的结果。"""
         stockout_warning_lead_minutes = (
             snapshot.config.stockout_warning_lead_minutes
@@ -308,6 +309,7 @@ class MachineSelectionEvaluator:
         candidate_result: AlgorithmStockoutCandidateResult,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmStockoutSelectionResult:
+        # 聚合路径以 group_key 跟踪每个订单子库存，避免同一物理 main 内多个订单被错误汇总。
         """根据当前快照和业务规则执行【_select_stockout_from_batch】计算，返回类型标注所声明的结果。"""
         batch = snapshot.main_buffer_batch
         receiver_key = (
@@ -555,6 +557,7 @@ class MachineSelectionEvaluator:
     def _inventory_change_rate(
         result: AlgorithmIntervalNetRateResult,
     ) -> float:
+        # 优先使用显式库存变化率；旧结果仅保存净消耗率时取其相反数。
         """内部辅助步骤【_inventory_change_rate】，为上层业务流程提供数据处理或共用判断。"""
         if result.inventory_change_rate is not None:
             return result.inventory_change_rate
@@ -565,6 +568,7 @@ class MachineSelectionEvaluator:
         total_inventory: float,
         inventory_change_rate: float,
     ) -> float | None:
+        # 只有库存持续净消耗时才可预测断料分钟数，库存增长或持平返回空值。
         """内部辅助步骤【_group_depletion_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if inventory_change_rate >= 0:
             return None
@@ -575,6 +579,7 @@ class MachineSelectionEvaluator:
         group: MainBufferGroup,
         inventory_change_rate: float,
     ) -> float | None:
+        # 只有正向库存增长会逼近容量上限；非正增长不构成溢满倒计时。
         """内部辅助步骤【_group_overflow_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if inventory_change_rate <= 0:
             return None
@@ -590,6 +595,7 @@ class MachineSelectionEvaluator:
         state: VirtualGroupState,
         lead_minutes: float,
     ) -> bool:
+        # 断料方案同时要求目标缺口消除且所有被切出来源订单仍保持安全库存。
         """内部辅助步骤【_stockout_resolved】，为上层业务流程提供数据处理或共用判断。"""
         if state.inventory_change_rate >= 0:
             return True
@@ -638,6 +644,7 @@ class MachineSelectionEvaluator:
         interval_results: list[AlgorithmIntervalNetRateResult],
         overflow_results: list[AlgorithmBufferOverflowTimeResult],
     ) -> AlgorithmOverflowSelectionResult:
+        # 溢满选型从来源订单切出机台并为其选择接收订单，每步都重新评估物理 main 的总增长率。
         """根据当前快照和业务规则执行【select_overflow_machines】计算，返回类型标注所声明的结果。"""
         if snapshot.main_buffer_batch.groups_by_group_key:
             return self._select_overflow_from_batch(
@@ -1018,6 +1025,7 @@ class MachineSelectionEvaluator:
         candidate_result: AlgorithmOverflowCandidateResult,
         interval_results: list[AlgorithmIntervalNetRateResult],
     ) -> AlgorithmOverflowSelectionResult:
+        # 聚合路径允许来源订单在虚拟切换后变化，因此不能固定首次预警中的来源订单。
         """根据当前快照和业务规则执行【_select_overflow_from_batch】计算，返回类型标注所声明的结果。"""
         batch = snapshot.main_buffer_batch
         source_key = warning.group_key
@@ -1574,6 +1582,7 @@ class MachineSelectionEvaluator:
         state: VirtualGroupState,
         lead_minutes: float,
     ) -> bool:
+        # 成功条件不仅是来源订单不再增长，还要求整个物理 main 已不再在预警窗口内溢满。
         """内部辅助步骤【_overflow_group_resolved】，为上层业务流程提供数据处理或共用判断。"""
         if state.inventory_change_rate <= 0:
             return True
@@ -1587,6 +1596,7 @@ class MachineSelectionEvaluator:
         )
 
     def _physical_overflow_minutes(self, physical, growth_rate: float):
+        # 以物理 main 汇总库存和容量计算倒计时，不能使用单订单剩余容量替代。
         """内部辅助步骤【_physical_overflow_minutes】，为上层业务流程提供数据处理或共用判断。"""
         if physical is None or physical.total_capacity is None:
             return None
@@ -1597,6 +1607,7 @@ class MachineSelectionEvaluator:
         return (physical.total_capacity - physical.total_inventory) / growth_rate * 60
 
     def _physical_main_resolved(self, snapshot, main_id, virtual_groups, batch):
+        # 检查虚拟切换后的同 main 全部订单增长率，确认没有其他订单接替成为新的溢满来源。
         """内部辅助步骤【_physical_main_resolved】，为上层业务流程提供数据处理或共用判断。"""
         physical = self._physical_state(batch, main_id)
         if (
@@ -1616,6 +1627,7 @@ class MachineSelectionEvaluator:
 
     @staticmethod
     def _target_effect_capacity(snapshot, machine_code, product_code, fallback):
+        # 目标产品可用产能优先取机台产品产能表，缺失时回退到当前实时小时产出。
         """内部辅助步骤【_target_effect_capacity】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             item.actual_capacity
@@ -1626,6 +1638,7 @@ class MachineSelectionEvaluator:
 
     @staticmethod
     def _physical_state(batch, main_id):
+        # 返回物理 main 的容量、当前总库存和所属订单组，供每轮虚拟评估复用。
         """内部辅助步骤【_physical_state】，为上层业务流程提供数据处理或共用判断。"""
         state = batch.physical_main_buffers_by_main_id.get(main_id)
         if state is not None:
@@ -1658,6 +1671,7 @@ class MachineSelectionEvaluator:
         self,
         warning: AlgorithmOverflowWarningResult,
     ):
+        # 从虚拟订单状态中选出当前增长最快的订单；并列时使用订单号保证结果稳定。
         """内部辅助步骤【_maximum_growth_detail】，为上层业务流程提供数据处理或共用判断。"""
         positive = [
             detail
@@ -1679,6 +1693,7 @@ class MachineSelectionEvaluator:
         option: AlgorithmOverflowTargetOption,
         interval_by_key: dict[IntervalKey, AlgorithmIntervalNetRateResult],
     ):
+        # 将候选目标订单映射到唯一库存区间，无法唯一定位则拒绝该切换组合。
         """内部辅助步骤【_overflow_target_interval】，为上层业务流程提供数据处理或共用判断。"""
         has_complete_context = all(
             value is not None
@@ -1892,6 +1907,7 @@ class MachineSelectionEvaluator:
         candidate: AlgorithmStockoutCandidateMachine,
         interval_by_key: dict[IntervalKey, AlgorithmIntervalNetRateResult],
     ):
+        # 根据当前虚拟状态重建物理 main 风险，供候选排序与最终成功判断使用。
         """内部辅助步骤【_source_interval】，为上层业务流程提供数据处理或共用判断。"""
         matches = [
             (key, interval)

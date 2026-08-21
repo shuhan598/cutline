@@ -132,7 +132,7 @@ class AlgorithmActiveCutlineEvent(AlgorithmModel):
     warning_id: str | None = Field(
         default=None,
         min_length=1,
-        description="Source warning identifier used for cross-cycle deduplication",
+        description="用于跨轮去重的来源预警标识",
     )
     negative_start_time: datetime | None = Field(
         default=None,

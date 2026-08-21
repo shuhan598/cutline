@@ -36,10 +36,12 @@ class BufferProcessResolver:
     """在适配转换和校验中统一应用车间与工艺解析规则。"""
 
     def __init__(self, routes: Iterable[ProcessRouteView]):
+        # 保留输入路由的列表副本，使解析器可重复使用且不会受外部迭代器消耗影响。
         """初始化【__init__】对象的状态、索引和依赖。"""
         self._routes = list(routes)
 
     def resolve(self, buffer: BufferMasterView) -> BufferProcessResolution:
+        # Buffer 必须恰好连接同车间的两个工序，按路线序号确定上游与下游而非依赖输入顺序。
         """根据当前快照和业务规则执行【resolve】计算，返回类型标注所声明的结果。"""
         if len(buffer.served_process_codes) != 2:
             raise BufferProcessResolutionError(

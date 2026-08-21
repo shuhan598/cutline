@@ -25,6 +25,10 @@ from tests.fixtures.v3_full_route_factory import (
     SUPPORT_BUFFER_CODE,
     build_stockout_auto_payload,
 )
+from tests.utils.legacy_evaluate_client import (
+    LegacyEvaluateTestClient,
+    create_legacy_evaluate_test_app,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -175,8 +179,8 @@ def cutline_payload() -> dict:
 
 
 def make_client() -> TestClient:
-    app = create_app()
-    return TestClient(app)
+    app = create_legacy_evaluate_test_app()
+    return LegacyEvaluateTestClient(app)
 
 
 def test_health_endpoint_returns_ok():
@@ -375,7 +379,7 @@ def test_backend_validate_rejects_unknown_fields_with_422():
 
 
 def test_cutline_evaluate_delegates_to_cutline_service():
-    app = create_app()
+    app = create_legacy_evaluate_test_app()
     calls = []
     payload = build_stockout_auto_payload()
 
@@ -390,7 +394,7 @@ def test_cutline_evaluate_delegates_to_cutline_service():
             )
 
     app.dependency_overrides[get_cutline_service] = StubService
-    client = TestClient(app)
+    client = LegacyEvaluateTestClient(app)
 
     response = client.post("/cutline/evaluate", json=payload)
 
@@ -623,7 +627,10 @@ def test_calculation_route_returns_422_for_raw_standard_agv_conflict():
 def test_cutline_evaluate_rejects_empty_orders_with_backend_issues():
     payload = build_stockout_auto_payload()
     payload["orders"] = []
-    client = TestClient(create_app(), raise_server_exceptions=False)
+    client = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    )
 
     response = client.post("/cutline/evaluate", json=payload)
 
@@ -640,7 +647,10 @@ def test_cutline_evaluate_rejects_empty_orders_with_backend_issues():
 def test_cutline_evaluate_rejects_order_with_unknown_product():
     payload = build_stockout_auto_payload()
     payload["orders"][0]["product_code"] = "UNKNOWN-PRODUCT"
-    client = TestClient(create_app(), raise_server_exceptions=False)
+    client = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    )
 
     response = client.post("/cutline/evaluate", json=payload)
 
@@ -741,7 +751,10 @@ def test_cutline_evaluate_maps_snapshot_conversion_error_to_422():
     payload = build_stockout_auto_payload()
     assert payload["machine_lines"]
     payload["lines"] = []
-    client = TestClient(create_app(), raise_server_exceptions=False)
+    client = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    )
 
     response = client.post("/cutline/evaluate", json=payload)
 
@@ -858,14 +871,14 @@ def test_algorithm_endpoint_logs_unexpected_exception_and_keeps_500(
     monkeypatch,
 ):
     monkeypatch.setenv("CUTLINE_LOG_DIR", str(tmp_path))
-    app = create_app()
+    app = create_legacy_evaluate_test_app()
 
     class FailingService:
         def evaluate_algorithm(self, request: CutlineAlgorithmRequest):
             raise RuntimeError("algorithm endpoint failure")
 
     app.dependency_overrides[get_cutline_service] = FailingService
-    client = TestClient(app, raise_server_exceptions=False)
+    client = LegacyEvaluateTestClient(app, raise_server_exceptions=False)
 
     response = client.post(path, json=payload)
 
@@ -885,7 +898,10 @@ def test_cutline_evaluate_logs_snapshot_conversion_error(
     monkeypatch.setenv("CUTLINE_LOG_DIR", str(tmp_path))
     payload = build_stockout_auto_payload()
     payload["lines"] = []
-    client = TestClient(create_app(), raise_server_exceptions=False)
+    client = LegacyEvaluateTestClient(
+        create_legacy_evaluate_test_app(),
+        raise_server_exceptions=False,
+    )
 
     response = client.post("/cutline/evaluate", json=payload)
 

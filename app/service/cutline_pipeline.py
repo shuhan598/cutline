@@ -70,6 +70,7 @@ class CutlinePipeline:
     """轻量编排：构建一次组件，通过 evaluate_algorithm 编排结果。"""
 
     def __init__(self):
+        # 所有计算器均无跨轮可变业务状态；跨轮数据由请求快照和最终持久化状态显式传递。
         """初始化【__init__】对象的状态、索引和依赖。"""
         self._net_rate = NetRateCalculator()
         self._depletion = DepletionTimeCalculator()
@@ -93,6 +94,7 @@ class CutlinePipeline:
         snapshot: AlgorithmSnapshot,
     ) -> AlgorithmEvaluateResult:
         """根据当前快照和业务规则执行【evaluate_algorithm】计算，返回类型标注所声明的结果。"""
+        # Buffer 聚合异常按 main 隔离为结果中的错误，不阻断其他物理缓存区继续计算。
         errors = self._aggregation_errors(snapshot)
         net_rate_results = cast(
             list[AlgorithmIntervalNetRateResult],
@@ -119,6 +121,7 @@ class CutlinePipeline:
                     )
                 )
 
+        # 只有确认成功的机台才生成活跃事件；生成或合并冲突会被记录为局部错误。
         created_events, creation_errors = (
             self._create_confirmed_active_cutline_events(
                 snapshot=snapshot,
@@ -160,6 +163,7 @@ class CutlinePipeline:
             accepted_new_events=new_active_cutline_events,
         )
 
+        # 回流判断需要同时看到本轮新确认事件和既有事件，因此使用合并后的事件集合构造临时快照。
         return_snapshot = snapshot.model_copy(
             update={"active_cutline_events": merged_events},
             deep=True,
@@ -195,6 +199,7 @@ class CutlinePipeline:
         )
 
         cutline_decisions: list[AlgorithmCutlineDecisionResult] = []
+        # 断料方向是将机台切入目标订单以补足缺口。
         for warning in stockout_warnings:
             decision, error = self._build_stockout_decision(
                 snapshot,
@@ -207,6 +212,7 @@ class CutlinePipeline:
             if error is not None:
                 errors.append(error)
 
+        # 溢满方向是将机台从增长订单切出到同一 main 的可接收订单以降低库存增长率。
         for warning in overflow_warnings:
             decision, error = self._build_overflow_decision(
                 snapshot,
@@ -224,6 +230,7 @@ class CutlinePipeline:
             return_results=return_results,
             preserve_without_result=True,
         )
+        # 已有活跃或待确认计划的同一业务目标不再重复生成自动方案。
         tracked_keys = self._tracked_business_keys(
             snapshot=snapshot,
             active_events=active_states,
@@ -321,7 +328,7 @@ class CutlinePipeline:
     def _aggregation_errors(
         snapshot: AlgorithmSnapshot,
     ) -> list[AlgorithmPipelineError]:
-        """内部辅助步骤【_aggregation_errors】，为上层业务流程提供数据处理或共用判断。"""
+        """按错误码和物理 main 对聚合问题去重，转换成可返回的管道错误。"""
         errors: list[AlgorithmPipelineError] = []
         seen: set[tuple[str, str]] = set()
         for issue in snapshot.main_buffer_batch.issues:
@@ -347,7 +354,7 @@ class CutlinePipeline:
         evaluations: list[PendingCutlinePlanEvaluation],
         accepted_new_events: list[AlgorithmActiveCutlineEvent],
     ) -> list[PendingCutlinePlanEvaluation]:
-        """内部辅助步骤【_reconcile_plan_evaluations】，为上层业务流程提供数据处理或共用判断。"""
+        """将探测到的确认结果与成功创建的活跃事件对齐，避免失败事件被误记为已确认。"""
         plan_by_id = {
             plan.plan_id: plan for plan in snapshot.pending_cutline_plans
         }
@@ -415,7 +422,7 @@ class CutlinePipeline:
         list[AlgorithmActiveCutlineEvent],
         list[AlgorithmPipelineError],
     ]:
-        """根据当前快照和业务规则执行【_create_confirmed_active_cutline_events】计算，返回类型标注所声明的结果。"""
+        """逐条把确认转换生成活跃事件；单条转换失败只记录局部错误，不阻断同批事件。"""
         unique_transitions, errors = self._unique_transitions(transitions)
         plan_by_id = {
             plan.plan_id: plan for plan in snapshot.pending_cutline_plans
@@ -468,7 +475,7 @@ class CutlinePipeline:
         transition: ConfirmedCutlineTransition,
         plan: PendingCutlinePlan,
     ) -> AlgorithmActiveCutlineEvent:
-        """内部辅助步骤【_event_from_transition】，为上层业务流程提供数据处理或共用判断。"""
+        """把待确认转换映射为稳定 ID 的活跃切线事件。"""
         return self._active_event_tracker.create_event(
             event_id=(
                 f"CUT-{transition.plan_id}-{transition.machine_code}"
@@ -510,7 +517,7 @@ class CutlinePipeline:
         list[ConfirmedCutlineTransition],
         list[AlgorithmPipelineError],
     ]:
-        """内部辅助步骤【_unique_transitions】，为上层业务流程提供数据处理或共用判断。"""
+        """折叠重复转换，并拒绝同一计划和机台对应不同业务内容的冲突。"""
         identities = [
             (
                 self._transition_event_id(transition),
@@ -549,7 +556,7 @@ class CutlinePipeline:
     def _transition_event_id(
         transition: ConfirmedCutlineTransition,
     ) -> str:
-        """内部辅助步骤【_transition_event_id】，为上层业务流程提供数据处理或共用判断。"""
+        """按计划和机台生成与事件创建一致的稳定编号。"""
         return f"CUT-{transition.plan_id}-{transition.machine_code}"
 
     def _merge_active_cutline_events(
@@ -563,7 +570,7 @@ class CutlinePipeline:
         list[AlgorithmActiveCutlineEvent],
         list[AlgorithmPipelineError],
     ]:
-        """内部辅助步骤【_merge_active_cutline_events】，为上层业务流程提供数据处理或共用判断。"""
+        """合并历史与新事件，并检测相同业务身份但内容不一致的冲突。"""
         tagged_events = [
             *((False, event) for event in existing_events),
             *((True, event) for event in new_events),
@@ -696,7 +703,7 @@ class CutlinePipeline:
         return_results: list[AlgorithmReturnResult],
         preserve_without_result: bool,
     ) -> list[AlgorithmActiveCutlineEvent]:
-        """内部辅助步骤【_apply_return_state】，为上层业务流程提供数据处理或共用判断。"""
+        """将命中的回流结果应用到事件副本，按调用方要求保留或排除未命中事件。"""
         result_by_event_id = {
             result.event_id: result for result in return_results
         }
@@ -795,7 +802,7 @@ class CutlinePipeline:
         decisions: list[AlgorithmCutlineDecisionResult],
         tracked_keys: set[tuple[str, str, str, str, str, str]],
     ) -> list[AlgorithmCutlineDecisionResult]:
-        """内部辅助步骤【_filter_equivalent_automatic_decisions】，为上层业务流程提供数据处理或共用判断。"""
+        """保留人工干预诊断，仅过滤已被活跃事件或待确认计划占用的重复自动方案。"""
         filtered: list[AlgorithmCutlineDecisionResult] = []
         for decision in decisions:
             key = self._decision_business_key(decision)

@@ -46,7 +46,11 @@ _state_store = AlgorithmStateStore()
 
 
 def configure_v6_stores() -> None:
-    """Reset process-local V6 state when a new application instance is created."""
+    """在创建新的应用实例时重置进程内 V6 目录和跨轮状态。
+
+    应用工厂模式下每个实例必须拥有独立的内存目录和车间状态，避免测试或多个
+    应用实例之间泄漏已发布目录、幂等键和上一轮计算状态。
+    """
     global _catalog_store, _state_store
     _catalog_store = CatalogStore(strict=True)
     _state_store = AlgorithmStateStore()
@@ -58,19 +62,23 @@ def get_cutline_service() -> CutlineService:
 
 
 def get_catalog_store() -> CatalogStore:
+    """提供当前应用进程使用的 V6 静态目录存储实例，供依赖注入调用。"""
     return _catalog_store
 
 
 def get_state_store() -> AlgorithmStateStore:
+    """提供当前应用进程使用的 V6 车间跨轮状态存储实例，供依赖注入调用。"""
     return _state_store
 
 
 def _catalog_http_error(exc: CatalogStoreError) -> HTTPException:
+    """按目录错误类型映射 422 数据错误或 409 版本、幂等冲突错误。"""
     status = 422 if exc.code == "STATIC_DATA_INVALID" else 409
     return HTTPException(status_code=status, detail={"code": exc.code, "message": str(exc), "retryable": status == 409})
 
 
 def _catalog_response(record, store: CatalogStore) -> CatalogResponse:
+    """将目录内部记录和当前可保留版本转换为公开的目录响应。"""
     return CatalogResponse(
         catalog_version=record.catalog_version,
         catalog_hash=record.catalog_hash,
@@ -210,7 +218,6 @@ def run_stub_algorithm_request(
         log_algorithm_exception("/stub/algo/run")
         raise
 
-@router.post("/cutline/evaluate", response_model=CutlineEvaluateResponse)
 def evaluate_cutline_request(
     payload: Any = Body(None),
     service: CutlineService = Depends(get_cutline_service),

@@ -17,6 +17,7 @@ class StockoutWarningEvaluator:
         snapshot: AlgorithmSnapshot,
         depletion_results: list[AlgorithmDepletionTimeResult],
     ) -> list[AlgorithmStockoutWarningResult]:
+        # 断料时间落入预警提前量窗口才生成预警；无净消耗或尚未接近断料的库存不产生结果。
         """函数 ``evaluate_algorithm`` 执行当前业务步骤。参数、返回值和异常语义以类型标注及调用方契约为准。"""
         stockout_warning_lead_minutes = safe_float(
             snapshot.config.stockout_warning_lead_minutes
@@ -53,6 +54,7 @@ class StockoutWarningEvaluator:
                 )
             seen.add(unique_key)
 
+            # ``None`` 表示库存不会在可预测范围内耗尽，不能误报为断料风险。
             if (
                 depletion.depletion_minutes is None
                 or depletion.depletion_minutes
