@@ -36,6 +36,10 @@ from app.schemas.result_schema import (
     AlgorithmStockoutCutlinePlan,
     AlgorithmStockoutWarningResult,
 )
+from app.utils.input_error_codes import (
+    mixing_trace_error_code,
+    pipeline_error_code,
+)
 
 
 _PUBLIC_MANUAL_REASON_BY_INTERNAL = {
@@ -68,6 +72,7 @@ class AlgorithmResponseMapper:
             MixingTraceErrorResponse(
                 machine_code=item.machine_code,
                 reason=item.reason,
+                error_code=mixing_trace_error_code(item.reason),
                 message=item.message,
             )
             for item in result.mixing_trace_failures
@@ -436,6 +441,8 @@ class AlgorithmResponseMapper:
             warning_type=item.warning_type,
             warning_key=item.warning_key,
             reason=item.reason,
+            error_code=item.error_code
+            or pipeline_error_code(item.stage, item.reason),
             message=item.message,
         )
 

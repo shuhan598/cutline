@@ -327,6 +327,7 @@ def test_evaluate_algorithm_maps_aggregation_issues_once():
     assert error.warning_type is None
     assert error.warning_key == "MAIN-BUF-STOCK"
     assert error.reason == "capacity_unavailable"
+    assert error.error_code == "3007"
     assert error.message == "Capacity unavailable for BUF-STOCK"
 
 

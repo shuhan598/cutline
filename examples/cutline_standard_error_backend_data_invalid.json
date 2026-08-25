@@ -1,10 +1,12 @@
 {
   "detail": {
-    "code": "BACKEND_DATA_INVALID",
+    "code": "1010",
+    "legacy_code": "BACKEND_DATA_INVALID",
     "message": "后端数据不完整或数据关联关系错误",
     "issues": [
       {
         "code": "float_parsing",
+        "error_code": "2193",
         "dataset": "orders",
         "field": "total_quantity",
         "record_key": "index:0",

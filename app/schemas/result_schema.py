@@ -679,6 +679,7 @@ class AlgorithmPipelineError(BaseModel):
     warning_type: str | None = None
     warning_key: str | None = None
     reason: str
+    error_code: str | None = None
     message: str
 
 

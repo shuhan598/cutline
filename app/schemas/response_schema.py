@@ -235,6 +235,7 @@ class PipelineErrorResponse(ResponseModel):
     warning_type: str | None = None
     warning_key: str | None = None
     reason: str
+    error_code: str | None = None
     message: str
 
 
@@ -243,6 +244,7 @@ class MixingTraceErrorResponse(ResponseModel):
     stage: Literal["mixing_trace"] = "mixing_trace"
     machine_code: str
     reason: str
+    error_code: str
     message: str
 
 

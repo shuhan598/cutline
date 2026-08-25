@@ -32,9 +32,27 @@ from app.schemas.response_schema import PersistenceStateResponse
 from app.service.algorithm_state_store import AlgorithmStateStore
 from app.service.catalog_store import CatalogStore, CatalogStoreError
 from app.service.cutline_service import CutlineService
+from app.utils.input_error_codes import http_error_code
 
 
 router = APIRouter(tags=["cutline-v6"])
+
+
+def _error_detail(
+    legacy_code: str,
+    message: str,
+    *,
+    retryable: bool,
+    **extra: Any,
+) -> dict[str, Any]:
+    """构造含数字码与英文兼容码的统一 V6 错误体。"""
+    return {
+        "code": http_error_code(legacy_code),
+        "legacy_code": legacy_code,
+        "message": message,
+        "retryable": retryable,
+        **extra,
+    }
 
 
 def _error(exc: CatalogStoreError) -> HTTPException:
@@ -46,7 +64,11 @@ def _error(exc: CatalogStoreError) -> HTTPException:
     status = 422 if exc.code == "STATIC_DATA_INVALID" else 409
     return HTTPException(
         status_code=status,
-        detail={"code": exc.code, "message": str(exc), "retryable": status == 409},
+        detail=_error_detail(
+            exc.code,
+            str(exc),
+            retryable=status == 409,
+        ),
     )
 
 
@@ -74,7 +96,12 @@ def publish_static_data(
     try:
         request = FullCatalogRequest.model_validate(payload)
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail={"code": "STATIC_DATA_INVALID", "message": str(exc), "retryable": False}) from exc
+        raise HTTPException(
+            status_code=422,
+            detail=_error_detail(
+                "STATIC_DATA_INVALID", str(exc), retryable=False
+            ),
+        ) from exc
     try:
         record = store.publish(
             request.catalog_version,
@@ -100,7 +127,12 @@ def patch_static_data(
     try:
         request = CatalogPatchRequest.model_validate(payload)
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail={"code": "STATIC_DATA_INVALID", "message": str(exc), "retryable": False}) from exc
+        raise HTTPException(
+            status_code=422,
+            detail=_error_detail(
+                "STATIC_DATA_INVALID", str(exc), retryable=False
+            ),
+        ) from exc
     try:
         record = store.patch(
             request.base_catalog_version,
@@ -174,28 +206,42 @@ def evaluate_v6(
     except ValidationError as exc:
         raise HTTPException(
             status_code=422,
-            detail={
-                "code": "DYNAMIC_DATA_INVALID",
-                "message": str(exc),
-                "retryable": False,
-            },
+            detail=_error_detail(
+                "DYNAMIC_DATA_INVALID", str(exc), retryable=False
+            ),
         ) from exc
     record = store.get(request.catalog_version)
     if record is None:
         if store.current() is None:
             raise HTTPException(
                 status_code=409,
-                detail={"code": "STATIC_CATALOG_REQUIRED", "message": "no static catalog is loaded", "catalog_version": request.catalog_version, "retryable": True},
+                detail=_error_detail(
+                    "STATIC_CATALOG_REQUIRED",
+                    "no static catalog is loaded",
+                    retryable=True,
+                    catalog_version=request.catalog_version,
+                ),
             )
         raise HTTPException(
             status_code=409,
-            detail={"code": "CATALOG_VERSION_NOT_FOUND", "message": "requested catalog version is not retained", "catalog_version": request.catalog_version, "retryable": True},
+            detail=_error_detail(
+                "CATALOG_VERSION_NOT_FOUND",
+                "requested catalog version is not retained",
+                retryable=True,
+                catalog_version=request.catalog_version,
+            ),
         )
     missing = _missing_references(request, record.catalog)
     if missing:
         raise HTTPException(
             status_code=409,
-            detail={"code": "STATIC_CATALOG_DATA_MISSING", "message": "dynamic snapshot references missing static records", "catalog_version": request.catalog_version, "missing_references": missing, "retryable": True},
+            detail=_error_detail(
+                "STATIC_CATALOG_DATA_MISSING",
+                "dynamic snapshot references missing static records",
+                retryable=True,
+                catalog_version=request.catalog_version,
+                missing_references=missing,
+            ),
         )
     workshop_id = request.snapshot_meta.workshop_id
     attempt = state_store.begin(workshop_id)
@@ -217,11 +263,21 @@ def evaluate_v6(
         state_store.abort(workshop_id)
         raise HTTPException(
             status_code=409,
-            detail={"code": "STATIC_CATALOG_DATA_MISSING", "message": str(exc), "catalog_version": request.catalog_version, "retryable": True},
+            detail=_error_detail(
+                "STATIC_CATALOG_DATA_MISSING",
+                str(exc),
+                retryable=True,
+                catalog_version=request.catalog_version,
+            ),
         ) from exc
     except ValidationError as exc:
         state_store.abort(workshop_id)
-        raise HTTPException(status_code=422, detail={"code": "DYNAMIC_DATA_INVALID", "message": str(exc), "retryable": False}) from exc
+        raise HTTPException(
+            status_code=422,
+            detail=_error_detail(
+                "DYNAMIC_DATA_INVALID", str(exc), retryable=False
+            ),
+        ) from exc
     except Exception:
         state_store.abort(workshop_id)
         raise

@@ -63,6 +63,7 @@ from app.schemas.result_schema import (
     PendingCutlinePlanEvaluation,
 )
 from app.service.persistence_state_builder import PersistenceStateBuilder
+from app.utils.input_error_codes import aggregation_error_code
 from app.utils.time_utils import normalize_local_time
 
 
@@ -342,6 +343,7 @@ class CutlinePipeline:
                     warning_type=None,
                     warning_key=issue.main_id,
                     reason=issue.code,
+                    error_code=aggregation_error_code(issue.code),
                     message=issue.message,
                 )
             )

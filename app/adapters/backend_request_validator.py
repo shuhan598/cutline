@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.adapters.agv_binding_selector import (
     normalize_local_time,
@@ -44,6 +44,7 @@ from app.schemas.pending_cutline_schema import (
     PendingCutlinePlanStatus,
 )
 from app.utils.buffer_binding import should_ignore_bound_source_name
+from app.utils.input_error_codes import input_error_code
 
 
 class BackendValidationIssue(BaseModel):
@@ -51,10 +52,24 @@ class BackendValidationIssue(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     code: str
+    error_code: str
     dataset: str
     field: str | None
     record_key: str | None
     message: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def add_domain_error_code(cls, value: Any) -> Any:
+        """为每条问题补充可直接定位数据域的对外错误码。"""
+        if not isinstance(value, dict):
+            return value
+        issue = dict(value)
+        issue["error_code"] = input_error_code(
+            str(issue.get("dataset", "request")),
+            str(issue.get("code", "validation_failed")),
+        )
+        return issue
 
 
 class BackendRequestValidationResult(BaseModel):

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
-from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
 from app.adapters.backend_request_loader import (
@@ -34,6 +33,7 @@ from app.service.cutline_service import CutlineService
 from app.service.algorithm_state_store import AlgorithmStateStore
 from app.service.catalog_store import CatalogStore, CatalogStoreError
 from app.utils.algorithm_exception_logger import log_algorithm_exception
+from app.utils.input_error_codes import http_error_code
 
 
 router = APIRouter(tags=["cutline"])
@@ -74,7 +74,15 @@ def get_state_store() -> AlgorithmStateStore:
 def _catalog_http_error(exc: CatalogStoreError) -> HTTPException:
     """按目录错误类型映射 422 数据错误或 409 版本、幂等冲突错误。"""
     status = 422 if exc.code == "STATIC_DATA_INVALID" else 409
-    return HTTPException(status_code=status, detail={"code": exc.code, "message": str(exc), "retryable": status == 409})
+    return HTTPException(
+        status_code=status,
+        detail={
+            "code": http_error_code(exc.code),
+            "legacy_code": exc.code,
+            "message": str(exc),
+            "retryable": status == 409,
+        },
+    )
 
 
 def _catalog_response(record, store: CatalogStore) -> CatalogResponse:
@@ -92,16 +100,34 @@ def _raise_request_validation_error(
 ) -> NoReturn:
     """内部辅助步骤【_raise_request_validation_error】，为上层业务流程提供数据处理或共用判断。"""
     if isinstance(exc, ValidationError):
-        raise RequestValidationError(exc.errors()) from exc
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": http_error_code("REQUEST_VALIDATION_ERROR"),
+                "legacy_code": "REQUEST_VALIDATION_ERROR",
+                "message": "请求格式或字段类型错误",
+                "issues": [
+                    issue.model_dump(mode="json")
+                    for issue in _pydantic_validation_issues(exc)
+                ],
+            },
+        ) from exc
     raise HTTPException(
         status_code=422,
-        detail=[
-            {
-                "type": "value_error",
-                "loc": ["body", "agv_relations"],
-                "msg": str(exc),
-            }
-        ],
+        detail={
+            "code": http_error_code("REQUEST_VALIDATION_ERROR"),
+            "legacy_code": "REQUEST_VALIDATION_ERROR",
+            "message": "请求载荷标准化失败",
+            "issues": [
+                BackendValidationIssue(
+                    code="load_error",
+                    dataset="agv_relations",
+                    field=None,
+                    record_key=None,
+                    message=str(exc),
+                ).model_dump(mode="json")
+            ],
+        },
     ) from exc
 
 
@@ -122,7 +148,8 @@ def _raise_backend_data_invalid(
     http_error = HTTPException(
         status_code=422,
         detail={
-            "code": "BACKEND_DATA_INVALID",
+            "code": http_error_code("BACKEND_DATA_INVALID"),
+            "legacy_code": "BACKEND_DATA_INVALID",
             "message": "后端数据不完整或数据关联关系错误",
             "issues": [
                 issue.model_dump(mode="json") for issue in issues
@@ -232,7 +259,8 @@ def evaluate_cutline_request(
             raise HTTPException(
                 status_code=422,
                 detail={
-                    "code": "SNAPSHOT_CONVERSION_FAILED",
+                    "code": http_error_code("SNAPSHOT_CONVERSION_FAILED"),
+                    "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
                     "message": str(exc),
                     "issues": [],
                 },

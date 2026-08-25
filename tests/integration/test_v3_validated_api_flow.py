@@ -38,7 +38,7 @@ def test_same_missing_orders_payload_is_valid_false_and_evaluate_422():
     assert validation_response.json()["valid"] is False
     assert evaluation_response.status_code == 422
     assert evaluation_response.json()["detail"]["code"] == (
-        "BACKEND_DATA_INVALID"
+        "1010"
     )
 
 
@@ -64,7 +64,7 @@ def test_evaluate_maps_unknown_process_name_to_backend_data_invalid():
     )
     assert evaluation_response.status_code == 422
     detail = evaluation_response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
     assert any(
         issue["code"] == "unknown_process_name"
         and issue["dataset"] == "process_routes"
@@ -84,7 +84,7 @@ def test_duplicate_route_sequence_is_rejected_before_snapshot_conversion():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
     assert any(
         issue["code"] == "duplicate_sequence"
         for issue in detail["issues"]
@@ -100,7 +100,7 @@ def test_silk_screen_not_last_is_rejected_before_service():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
     assert any(
         issue["code"] == "silk_screen_not_last"
         for issue in detail["issues"]
@@ -115,7 +115,7 @@ def test_duplicate_silk_screen_is_rejected_before_service():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
     assert any(
         issue["code"] == "duplicate_silk_screen_process"
         for issue in detail["issues"]
@@ -130,7 +130,7 @@ def test_missing_silk_screen_is_rejected_before_service():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
     assert any(
         issue["code"] == "missing_silk_screen_process"
         for issue in detail["issues"]
@@ -145,7 +145,7 @@ def test_broken_route_neighbor_is_rejected_before_service():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
     assert any(
         issue["code"] == "broken_process_route"
         and issue["field"] == "upstream_process_code"
@@ -162,5 +162,5 @@ def test_real_snapshot_conversion_failure_returns_422():
 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == (
-        "SNAPSHOT_CONVERSION_FAILED"
+        "1011"
     )

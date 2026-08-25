@@ -329,8 +329,8 @@ def test_standard_success_output_is_the_current_formal_api_response(
 @pytest.mark.parametrize(
     ("path", "code"),
     (
-        (ERROR_OUTPUTS[0], "BACKEND_DATA_INVALID"),
-        (ERROR_OUTPUTS[1], "SNAPSHOT_CONVERSION_FAILED"),
+        (ERROR_OUTPUTS[0], "1010"),
+        (ERROR_OUTPUTS[1], "1011"),
     ),
 )
 def test_standard_422_error_uses_formal_error_envelope(path: Path, code: str):

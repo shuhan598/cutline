@@ -207,7 +207,7 @@ def test_evaluate_without_catalog_returns_recoverable_error():
         },
     )
     assert response.status_code == 409
-    assert response.json()["detail"]["code"] == "STATIC_CATALOG_REQUIRED"
+    assert response.json()["detail"]["code"] == "1006"
 
 
 def test_evaluate_unknown_retained_version_returns_catalog_not_found():
@@ -228,7 +228,7 @@ def test_evaluate_unknown_retained_version_returns_catalog_not_found():
         },
     )
     assert response.status_code == 409
-    assert response.json()["detail"]["code"] == "CATALOG_VERSION_NOT_FOUND"
+    assert response.json()["detail"]["code"] == "1007"
 
 
 def test_formal_evaluate_rejects_flat_static_arrays():
@@ -247,7 +247,7 @@ def test_formal_evaluate_invalid_dynamic_request_uses_v6_error_envelope():
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"]["code"] == "DYNAMIC_DATA_INVALID"
+    assert response.json()["detail"]["code"] == "1009"
 
 
 def test_invalid_patch_is_422_and_keeps_previous_version():
@@ -263,7 +263,7 @@ def test_invalid_patch_is_422_and_keeps_previous_version():
         json={"base_catalog_version": "v1", "next_catalog_version": "v2", "changes": {"workshops": {"upserts": [{"workshop_code": "W1"}], "deleted_keys": []}}},
     )
     assert response.status_code == 422
-    assert response.json()["detail"]["code"] == "STATIC_DATA_INVALID"
+    assert response.json()["detail"]["code"] == "1001"
     response = client.patch(
         "/cutline/static-data",
         headers={"Idempotency-Key": "k3"},

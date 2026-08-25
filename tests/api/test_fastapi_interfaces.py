@@ -311,12 +311,17 @@ def test_backend_validate_rejects_removed_runtime_fields(field: str):
     response = make_client().post("/backend/validate", json=payload)
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"] == [
-        "machine_realtime",
-        0,
-        field,
-    ]
-    assert response.json()["detail"][0]["type"] == "extra_forbidden"
+    detail = response.json()["detail"]
+    assert detail["code"] == "1012"
+    assert detail["legacy_code"] == "REQUEST_VALIDATION_ERROR"
+    assert any(
+        issue["code"] == "extra_forbidden"
+        and issue["error_code"] == "2291"
+        and issue["dataset"] == "machine_realtime"
+        and issue["field"] == field
+        and issue["record_key"] == "index:0"
+        for issue in detail["issues"]
+    )
 
 
 @pytest.mark.parametrize("line_input_mode", ["omitted", "empty"])
@@ -364,6 +369,7 @@ def test_backend_validate_returns_business_issues_as_successful_response():
     assert body["valid"] is False
     assert any(
         issue["code"] == "empty_dataset" and issue["dataset"] == "orders"
+        and issue["error_code"] == "2101"
         for issue in body["issues"]
     )
 
@@ -375,7 +381,15 @@ def test_backend_validate_rejects_unknown_fields_with_422():
     response = make_client().post("/backend/validate", json=payload)
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["type"] == "extra_forbidden"
+    detail = response.json()["detail"]
+    assert detail["code"] == "1012"
+    assert detail["legacy_code"] == "REQUEST_VALIDATION_ERROR"
+    assert any(
+        issue["code"] == "extra_forbidden"
+        and issue["error_code"] == "2995"
+        and issue["dataset"] == "unexpected"
+        for issue in detail["issues"]
+    )
 
 
 def test_cutline_evaluate_delegates_to_cutline_service():
@@ -447,12 +461,14 @@ def test_cutline_evaluate_rejects_removed_runtime_fields(field: str):
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["code"] == "extra_forbidden"
         and issue["dataset"] == "machine_realtime"
         and issue["field"] == field
         and issue["record_key"] == "index:0"
+        and issue["error_code"] == "2291"
         for issue in detail["issues"]
     )
 
@@ -636,10 +652,12 @@ def test_cutline_evaluate_rejects_empty_orders_with_backend_issues():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["code"] == "empty_dataset"
         and issue["dataset"] == "orders"
+        and issue["error_code"] == "2101"
         for issue in detail["issues"]
     )
 
@@ -656,11 +674,13 @@ def test_cutline_evaluate_rejects_order_with_unknown_product():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["code"] == "missing_reference"
         and issue["dataset"] == "orders"
         and issue["field"] == "product_code"
+        and issue["error_code"] == "2108"
         for issue in detail["issues"]
     )
 
@@ -673,10 +693,12 @@ def test_cutline_evaluate_maps_pydantic_error_to_backend_data_invalid():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["dataset"] == "products"
         and issue["code"] == "missing"
+        and issue["error_code"] == "2592"
         for issue in detail["issues"]
     )
 
@@ -689,12 +711,14 @@ def test_cutline_evaluate_maps_field_type_error_to_backend_data_invalid():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["dataset"] == "orders"
         and issue["record_key"] == "index:0"
         and issue["field"] == "total_quantity"
         and issue["code"] == "float_parsing"
+        and issue["error_code"] == "2193"
         for issue in detail["issues"]
     )
 
@@ -704,10 +728,12 @@ def test_cutline_evaluate_maps_non_object_root_to_backend_data_invalid():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["dataset"] == "request"
         and issue["code"] == "model_type"
+        and issue["error_code"] == "2998"
         for issue in detail["issues"]
     )
 
@@ -723,10 +749,12 @@ def test_cutline_evaluate_maps_null_or_missing_body_to_backend_data_invalid(
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["dataset"] == "request"
         and issue["code"] == "model_type"
+        and issue["error_code"] == "2998"
         for issue in detail["issues"]
     )
 
@@ -739,10 +767,12 @@ def test_cutline_evaluate_maps_loader_error_to_backend_data_invalid():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail["code"] == "BACKEND_DATA_INVALID"
+    assert detail["code"] == "1010"
+    assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
     assert any(
         issue["code"] == "load_error"
         and issue["dataset"] == "agv_relations"
+        and issue["error_code"] == "2321"
         for issue in detail["issues"]
     )
 
@@ -760,7 +790,8 @@ def test_cutline_evaluate_maps_snapshot_conversion_error_to_422():
 
     assert response.status_code == 422
     assert response.json()["detail"] == {
-        "code": "SNAPSHOT_CONVERSION_FAILED",
+        "code": "1011",
+        "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
         "message": "machine_lines were provided but lines are empty",
         "issues": [],
     }
@@ -789,6 +820,7 @@ def test_cutline_evaluate_isolates_duplicate_realtime_buffer_as_200_error():
     assert len(matching_errors) == 1
     assert matching_errors[0]["stage"] == "main_buffer_aggregation"
     assert matching_errors[0]["warning_key"] == duplicate["main_id"]
+    assert matching_errors[0]["error_code"] == "3003"
 
 
 def test_cutline_evaluate_isolates_unresolved_static_buffer_as_200_error():

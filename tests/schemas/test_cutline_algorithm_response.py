@@ -443,6 +443,7 @@ def test_mixing_error_has_machine_context_without_internal_failure_object():
         stage="mixing_trace",
         machine_code="EA004",
         reason="process_duration_not_found",
+        error_code="3111",
         message="process duration was not found",
     )
 
@@ -450,5 +451,6 @@ def test_mixing_error_has_machine_context_without_internal_failure_object():
         "stage": "mixing_trace",
         "machine_code": "EA004",
         "reason": "process_duration_not_found",
+        "error_code": "3111",
         "message": "process duration was not found",
     }

@@ -482,16 +482,18 @@
 | 422 | 已识别的输入数据、完整性或 Snapshot 转换错误 | 不进入正常业务展示；记录问题并修复数据 |
 | 500 | 未知程序异常或非预期系统错误 | 记录请求标识、时间和服务日志；不可一律归因为甲方数据问题 |
 
-`BACKEND_DATA_INVALID` 的真实格式见 [cutline_standard_error_backend_data_invalid.json](../examples/cutline_standard_error_backend_data_invalid.json)：
+`1010`（兼容标识 `BACKEND_DATA_INVALID`）的真实格式见 [cutline_standard_error_backend_data_invalid.json](../examples/cutline_standard_error_backend_data_invalid.json)：
 
 ```json
 {
   "detail": {
-    "code": "BACKEND_DATA_INVALID",
+    "code": "1010",
+    "legacy_code": "BACKEND_DATA_INVALID",
     "message": "后端数据不完整或数据关联关系错误",
     "issues": [
       {
         "code": "float_parsing",
+        "error_code": "2193",
         "dataset": "orders",
         "field": "total_quantity",
         "record_key": "index:0",
@@ -502,12 +504,13 @@
 }
 ```
 
-`SNAPSHOT_CONVERSION_FAILED` 的真实格式见 [cutline_standard_error_snapshot_conversion.json](../examples/cutline_standard_error_snapshot_conversion.json)：
+`1011`（兼容标识 `SNAPSHOT_CONVERSION_FAILED`）的真实格式见 [cutline_standard_error_snapshot_conversion.json](../examples/cutline_standard_error_snapshot_conversion.json)：
 
 ```json
 {
   "detail": {
-    "code": "SNAPSHOT_CONVERSION_FAILED",
+    "code": "1011",
+    "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
     "message": "machine_lines were provided but lines are empty",
     "issues": []
   }
