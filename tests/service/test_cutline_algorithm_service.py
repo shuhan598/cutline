@@ -667,4 +667,5 @@ def test_partial_pipeline_error_is_returned_alongside_other_results(monkeypatch)
     assert len(response.errors) == 1
     assert response.errors[0].stage == "stockout_candidate"
     assert response.errors[0].reason == "candidate_machine_calculation_error"
-    assert response.errors[0].message == "候选机台的关联数据或产能无法计算"
+    assert response.errors[0].message.startswith("排产/定线-")
+    assert response.errors[0].message.endswith("候选机台的关联数据或产能无法计算")

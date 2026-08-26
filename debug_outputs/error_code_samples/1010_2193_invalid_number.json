@@ -6,7 +6,7 @@
     "detail": {
       "code": "1010",
       "legacy_code": "BACKEND_DATA_INVALID",
-      "message": "后端数据不完整、格式错误或关联关系错误",
+      "message": "排产/定线-请求：后端数据不完整、格式错误或关联关系错误",
       "issues": [
         {
           "code": "float_parsing",
@@ -14,7 +14,7 @@
           "dataset": "orders",
           "field": "total_quantity",
           "record_key": "index:0",
-          "message": "数字字段无法解析"
+          "message": "排产/定线-订单第1条中‘订单总数量’字段无法解析为数字"
         }
       ]
     }

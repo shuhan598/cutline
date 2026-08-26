@@ -6,7 +6,7 @@
     "detail": {
       "code": "1011",
       "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
-      "message": "请求数据无法转换为算法快照",
+      "message": "排产/定线-请求：请求数据无法转换为算法快照",
       "issues": []
     }
   }

@@ -248,6 +248,96 @@ _INPUT_REASON_MESSAGES = {
     "model_type": "对象类型或 JSON 结构错误",
 }
 
+_INPUT_REASON_ACTIONS = {
+    "empty_dataset": "数据集为空",
+    "empty_code": "不符合编码规则",
+    "empty_value": "为空",
+    "null_field": "不允许为 null",
+    "duplicate_key": "存在重复值",
+    "invalid_value": "不符合业务规则",
+    "invalid_reference": "引用关系不一致",
+    "missing_reference": "引用记录不存在",
+    "ambiguous_reference": "引用匹配到多条记录",
+    "name_mismatch": "编码与名称不匹配",
+    "workshop_mismatch": "所属车间不一致",
+    "binding_conflict": "在同一时刻存在绑定冲突",
+    "missing_agv_binding": "缺少有效 AGV 绑定",
+    "unknown_process_name": "无法映射到内部工序目录",
+    "duplicate_sequence": "序号重复",
+    "broken_process_route": "上下游关系不连续",
+    "invalid_last_process_downstream": "最后一道工序不应填写下游工序",
+    "missing_silk_screen_process": "缺少丝网工序",
+    "duplicate_silk_screen_process": "存在多个丝网工序",
+    "silk_screen_not_last": "不是最后一道工序",
+    "load_error": "原始载荷标准化失败",
+    "extra_forbidden": "未在请求契约中声明",
+    "missing": "缺失",
+    "float_parsing": "无法解析为数字",
+    "model_type": "类型或 JSON 结构错误",
+}
+
+_DATASET_LABELS = {
+    "orders": "订单",
+    "machine_realtime": "机台实时数据",
+    "machine_master": "机台主数据",
+    "machine_process_times": "机台工艺时长",
+    "machine_lines": "机台产线关系",
+    "agv_relations": "AGV 绑定数据",
+    "buffer_realtime": "Buffer 实时数据",
+    "buffer_master": "Buffer 主数据",
+    "products": "产品",
+    "process_routes": "工艺路线",
+    "workshops": "车间",
+    "lines": "产线",
+    "pending_cutline_plans": "Pending 计划",
+    "active_cutline_events": "活跃切线事件",
+    "return_suggested_event_ids": "返工建议事件",
+    "mixed_cutline_event_ids": "混料事件",
+    "snapshot_meta": "快照元数据",
+    "request": "请求",
+}
+
+_FIELD_LABELS = {
+    "order_code": "订单编码",
+    "order_name": "订单名称",
+    "due_date": "截至日期",
+    "total_quantity": "订单总数量",
+    "produced_quantity": "已生产数量",
+    "remaining_quantity": "剩余数量",
+    "machine_code": "机台编码",
+    "machine_name": "机台名称",
+    "completed_quantity": "已完成数量",
+    "period_quantity": "期间数量",
+    "product_code": "产品编码",
+    "product_name": "产品名称",
+    "workshop_code": "车间编码",
+    "workshop_name": "车间名称",
+    "buffer_code": "Buffer 编码",
+    "max_capacity": "最大容量",
+    "current_quantity": "当前库存",
+    "process_code": "工序编码",
+    "process_name": "工序名称",
+    "sequence": "工序序号",
+    "equipmentid": "AGV 机台编码",
+    "linename": "AGV 当前产品名称",
+}
+
+_PIPELINE_STAGE_LABELS = {
+    "main_buffer_aggregation": "主 Buffer 聚合",
+    "pending_cutline_confirmation": "Pending 切线确认",
+    "active_event_creation": "活跃事件创建",
+    "active_event_merge": "活跃事件合并",
+    "return_evaluation": "返工评估",
+    "silk_screen_transition": "丝网切换",
+    "stockout_candidate": "缺料候选机台",
+    "overflow_candidate": "溢料候选机台",
+    "stockout_selection": "缺料机台筛选",
+    "overflow_selection": "溢料机台筛选",
+    "stockout_plan": "缺料方案",
+    "overflow_plan": "溢料方案",
+    "pending_cutline_creation": "Pending 计划创建",
+}
+
 
 def input_error_code(dataset: str, reason_code: str) -> str:
     """返回指定输入数据域及原因的四位数字错误码。"""
@@ -276,6 +366,68 @@ def error_code_message(
         error_code,
         _INPUT_REASON_MESSAGES.get(reason_code or "", fallback or "未分类错误"),
     )
+
+
+def http_error_message(error_code: str, scope: str) -> str:
+    """返回包含算法范围的 HTTP 错误说明。"""
+    return f"{scope}-请求：{error_code_message(error_code)}"
+
+
+def input_error_message(
+    *,
+    scope: str,
+    dataset: str,
+    field: str | None,
+    record_key: str | None,
+    reason_code: str,
+    error_code: str,
+    fallback: str | None = None,
+) -> str:
+    """返回包含数据对象和字段定位的中文输入校验说明。"""
+    dataset_label = _DATASET_LABELS.get(dataset, dataset)
+    if record_key and record_key.startswith("index:"):
+        record_label = f"{dataset_label}第{int(record_key[6:]) + 1}条"
+    elif record_key:
+        record_label = f"{dataset_label} {record_key}"
+    elif dataset == "request":
+        record_label = "请求"
+    else:
+        record_label = (
+            dataset_label
+            if dataset_label.endswith(("数据", "事件", "元数据"))
+            else f"{dataset_label}数据集"
+        )
+
+    action = _INPUT_REASON_ACTIONS.get(
+        reason_code,
+        error_code_message(error_code, fallback, reason_code=reason_code),
+    )
+    if field:
+        field_label = _FIELD_LABELS.get(field, field)
+        return f"{scope}-{record_label}中‘{field_label}’字段{action}"
+    return f"{scope}-{record_label}：{action}"
+
+
+def pipeline_error_message(
+    error_code: str,
+    *,
+    stage: str,
+    warning_key: str | None,
+    fallback: str | None = None,
+) -> str:
+    """返回包含排产/定线阶段和告警标识的局部算法错误说明。"""
+    target = warning_key or _PIPELINE_STAGE_LABELS.get(stage, stage)
+    return f"排产/定线-{target}：{error_code_message(error_code, fallback)}"
+
+
+def mixing_error_message(
+    error_code: str,
+    *,
+    machine_code: str,
+    fallback: str | None = None,
+) -> str:
+    """返回包含机台定位的混料追溯错误说明。"""
+    return f"混料-{machine_code}：{error_code_message(error_code, fallback)}"
 
 
 def aggregation_error_code(reason_code: str) -> str:

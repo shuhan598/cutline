@@ -37,9 +37,10 @@ from app.schemas.result_schema import (
     AlgorithmStockoutWarningResult,
 )
 from app.utils.input_error_codes import (
-    error_code_message,
     mixing_trace_error_code,
+    mixing_error_message,
     pipeline_error_code,
+    pipeline_error_message,
 )
 
 
@@ -441,7 +442,12 @@ class AlgorithmResponseMapper:
             warning_key=item.warning_key,
             reason=item.reason,
             error_code=error_code,
-            message=error_code_message(error_code, item.message),
+            message=pipeline_error_message(
+                error_code,
+                stage=item.stage,
+                warning_key=item.warning_key,
+                fallback=item.message,
+            ),
         )
 
     @staticmethod
@@ -452,7 +458,11 @@ class AlgorithmResponseMapper:
             machine_code=item.machine_code,
             reason=item.reason,
             error_code=error_code,
-            message=error_code_message(error_code, item.message),
+            message=mixing_error_message(
+                error_code,
+                machine_code=item.machine_code,
+                fallback=item.message,
+            ),
         )
 
     def _plan_warning_id(

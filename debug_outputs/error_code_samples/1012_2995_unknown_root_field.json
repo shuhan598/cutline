@@ -6,15 +6,15 @@
     "detail": {
       "code": "1012",
       "legacy_code": "REQUEST_VALIDATION_ERROR",
-      "message": "请求格式、字段类型或载荷标准化错误",
+      "message": "切线-请求：请求格式、字段类型或载荷标准化错误",
       "issues": [
         {
           "code": "extra_forbidden",
           "error_code": "2995",
-          "dataset": "unexpected",
-          "field": null,
+          "dataset": "request",
+          "field": "unexpected",
           "record_key": null,
-          "message": "请求包含未声明字段"
+          "message": "切线-请求中‘unexpected’字段未在请求契约中声明"
         }
       ]
     }

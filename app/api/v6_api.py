@@ -32,7 +32,7 @@ from app.schemas.response_schema import PersistenceStateResponse
 from app.service.algorithm_state_store import AlgorithmStateStore
 from app.service.catalog_store import CatalogStore, CatalogStoreError
 from app.service.cutline_service import CutlineService
-from app.utils.input_error_codes import error_code_message, http_error_code
+from app.utils.input_error_codes import http_error_code, http_error_message
 
 
 router = APIRouter(tags=["cutline-v6"])
@@ -49,7 +49,9 @@ def _error_detail(
     return {
         "code": http_error_code(legacy_code),
         "legacy_code": legacy_code,
-        "message": error_code_message(http_error_code(legacy_code), message),
+        "message": http_error_message(
+            http_error_code(legacy_code), "排产/定线-V6"
+        ),
         "retryable": retryable,
         **extra,
     }

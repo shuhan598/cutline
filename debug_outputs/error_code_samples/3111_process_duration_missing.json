@@ -48,7 +48,7 @@
         "machine_code": "EA004",
         "reason": "process_duration_not_found",
         "error_code": "3111",
-        "message": "机台和源产品的工艺时长缺失"
+        "message": "混料-EA004：机台和源产品的工艺时长缺失"
       }
     ],
     "persistence_state": {

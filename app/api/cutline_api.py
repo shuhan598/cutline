@@ -33,7 +33,11 @@ from app.service.cutline_service import CutlineService
 from app.service.algorithm_state_store import AlgorithmStateStore
 from app.service.catalog_store import CatalogStore, CatalogStoreError
 from app.utils.algorithm_exception_logger import log_algorithm_exception
-from app.utils.input_error_codes import error_code_message, http_error_code
+from app.utils.input_error_codes import (
+    http_error_code,
+    http_error_message,
+    input_error_message,
+)
 
 
 router = APIRouter(tags=["cutline"])
@@ -79,7 +83,9 @@ def _catalog_http_error(exc: CatalogStoreError) -> HTTPException:
         detail={
             "code": http_error_code(exc.code),
             "legacy_code": exc.code,
-            "message": error_code_message(http_error_code(exc.code), str(exc)),
+            "message": http_error_message(
+                http_error_code(exc.code), "排产/定线-V6目录"
+            ),
             "retryable": status == 409,
         },
     )
@@ -105,11 +111,10 @@ def _raise_request_validation_error(
             detail={
                 "code": http_error_code("REQUEST_VALIDATION_ERROR"),
                 "legacy_code": "REQUEST_VALIDATION_ERROR",
-                "message": error_code_message("1012"),
-                "issues": [
-                    issue.model_dump(mode="json")
-                    for issue in _pydantic_validation_issues(exc)
-                ],
+                "message": http_error_message("1012", "切线"),
+                "issues": _serialize_issues(
+                    _pydantic_validation_issues(exc), scope="切线"
+                ),
             },
         ) from exc
     raise HTTPException(
@@ -117,16 +122,19 @@ def _raise_request_validation_error(
         detail={
             "code": http_error_code("REQUEST_VALIDATION_ERROR"),
             "legacy_code": "REQUEST_VALIDATION_ERROR",
-            "message": error_code_message("1012"),
-            "issues": [
-                BackendValidationIssue(
+            "message": http_error_message("1012", "切线"),
+            "issues": _serialize_issues(
+                [
+                    BackendValidationIssue(
                     code="load_error",
                     dataset="agv_relations",
                     field=None,
                     record_key=None,
                     message=str(exc),
-                ).model_dump(mode="json")
-            ],
+                    )
+                ],
+                scope="切线",
+            ),
         },
     ) from exc
 
@@ -150,10 +158,8 @@ def _raise_backend_data_invalid(
         detail={
             "code": http_error_code("BACKEND_DATA_INVALID"),
             "legacy_code": "BACKEND_DATA_INVALID",
-            "message": error_code_message("1010"),
-            "issues": [
-                issue.model_dump(mode="json") for issue in issues
-            ],
+            "message": http_error_message("1010", "排产/定线"),
+            "issues": _serialize_issues(issues, scope="排产/定线"),
         },
     )
     if cause is not None:
@@ -168,12 +174,20 @@ def _pydantic_validation_issues(
     issues: list[BackendValidationIssue] = []
     for error in exc.errors(include_url=False):
         location = list(error.get("loc", ()))
-        dataset = str(location[0]) if location else "request"
+        code = str(error.get("type", "validation_error"))
+        is_root_extra_field = len(location) == 1 and code == "extra_forbidden"
+        dataset = "request" if is_root_extra_field else (
+            str(location[0]) if location else "request"
+        )
         has_record_index = len(location) > 1 and isinstance(location[1], int)
-        field_parts = location[2:] if has_record_index else location[1:]
+        field_parts = (
+            location if is_root_extra_field else (
+                location[2:] if has_record_index else location[1:]
+            )
+        )
         issues.append(
             BackendValidationIssue(
-                code=str(error.get("type", "validation_error")),
+                code=code,
                 dataset=dataset,
                 field=(
                     ".".join(str(item) for item in field_parts)
@@ -187,6 +201,26 @@ def _pydantic_validation_issues(
             )
         )
     return issues
+
+
+def _serialize_issues(
+    issues: list[BackendValidationIssue], *, scope: str
+) -> list[dict[str, Any]]:
+    """按接口所属算法范围生成带记录和字段定位的中文说明。"""
+    serialized: list[dict[str, Any]] = []
+    for issue in issues:
+        value = issue.model_dump(mode="json")
+        value["message"] = input_error_message(
+            scope=scope,
+            dataset=issue.dataset,
+            field=issue.field,
+            record_key=issue.record_key,
+            reason_code=issue.code,
+            error_code=issue.error_code,
+            fallback=issue.message,
+        )
+        serialized.append(value)
+    return serialized
 
 
 def _load_validated_cutline_request(
@@ -261,7 +295,7 @@ def evaluate_cutline_request(
                 detail={
                     "code": http_error_code("SNAPSHOT_CONVERSION_FAILED"),
                     "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
-                    "message": error_code_message("1011", str(exc)),
+                    "message": http_error_message("1011", "排产/定线"),
                     "issues": [],
                 },
             ) from exc

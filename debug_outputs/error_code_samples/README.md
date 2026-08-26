@@ -10,4 +10,6 @@
 | `3003_duplicate_buffer.json` | 200 | `3003` | 同一物理 main 内存在重复的 Buffer 编码 |
 | `3111_process_duration_missing.json` | 200 | `3111` | 机台和源产品的工艺时长缺失 |
 
+各样例的 `message` 均含算法范围和定位信息：输入问题以 `切线-` 或 `排产/定线-` 开头，局部计算问题附带 `warning_key`，混料追溯问题附带机台编码。
+
 `3003` 和 `3111` 是可隔离的局部算法错误，位于响应的 `errors[]` 中。`3111` 需在已存在切线事件的第二轮计算中触发，因此该样例执行 `CutlineService.evaluate_algorithm`；常规 HTTP 请求会先按数据完整性校验返回 `1010`。

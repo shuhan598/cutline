@@ -5,7 +5,10 @@ from app.utils.input_error_codes import (
     error_code_message,
     http_error_code,
     input_error_code,
+    input_error_message,
+    mixing_error_message,
     mixing_trace_error_code,
+    pipeline_error_message,
     pipeline_error_code,
 )
 
@@ -45,3 +48,22 @@ def test_error_code_messages_are_chinese_and_cover_segmented_input_codes():
     assert error_code_message("2995", reason_code="extra_forbidden") == "请求包含未声明字段"
     assert error_code_message("3003") == "同一物理 main 内存在重复的 Buffer 编码"
     assert error_code_message("3111") == "机台和源产品的工艺时长缺失"
+
+
+def test_error_messages_include_algorithm_and_data_location():
+    assert input_error_message(
+        scope="切线",
+        dataset="orders",
+        field="order_name",
+        record_key="订单A",
+        reason_code="empty_code",
+        error_code="2102",
+    ) == "切线-订单 订单A中‘订单名称’字段不符合编码规则"
+    assert pipeline_error_message(
+        "3003",
+        stage="main_buffer_aggregation",
+        warning_key="MAIN-1",
+    ) == "排产/定线-MAIN-1：同一物理 main 内存在重复的 Buffer 编码"
+    assert mixing_error_message("3111", machine_code="EA004") == (
+        "混料-EA004：机台和源产品的工艺时长缺失"
+    )

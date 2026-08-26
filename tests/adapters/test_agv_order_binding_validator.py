@@ -179,7 +179,8 @@ def test_validator_reports_unknown_agv_equipmentid():
         issue.code == "missing_reference"
         and issue.dataset == "agv_relations"
         and issue.field == "equipmentid"
-        and issue.message == "被引用记录不存在"
+        and issue.message.startswith("切线-")
+        and issue.message.endswith("字段引用记录不存在")
         for issue in result.issues
     )
 
@@ -194,7 +195,8 @@ def test_validator_reports_unknown_agv_linename():
         issue.code == "missing_reference"
         and issue.dataset == "agv_relations"
         and issue.field == "linename"
-        and issue.message == "被引用记录不存在"
+        and issue.message.startswith("切线-")
+        and issue.message.endswith("字段引用记录不存在")
         for issue in result.issues
     )
     assert any(
@@ -215,7 +217,8 @@ def test_running_machine_without_any_agv_record_is_reported_after_mapping():
         and issue.dataset == "machine_realtime"
         and issue.field == "machine_code"
         and issue.record_key == "P166-EA003"
-        and issue.message == "运行机台缺少有效 AGV 绑定"
+        and issue.message.startswith("切线-")
+        and issue.message.endswith("字段缺少有效 AGV 绑定")
         for issue in result.issues
     )
 
@@ -328,7 +331,8 @@ def test_validator_reports_latest_same_time_linename_conflict():
         issue.code == "binding_conflict"
         and issue.dataset == "agv_relations"
         and issue.field == "linename"
-        and issue.message == "同一机台或绑定在同一时刻冲突"
+        and issue.message.startswith("切线-")
+        and issue.message.endswith("字段在同一时刻存在绑定冲突")
         for issue in result.issues
     )
 
@@ -343,7 +347,8 @@ def test_validator_reports_unknown_realtime_p166_code():
         issue.code == "missing_reference"
         and issue.dataset == "machine_realtime"
         and issue.field == "machine_code"
-        and issue.message == "被引用记录不存在"
+        and issue.message.startswith("切线-")
+        and issue.message.endswith("字段引用记录不存在")
         for issue in result.issues
     )
 
@@ -358,7 +363,8 @@ def test_validator_reports_agv_machine_order_workshop_conflict():
     assert any(
         issue.code == "workshop_mismatch"
         and issue.dataset == "agv_relations"
-        and issue.message == "关联记录所属车间不一致"
+        and issue.message.startswith("切线-")
+        and issue.message.endswith("所属车间不一致")
         for issue in result.issues
     )
 
