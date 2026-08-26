@@ -204,7 +204,7 @@ def test_validator_reports_unknown_process_name_with_existing_issue_shape():
     assert issue.dataset == "process_routes"
     assert issue.field == "process_name"
     assert issue.record_key == original_process_code
-    assert issue.message.startswith("切线-")
+    assert issue.message.startswith("切线/混料-")
     assert issue.message.endswith("字段无法映射到内部工序目录")
 
 

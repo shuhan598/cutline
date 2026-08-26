@@ -1262,7 +1262,7 @@ def test_backend_validator_reports_duplicate_pending_id_and_business_key():
         issue.code == "duplicate_key"
         and issue.dataset == "pending_cutline_plans"
         and issue.field == "plan_id"
-        and issue.message.startswith("切线-")
+        and issue.message.startswith("切线/混料-")
         and issue.message.endswith("字段存在重复值")
         for issue in result.issues
     )
@@ -1273,7 +1273,7 @@ def test_backend_validator_reports_duplicate_pending_id_and_business_key():
         issue.code == "duplicate_key"
         and issue.dataset == "pending_cutline_plans"
         and issue.field == "business_key"
-        and issue.message.startswith("切线-")
+        and issue.message.startswith("切线/混料-")
         and issue.message.endswith("字段存在重复值")
         for issue in result.issues
     )

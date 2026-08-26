@@ -50,7 +50,7 @@ def _error_detail(
         "code": http_error_code(legacy_code),
         "legacy_code": legacy_code,
         "message": http_error_message(
-            http_error_code(legacy_code), "排产/定线-V6"
+            http_error_code(legacy_code), "切线/混料-V6"
         ),
         "retryable": retryable,
         **extra,

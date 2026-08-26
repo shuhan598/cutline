@@ -70,7 +70,7 @@ class BackendValidationIssue(BaseModel):
             str(issue.get("code", "validation_failed")),
         )
         issue["message"] = input_error_message(
-            scope="切线",
+            scope="切线/混料",
             dataset=str(issue.get("dataset", "request")),
             field=issue.get("field"),
             record_key=issue.get("record_key"),

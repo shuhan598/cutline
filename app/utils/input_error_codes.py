@@ -415,9 +415,9 @@ def pipeline_error_message(
     warning_key: str | None,
     fallback: str | None = None,
 ) -> str:
-    """返回包含排产/定线阶段和告警标识的局部算法错误说明。"""
+    """返回包含切线/混料范围和告警标识的局部算法错误说明。"""
     target = warning_key or _PIPELINE_STAGE_LABELS.get(stage, stage)
-    return f"排产/定线-{target}：{error_code_message(error_code, fallback)}"
+    return f"切线/混料-{target}：{error_code_message(error_code, fallback)}"
 
 
 def mixing_error_message(

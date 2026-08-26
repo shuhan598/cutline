@@ -6,7 +6,7 @@
     "detail": {
       "code": "1012",
       "legacy_code": "REQUEST_VALIDATION_ERROR",
-      "message": "切线-请求：请求格式、字段类型或载荷标准化错误",
+      "message": "切线/混料-请求：请求格式、字段类型或载荷标准化错误",
       "issues": [
         {
           "code": "extra_forbidden",
@@ -14,7 +14,7 @@
           "dataset": "machine_realtime",
           "field": "completed_quantity",
           "record_key": "index:0",
-          "message": "切线-机台实时数据第1条中‘已完成数量’字段未在请求契约中声明"
+          "message": "切线/混料-机台实时数据第1条中‘已完成数量’字段未在请求契约中声明"
         }
       ]
     }

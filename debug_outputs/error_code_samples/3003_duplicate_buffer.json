@@ -87,7 +87,7 @@
         "warning_key": "MAIN-310110301",
         "reason": "duplicate_buffer_id",
         "error_code": "3003",
-        "message": "排产/定线-MAIN-310110301：同一物理 main 内存在重复的 Buffer 编码"
+        "message": "切线/混料-MAIN-310110301：同一物理 main 内存在重复的 Buffer 编码"
       }
     ],
     "persistence_state": {

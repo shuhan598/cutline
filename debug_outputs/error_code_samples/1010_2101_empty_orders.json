@@ -6,7 +6,7 @@
     "detail": {
       "code": "1010",
       "legacy_code": "BACKEND_DATA_INVALID",
-      "message": "排产/定线-请求：后端数据不完整、格式错误或关联关系错误",
+      "message": "切线/混料-请求：后端数据不完整、格式错误或关联关系错误",
       "issues": [
         {
           "code": "empty_dataset",
@@ -14,7 +14,7 @@
           "dataset": "orders",
           "field": null,
           "record_key": null,
-          "message": "排产/定线-订单数据集：数据集为空"
+          "message": "切线/混料-订单数据集：数据集为空"
         },
         {
           "code": "missing_reference",
@@ -22,7 +22,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA001",
-          "message": "排产/定线-AGV 绑定数据 EA001中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA001中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -30,7 +30,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA003",
-          "message": "排产/定线-AGV 绑定数据 EA003中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA003中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -38,7 +38,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA004",
-          "message": "排产/定线-AGV 绑定数据 EA004中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA004中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -46,7 +46,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA005",
-          "message": "排产/定线-AGV 绑定数据 EA005中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA005中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -54,7 +54,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA006",
-          "message": "排产/定线-AGV 绑定数据 EA006中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA006中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -62,7 +62,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA007",
-          "message": "排产/定线-AGV 绑定数据 EA007中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA007中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -70,7 +70,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA009",
-          "message": "排产/定线-AGV 绑定数据 EA009中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA009中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -78,7 +78,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA011",
-          "message": "排产/定线-AGV 绑定数据 EA011中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA011中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -86,7 +86,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA013",
-          "message": "排产/定线-AGV 绑定数据 EA013中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA013中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -94,7 +94,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA015",
-          "message": "排产/定线-AGV 绑定数据 EA015中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA015中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -102,7 +102,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA017",
-          "message": "排产/定线-AGV 绑定数据 EA017中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA017中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -110,7 +110,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA019",
-          "message": "排产/定线-AGV 绑定数据 EA019中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA019中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -118,7 +118,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA021",
-          "message": "排产/定线-AGV 绑定数据 EA021中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA021中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -126,7 +126,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA023",
-          "message": "排产/定线-AGV 绑定数据 EA023中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA023中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -134,7 +134,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA024",
-          "message": "排产/定线-AGV 绑定数据 EA024中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA024中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_reference",
@@ -142,7 +142,7 @@
           "dataset": "agv_relations",
           "field": "linename",
           "record_key": "EA025",
-          "message": "排产/定线-AGV 绑定数据 EA025中‘AGV 当前产品名称’字段引用记录不存在"
+          "message": "切线/混料-AGV 绑定数据 EA025中‘AGV 当前产品名称’字段引用记录不存在"
         },
         {
           "code": "missing_agv_binding",
@@ -150,7 +150,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA001",
-          "message": "排产/定线-机台实时数据 P166-EA001中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA001中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -158,7 +158,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA003",
-          "message": "排产/定线-机台实时数据 P166-EA003中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA003中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -166,7 +166,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA004",
-          "message": "排产/定线-机台实时数据 P166-EA004中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA004中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -174,7 +174,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA005",
-          "message": "排产/定线-机台实时数据 P166-EA005中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA005中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -182,7 +182,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA006",
-          "message": "排产/定线-机台实时数据 P166-EA006中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA006中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -190,7 +190,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA007",
-          "message": "排产/定线-机台实时数据 P166-EA007中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA007中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -198,7 +198,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA009",
-          "message": "排产/定线-机台实时数据 P166-EA009中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA009中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -206,7 +206,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA011",
-          "message": "排产/定线-机台实时数据 P166-EA011中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA011中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -214,7 +214,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA013",
-          "message": "排产/定线-机台实时数据 P166-EA013中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA013中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -222,7 +222,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA015",
-          "message": "排产/定线-机台实时数据 P166-EA015中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA015中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -230,7 +230,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA017",
-          "message": "排产/定线-机台实时数据 P166-EA017中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA017中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -238,7 +238,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA025",
-          "message": "排产/定线-机台实时数据 P166-EA025中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA025中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -246,7 +246,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA019",
-          "message": "排产/定线-机台实时数据 P166-EA019中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA019中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -254,7 +254,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA021",
-          "message": "排产/定线-机台实时数据 P166-EA021中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA021中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -262,7 +262,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA023",
-          "message": "排产/定线-机台实时数据 P166-EA023中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA023中‘机台编码’字段缺少有效 AGV 绑定"
         },
         {
           "code": "missing_agv_binding",
@@ -270,7 +270,7 @@
           "dataset": "machine_realtime",
           "field": "machine_code",
           "record_key": "P166-EA024",
-          "message": "排产/定线-机台实时数据 P166-EA024中‘机台编码’字段缺少有效 AGV 绑定"
+          "message": "切线/混料-机台实时数据 P166-EA024中‘机台编码’字段缺少有效 AGV 绑定"
         }
       ]
     }

@@ -84,7 +84,7 @@ def _catalog_http_error(exc: CatalogStoreError) -> HTTPException:
             "code": http_error_code(exc.code),
             "legacy_code": exc.code,
             "message": http_error_message(
-                http_error_code(exc.code), "排产/定线-V6目录"
+                http_error_code(exc.code), "切线/混料-V6目录"
             ),
             "retryable": status == 409,
         },
@@ -111,9 +111,9 @@ def _raise_request_validation_error(
             detail={
                 "code": http_error_code("REQUEST_VALIDATION_ERROR"),
                 "legacy_code": "REQUEST_VALIDATION_ERROR",
-                "message": http_error_message("1012", "切线"),
+                "message": http_error_message("1012", "切线/混料"),
                 "issues": _serialize_issues(
-                    _pydantic_validation_issues(exc), scope="切线"
+                    _pydantic_validation_issues(exc), scope="切线/混料"
                 ),
             },
         ) from exc
@@ -122,7 +122,7 @@ def _raise_request_validation_error(
         detail={
             "code": http_error_code("REQUEST_VALIDATION_ERROR"),
             "legacy_code": "REQUEST_VALIDATION_ERROR",
-            "message": http_error_message("1012", "切线"),
+            "message": http_error_message("1012", "切线/混料"),
             "issues": _serialize_issues(
                 [
                     BackendValidationIssue(
@@ -133,7 +133,7 @@ def _raise_request_validation_error(
                     message=str(exc),
                     )
                 ],
-                scope="切线",
+                scope="切线/混料",
             ),
         },
     ) from exc
@@ -158,8 +158,8 @@ def _raise_backend_data_invalid(
         detail={
             "code": http_error_code("BACKEND_DATA_INVALID"),
             "legacy_code": "BACKEND_DATA_INVALID",
-            "message": http_error_message("1010", "排产/定线"),
-            "issues": _serialize_issues(issues, scope="排产/定线"),
+            "message": http_error_message("1010", "切线/混料"),
+            "issues": _serialize_issues(issues, scope="切线/混料"),
         },
     )
     if cause is not None:
@@ -295,7 +295,7 @@ def evaluate_cutline_request(
                 detail={
                     "code": http_error_code("SNAPSHOT_CONVERSION_FAILED"),
                     "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
-                    "message": http_error_message("1011", "排产/定线"),
+                    "message": http_error_message("1011", "切线/混料"),
                     "issues": [],
                 },
             ) from exc

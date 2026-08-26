@@ -314,7 +314,7 @@ def test_backend_validate_rejects_removed_runtime_fields(field: str):
     detail = response.json()["detail"]
     assert detail["code"] == "1012"
     assert detail["legacy_code"] == "REQUEST_VALIDATION_ERROR"
-    assert detail["message"] == "切线-请求：请求格式、字段类型或载荷标准化错误"
+    assert detail["message"] == "切线/混料-请求：请求格式、字段类型或载荷标准化错误"
     field_label = {
         "completed_quantity": "已完成数量",
         "period_quantity": "期间数量",
@@ -323,7 +323,7 @@ def test_backend_validate_rejects_removed_runtime_fields(field: str):
         issue["code"] == "extra_forbidden"
         and issue["error_code"] == "2291"
         and issue["message"] == (
-            f"切线-机台实时数据第1条中‘{field_label}’字段未在请求契约中声明"
+            f"切线/混料-机台实时数据第1条中‘{field_label}’字段未在请求契约中声明"
         )
         and issue["dataset"] == "machine_realtime"
         and issue["field"] == field
@@ -392,11 +392,11 @@ def test_backend_validate_rejects_unknown_fields_with_422():
     detail = response.json()["detail"]
     assert detail["code"] == "1012"
     assert detail["legacy_code"] == "REQUEST_VALIDATION_ERROR"
-    assert detail["message"] == "切线-请求：请求格式、字段类型或载荷标准化错误"
+    assert detail["message"] == "切线/混料-请求：请求格式、字段类型或载荷标准化错误"
     assert any(
         issue["code"] == "extra_forbidden"
         and issue["error_code"] == "2995"
-        and issue["message"] == "切线-请求中‘unexpected’字段未在请求契约中声明"
+        and issue["message"] == "切线/混料-请求中‘unexpected’字段未在请求契约中声明"
         and issue["dataset"] == "request"
         for issue in detail["issues"]
     )
@@ -652,7 +652,7 @@ def test_calculation_route_returns_422_for_raw_standard_agv_conflict():
             "dataset": "agv_relations",
             "field": None,
             "record_key": None,
-            "message": "排产/定线-AGV 绑定数据：原始载荷标准化失败",
+            "message": "切线/混料-AGV 绑定数据：原始载荷标准化失败",
         }
     ]
 
@@ -671,12 +671,12 @@ def test_cutline_evaluate_rejects_empty_orders_with_backend_issues():
     detail = response.json()["detail"]
     assert detail["code"] == "1010"
     assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
-    assert detail["message"] == "排产/定线-请求：后端数据不完整、格式错误或关联关系错误"
+    assert detail["message"] == "切线/混料-请求：后端数据不完整、格式错误或关联关系错误"
     assert any(
         issue["code"] == "empty_dataset"
         and issue["dataset"] == "orders"
         and issue["error_code"] == "2101"
-        and issue["message"] == "排产/定线-订单数据集：数据集为空"
+        and issue["message"] == "切线/混料-订单数据集：数据集为空"
         for issue in detail["issues"]
     )
 
@@ -695,7 +695,7 @@ def test_cutline_evaluate_rejects_order_with_unknown_product():
     detail = response.json()["detail"]
     assert detail["code"] == "1010"
     assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
-    assert detail["message"] == "排产/定线-请求：后端数据不完整、格式错误或关联关系错误"
+    assert detail["message"] == "切线/混料-请求：后端数据不完整、格式错误或关联关系错误"
     assert any(
         issue["code"] == "missing_reference"
         and issue["dataset"] == "orders"
@@ -740,7 +740,7 @@ def test_cutline_evaluate_maps_field_type_error_to_backend_data_invalid():
         and issue["code"] == "float_parsing"
         and issue["error_code"] == "2193"
         and issue["message"] == (
-            "排产/定线-订单第1条中‘订单总数量’字段无法解析为数字"
+            "切线/混料-订单第1条中‘订单总数量’字段无法解析为数字"
         )
         for issue in detail["issues"]
     )
@@ -815,7 +815,7 @@ def test_cutline_evaluate_maps_snapshot_conversion_error_to_422():
     assert response.json()["detail"] == {
         "code": "1011",
         "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
-        "message": "排产/定线-请求：请求数据无法转换为算法快照",
+        "message": "切线/混料-请求：请求数据无法转换为算法快照",
         "issues": [],
     }
 
@@ -845,7 +845,7 @@ def test_cutline_evaluate_isolates_duplicate_realtime_buffer_as_200_error():
     assert matching_errors[0]["warning_key"] == duplicate["main_id"]
     assert matching_errors[0]["error_code"] == "3003"
     assert matching_errors[0]["message"] == (
-        f"排产/定线-{duplicate['main_id']}："
+        f"切线/混料-{duplicate['main_id']}："
         "同一物理 main 内存在重复的 Buffer 编码"
     )
 

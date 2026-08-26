@@ -460,7 +460,7 @@ def test_mapper_keeps_mixing_success_and_converts_each_failure_once_to_errors():
     assert len(response.errors) == 2
     assert response.errors[0].reason == "target_interval_not_found"
     assert response.errors[0].message == (
-        "排产/定线-CUT-002：活跃事件找不到唯一的目标净速率区间"
+        "切线/混料-CUT-002：活跃事件找不到唯一的目标净速率区间"
     )
     assert isinstance(response.errors[1], MixingTraceErrorResponse)
     assert response.errors[1].machine_code == "M2"
