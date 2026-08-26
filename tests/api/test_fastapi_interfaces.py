@@ -314,9 +314,11 @@ def test_backend_validate_rejects_removed_runtime_fields(field: str):
     detail = response.json()["detail"]
     assert detail["code"] == "1012"
     assert detail["legacy_code"] == "REQUEST_VALIDATION_ERROR"
+    assert detail["message"] == "请求格式、字段类型或载荷标准化错误"
     assert any(
         issue["code"] == "extra_forbidden"
         and issue["error_code"] == "2291"
+        and issue["message"] == "请求包含未声明字段"
         and issue["dataset"] == "machine_realtime"
         and issue["field"] == field
         and issue["record_key"] == "index:0"
@@ -384,9 +386,11 @@ def test_backend_validate_rejects_unknown_fields_with_422():
     detail = response.json()["detail"]
     assert detail["code"] == "1012"
     assert detail["legacy_code"] == "REQUEST_VALIDATION_ERROR"
+    assert detail["message"] == "请求格式、字段类型或载荷标准化错误"
     assert any(
         issue["code"] == "extra_forbidden"
         and issue["error_code"] == "2995"
+        and issue["message"] == "请求包含未声明字段"
         and issue["dataset"] == "unexpected"
         for issue in detail["issues"]
     )
@@ -635,9 +639,16 @@ def test_calculation_route_returns_422_for_raw_standard_agv_conflict():
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert "agv_relations[0]" in str(detail)
-    assert "equipmentid" in str(detail)
-    assert "machine_code" in str(detail)
+    assert detail["issues"] == [
+        {
+            "code": "load_error",
+            "error_code": "2321",
+            "dataset": "agv_relations",
+            "field": None,
+            "record_key": None,
+            "message": "原始后端载荷标准化失败",
+        }
+    ]
 
 
 def test_cutline_evaluate_rejects_empty_orders_with_backend_issues():
@@ -654,10 +665,12 @@ def test_cutline_evaluate_rejects_empty_orders_with_backend_issues():
     detail = response.json()["detail"]
     assert detail["code"] == "1010"
     assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
+    assert detail["message"] == "后端数据不完整、格式错误或关联关系错误"
     assert any(
         issue["code"] == "empty_dataset"
         and issue["dataset"] == "orders"
         and issue["error_code"] == "2101"
+        and issue["message"] == "必需数据集为空"
         for issue in detail["issues"]
     )
 
@@ -676,6 +689,7 @@ def test_cutline_evaluate_rejects_order_with_unknown_product():
     detail = response.json()["detail"]
     assert detail["code"] == "1010"
     assert detail["legacy_code"] == "BACKEND_DATA_INVALID"
+    assert detail["message"] == "后端数据不完整、格式错误或关联关系错误"
     assert any(
         issue["code"] == "missing_reference"
         and issue["dataset"] == "orders"
@@ -719,6 +733,7 @@ def test_cutline_evaluate_maps_field_type_error_to_backend_data_invalid():
         and issue["field"] == "total_quantity"
         and issue["code"] == "float_parsing"
         and issue["error_code"] == "2193"
+        and issue["message"] == "数字字段无法解析"
         for issue in detail["issues"]
     )
 
@@ -792,7 +807,7 @@ def test_cutline_evaluate_maps_snapshot_conversion_error_to_422():
     assert response.json()["detail"] == {
         "code": "1011",
         "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
-        "message": "machine_lines were provided but lines are empty",
+        "message": "请求数据无法转换为算法快照",
         "issues": [],
     }
 
@@ -821,6 +836,7 @@ def test_cutline_evaluate_isolates_duplicate_realtime_buffer_as_200_error():
     assert matching_errors[0]["stage"] == "main_buffer_aggregation"
     assert matching_errors[0]["warning_key"] == duplicate["main_id"]
     assert matching_errors[0]["error_code"] == "3003"
+    assert matching_errors[0]["message"] == "同一物理 main 内存在重复的 Buffer 编码"
 
 
 def test_cutline_evaluate_isolates_unresolved_static_buffer_as_200_error():

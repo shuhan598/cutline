@@ -459,9 +459,11 @@ def test_mapper_keeps_mixing_success_and_converts_each_failure_once_to_errors():
     assert len(response.mixing_trace_records) == 1
     assert len(response.errors) == 2
     assert response.errors[0].reason == "target_interval_not_found"
+    assert response.errors[0].message == "活跃事件找不到唯一的目标净速率区间"
     assert isinstance(response.errors[1], MixingTraceErrorResponse)
     assert response.errors[1].machine_code == "M2"
     assert response.errors[1].reason == "machine_runtime_not_found"
+    assert response.errors[1].message == "机台实时记录缺失"
     assert "mixing_trace_failures" not in response.model_fields
 
 

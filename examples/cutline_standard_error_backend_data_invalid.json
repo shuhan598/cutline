@@ -2,7 +2,7 @@
   "detail": {
     "code": "1010",
     "legacy_code": "BACKEND_DATA_INVALID",
-    "message": "后端数据不完整或数据关联关系错误",
+    "message": "后端数据不完整、格式错误或关联关系错误",
     "issues": [
       {
         "code": "float_parsing",
@@ -10,7 +10,7 @@
         "dataset": "orders",
         "field": "total_quantity",
         "record_key": "index:0",
-        "message": "Input should be a valid number, unable to parse string as a number"
+        "message": "数字字段无法解析"
       }
     ]
   }

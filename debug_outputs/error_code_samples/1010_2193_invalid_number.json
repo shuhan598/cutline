@@ -1,0 +1,22 @@
+{
+  "scenario": "切线评估请求的订单数量无法解析为数字",
+  "endpoint": "/cutline/evaluate",
+  "status_code": 422,
+  "response": {
+    "detail": {
+      "code": "1010",
+      "legacy_code": "BACKEND_DATA_INVALID",
+      "message": "后端数据不完整、格式错误或关联关系错误",
+      "issues": [
+        {
+          "code": "float_parsing",
+          "error_code": "2193",
+          "dataset": "orders",
+          "field": "total_quantity",
+          "record_key": "index:0",
+          "message": "数字字段无法解析"
+        }
+      ]
+    }
+  }
+}

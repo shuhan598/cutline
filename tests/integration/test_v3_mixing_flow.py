@@ -41,6 +41,8 @@ def test_v3_active_mixing_failure_enters_errors_once_without_watermark():
     failure = failures[0]
     assert failure.machine_code == "EA004"
     assert failure.reason == "process_duration_not_found"
+    assert failure.error_code == "3111"
+    assert failure.message == "机台和源产品的工艺时长缺失"
     assert response.persistence_state.mixed_cutline_event_ids == []
     assert response.persistence_state.new_mixing_trace_records == []
     assert len(response.errors) == 1

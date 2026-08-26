@@ -1262,7 +1262,7 @@ def test_backend_validator_reports_duplicate_pending_id_and_business_key():
         issue.code == "duplicate_key"
         and issue.dataset == "pending_cutline_plans"
         and issue.field == "plan_id"
-        and "PLAN-PENDING-1" in issue.message
+        and issue.message == "主键或业务键重复"
         for issue in result.issues
     )
     duplicate["plan_id"] = "PLAN-PENDING-2"
@@ -1272,8 +1272,7 @@ def test_backend_validator_reports_duplicate_pending_id_and_business_key():
         issue.code == "duplicate_key"
         and issue.dataset == "pending_cutline_plans"
         and issue.field == "business_key"
-        and "PLAN-PENDING-1" in issue.message
-        and "PLAN-PENDING-2" in issue.message
+        and issue.message == "主键或业务键重复"
         for issue in result.issues
     )
 

@@ -1,0 +1,278 @@
+{
+  "scenario": "切线评估请求缺少订单数据集",
+  "endpoint": "/cutline/evaluate",
+  "status_code": 422,
+  "response": {
+    "detail": {
+      "code": "1010",
+      "legacy_code": "BACKEND_DATA_INVALID",
+      "message": "后端数据不完整、格式错误或关联关系错误",
+      "issues": [
+        {
+          "code": "empty_dataset",
+          "error_code": "2101",
+          "dataset": "orders",
+          "field": null,
+          "record_key": null,
+          "message": "必需数据集为空"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA001",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA003",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA004",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA005",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA006",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA007",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA009",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA011",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA013",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA015",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA017",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA019",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA021",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA023",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA024",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_reference",
+          "error_code": "2308",
+          "dataset": "agv_relations",
+          "field": "linename",
+          "record_key": "EA025",
+          "message": "被引用记录不存在"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA001",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA003",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA004",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA005",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA006",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA007",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA009",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA011",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA013",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA015",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA017",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA025",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA019",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA021",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA023",
+          "message": "运行机台缺少有效 AGV 绑定"
+        },
+        {
+          "code": "missing_agv_binding",
+          "error_code": "2213",
+          "dataset": "machine_realtime",
+          "field": "machine_code",
+          "record_key": "P166-EA024",
+          "message": "运行机台缺少有效 AGV 绑定"
+        }
+      ]
+    }
+  }
+}

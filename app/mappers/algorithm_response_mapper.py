@@ -37,6 +37,7 @@ from app.schemas.result_schema import (
     AlgorithmStockoutWarningResult,
 )
 from app.utils.input_error_codes import (
+    error_code_message,
     mixing_trace_error_code,
     pipeline_error_code,
 )
@@ -69,12 +70,7 @@ class AlgorithmResponseMapper:
             for item in result.errors
         ]
         errors.extend(
-            MixingTraceErrorResponse(
-                machine_code=item.machine_code,
-                reason=item.reason,
-                error_code=mixing_trace_error_code(item.reason),
-                message=item.message,
-            )
+            self._map_mixing_trace_failure(item)
             for item in result.mixing_trace_failures
         )
         return CutlineAlgorithmResponse(
@@ -436,14 +432,27 @@ class AlgorithmResponseMapper:
         item: AlgorithmPipelineError,
     ) -> PipelineErrorResponse:
         """在後端输入与算法内部模型之间执行【_map_pipeline_error】转换，并保留必要的校验信息。"""
+        error_code = item.error_code or pipeline_error_code(
+            item.stage, item.reason
+        )
         return PipelineErrorResponse(
             stage=item.stage,
             warning_type=item.warning_type,
             warning_key=item.warning_key,
             reason=item.reason,
-            error_code=item.error_code
-            or pipeline_error_code(item.stage, item.reason),
-            message=item.message,
+            error_code=error_code,
+            message=error_code_message(error_code, item.message),
+        )
+
+    @staticmethod
+    def _map_mixing_trace_failure(item) -> MixingTraceErrorResponse:
+        """将混料追溯失败转换为带中文描述的公开错误。"""
+        error_code = mixing_trace_error_code(item.reason)
+        return MixingTraceErrorResponse(
+            machine_code=item.machine_code,
+            reason=item.reason,
+            error_code=error_code,
+            message=error_code_message(error_code, item.message),
         )
 
     def _plan_warning_id(

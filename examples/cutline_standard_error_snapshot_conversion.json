@@ -2,7 +2,7 @@
   "detail": {
     "code": "1011",
     "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
-    "message": "machine_lines were provided but lines are empty",
+    "message": "请求数据无法转换为算法快照",
     "issues": []
   }
 }

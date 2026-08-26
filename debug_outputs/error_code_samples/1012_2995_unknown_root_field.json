@@ -1,0 +1,22 @@
+{
+  "scenario": "普通请求包含未声明的根字段",
+  "endpoint": "/backend/validate",
+  "status_code": 422,
+  "response": {
+    "detail": {
+      "code": "1012",
+      "legacy_code": "REQUEST_VALIDATION_ERROR",
+      "message": "请求格式、字段类型或载荷标准化错误",
+      "issues": [
+        {
+          "code": "extra_forbidden",
+          "error_code": "2995",
+          "dataset": "unexpected",
+          "field": null,
+          "record_key": null,
+          "message": "请求包含未声明字段"
+        }
+      ]
+    }
+  }
+}

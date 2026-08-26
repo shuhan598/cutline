@@ -1,0 +1,210 @@
+{
+  "scenario": "同一物理 main 内包含重复 Buffer 编码",
+  "endpoint": "/cutline/evaluate",
+  "status_code": 200,
+  "response": {
+    "calculation_time": "2026-07-17T08:00:00+08:00",
+    "stockout_warnings": [
+      {
+        "warning_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+        "warning_type": "stockout",
+        "warning_time": "2026-07-17T08:00:00+08:00",
+        "buffer_code": "310110302",
+        "order_code": "ORD-S2-001",
+        "wafer_size": "182",
+        "wafer_spec": "N",
+        "workshop_code": "S2",
+        "upstream_process_code": "制绒",
+        "downstream_process_code": "碱抛",
+        "current_quantity": 100.0,
+        "upstream_output_rate": 200.0,
+        "downstream_input_rate": 600.0,
+        "net_consumption_rate": 400.0,
+        "depletion_minutes": 15.0,
+        "stockout_warning_lead_minutes": 30.0
+      }
+    ],
+    "overflow_warnings": [],
+    "cutline_decisions": [
+      {
+        "warning_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+        "plan": {
+          "plan_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+          "warning_type": "stockout",
+          "calculation_time": "2026-07-17T08:00:00+08:00",
+          "workshop_code": "S2",
+          "buffer_code": "310110302",
+          "order_code": "ORD-S2-001",
+          "wafer_size": "182",
+          "wafer_spec": "N",
+          "upstream_process_code": "制绒",
+          "downstream_process_code": "碱抛",
+          "initial_capacity_gap": 400.0,
+          "total_contribution_capacity": 600.0,
+          "remaining_capacity_gap": 0.0,
+          "selected_machines": [
+            {
+              "machine_code": "EA004",
+              "source_order_code": "ORD-S2-002",
+              "target_order_code": "ORD-S2-001",
+              "source_buffer_code": "310112802",
+              "target_buffer_code": "310110302",
+              "process_code": "制绒",
+              "workshop_code": "S2",
+              "wafer_size": "182",
+              "source_wafer_spec": "N",
+              "target_wafer_spec": "N",
+              "contribution_capacity": 600.0
+            }
+          ]
+        }
+      }
+    ],
+    "return_recommendations": [],
+    "silk_screen_results": [
+      {
+        "workshop_code": "S2",
+        "current_order_code": "ORD-S2-001",
+        "machine_codes": [
+          "EA021"
+        ],
+        "calculation_time": "2026-07-17T08:00:00+08:00",
+        "silk_screen_clear_minutes": 30.0,
+        "remaining_production_hours": 500.0,
+        "prepare_clearance": false,
+        "reason": "not_yet_time_to_prepare",
+        "message": "当前订单尚未进入清台准备提醒窗口。"
+      }
+    ],
+    "mixing_trace_records": [],
+    "new_active_cutline_events": [],
+    "updated_active_cutline_events": [],
+    "closed_active_cutline_event_ids": [],
+    "errors": [
+      {
+        "stage": "main_buffer_aggregation",
+        "warning_type": null,
+        "warning_key": "MAIN-310110301",
+        "reason": "duplicate_buffer_id",
+        "error_code": "3003",
+        "message": "同一物理 main 内存在重复的 Buffer 编码"
+      }
+    ],
+    "persistence_state": {
+      "pending_cutline_plans": [
+        {
+          "plan_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+          "warning_id": "stockout:2026-07-17T08:00:00+08:00:310110302:ORD-S2-001",
+          "warning_type": "stockout",
+          "warning_time": "2026-07-17T08:00:00+08:00",
+          "created_at": "2026-07-17T08:00:00+08:00",
+          "expire_at": "2026-07-17T08:30:00+08:00",
+          "status": "PENDING",
+          "workshop_code": "S2",
+          "buffer_code": "310110302",
+          "upstream_process_code": "制绒",
+          "downstream_process_code": "碱抛",
+          "monitored_order_code": "ORD-S2-001",
+          "process_code": "制绒",
+          "source_order_code": "ORD-S2-002",
+          "target_order_code": "ORD-S2-001",
+          "source_product_code": "PROD-S2-N-SUPPORT",
+          "target_product_code": "PROD-S2-N-TARGET",
+          "before_machine_count": 1,
+          "before_machine_codes": [
+            "EA003"
+          ],
+          "expected_machine_count": 2,
+          "expected_delta_direction": "increase",
+          "candidate_machines": [
+            {
+              "machine_code": "EA004",
+              "baseline_order_code": "ORD-S2-002",
+              "baseline_product_code": "PROD-S2-N-SUPPORT",
+              "baseline_product_name": "182N支援产品",
+              "baseline_wafer_size": "182",
+              "baseline_wafer_spec": "N",
+              "baseline_source_grade": "A",
+              "expected_target_order_code": "ORD-S2-001",
+              "expected_target_product_code": "PROD-S2-N-TARGET",
+              "expected_target_product_name": "182N至上产品",
+              "expected_target_wafer_size": "182",
+              "expected_target_wafer_spec": "N",
+              "expected_target_source_grade": "A",
+              "process_code": "制绒",
+              "workshop_code": "S2",
+              "source_buffer_code": "310112802",
+              "target_buffer_code": "310110302",
+              "target_upstream_process_code": "制绒",
+              "target_downstream_process_code": "碱抛"
+            }
+          ],
+          "candidate_machine_codes": [
+            "EA004"
+          ],
+          "baseline_machine_bindings": [
+            {
+              "machine_code": "EA003",
+              "order_code": "ORD-S2-001",
+              "product_code": "PROD-S2-N-TARGET",
+              "product_name": "182N至上产品",
+              "wafer_size": "182",
+              "wafer_spec": "N",
+              "source_grade": "A",
+              "process_code": "制绒",
+              "workshop_code": "S2",
+              "machine_status": "running",
+              "observed_at": "2026-07-17T07:55:00+08:00"
+            },
+            {
+              "machine_code": "EA004",
+              "order_code": "ORD-S2-002",
+              "product_code": "PROD-S2-N-SUPPORT",
+              "product_name": "182N支援产品",
+              "wafer_size": "182",
+              "wafer_spec": "N",
+              "source_grade": "A",
+              "process_code": "制绒",
+              "workshop_code": "S2",
+              "machine_status": "running",
+              "observed_at": "2026-07-17T07:55:00+08:00"
+            },
+            {
+              "machine_code": "EA023",
+              "order_code": "ORD-S2-003",
+              "product_code": "PROD-S2-R",
+              "product_name": "210R华晟产品",
+              "wafer_size": "210",
+              "wafer_spec": "R",
+              "source_grade": "A-",
+              "process_code": "制绒",
+              "workshop_code": "S2",
+              "machine_status": "running",
+              "observed_at": "2026-07-17T07:55:00+08:00"
+            },
+            {
+              "machine_code": "EA024",
+              "order_code": "ORD-S2-004",
+              "product_code": "PROD-S2-P",
+              "product_name": "210P晶澳产品",
+              "wafer_size": "210",
+              "wafer_spec": "P",
+              "source_grade": "A",
+              "process_code": "制绒",
+              "workshop_code": "S2",
+              "machine_status": "running",
+              "observed_at": "2026-07-17T07:55:00+08:00"
+            }
+          ],
+          "confirmed_machine_codes": []
+        }
+      ],
+      "active_cutline_events": [],
+      "expired_pending_plan_ids": [],
+      "completed_pending_plan_ids": [],
+      "return_suggested_event_ids": [],
+      "mixed_cutline_event_ids": [],
+      "new_mixing_trace_records": []
+    }
+  }
+}

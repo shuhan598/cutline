@@ -44,7 +44,7 @@ from app.schemas.pending_cutline_schema import (
     PendingCutlinePlanStatus,
 )
 from app.utils.buffer_binding import should_ignore_bound_source_name
-from app.utils.input_error_codes import input_error_code
+from app.utils.input_error_codes import error_code_message, input_error_code
 
 
 class BackendValidationIssue(BaseModel):
@@ -68,6 +68,11 @@ class BackendValidationIssue(BaseModel):
         issue["error_code"] = input_error_code(
             str(issue.get("dataset", "request")),
             str(issue.get("code", "validation_failed")),
+        )
+        issue["message"] = error_code_message(
+            issue["error_code"],
+            str(issue.get("message", "请求数据校验失败")),
+            reason_code=str(issue.get("code", "validation_failed")),
         )
         return issue
 

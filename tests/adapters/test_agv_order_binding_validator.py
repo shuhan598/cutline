@@ -179,7 +179,7 @@ def test_validator_reports_unknown_agv_equipmentid():
         issue.code == "missing_reference"
         and issue.dataset == "agv_relations"
         and issue.field == "equipmentid"
-        and "machine_master.machine_code" in issue.message
+        and issue.message == "被引用记录不存在"
         for issue in result.issues
     )
 
@@ -194,7 +194,7 @@ def test_validator_reports_unknown_agv_linename():
         issue.code == "missing_reference"
         and issue.dataset == "agv_relations"
         and issue.field == "linename"
-        and "未知产品" in issue.message
+        and issue.message == "被引用记录不存在"
         for issue in result.issues
     )
     assert any(
@@ -215,7 +215,7 @@ def test_running_machine_without_any_agv_record_is_reported_after_mapping():
         and issue.dataset == "machine_realtime"
         and issue.field == "machine_code"
         and issue.record_key == "P166-EA003"
-        and "EA003" in issue.message
+        and issue.message == "运行机台缺少有效 AGV 绑定"
         for issue in result.issues
     )
 
@@ -328,8 +328,7 @@ def test_validator_reports_latest_same_time_linename_conflict():
         issue.code == "binding_conflict"
         and issue.dataset == "agv_relations"
         and issue.field == "linename"
-        and "产品一" in issue.message
-        and "产品二" in issue.message
+        and issue.message == "同一机台或绑定在同一时刻冲突"
         for issue in result.issues
     )
 
@@ -344,7 +343,7 @@ def test_validator_reports_unknown_realtime_p166_code():
         issue.code == "missing_reference"
         and issue.dataset == "machine_realtime"
         and issue.field == "machine_code"
-        and "p166_jt_group" in issue.message
+        and issue.message == "被引用记录不存在"
         for issue in result.issues
     )
 
@@ -359,10 +358,7 @@ def test_validator_reports_agv_machine_order_workshop_conflict():
     assert any(
         issue.code == "workshop_mismatch"
         and issue.dataset == "agv_relations"
-        and "EA003" in issue.message
-        and "ORD-S2-001" in issue.message
-        and "S1" in issue.message
-        and "S2" in issue.message
+        and issue.message == "关联记录所属车间不一致"
         for issue in result.issues
     )
 

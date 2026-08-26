@@ -33,7 +33,7 @@ from app.service.cutline_service import CutlineService
 from app.service.algorithm_state_store import AlgorithmStateStore
 from app.service.catalog_store import CatalogStore, CatalogStoreError
 from app.utils.algorithm_exception_logger import log_algorithm_exception
-from app.utils.input_error_codes import http_error_code
+from app.utils.input_error_codes import error_code_message, http_error_code
 
 
 router = APIRouter(tags=["cutline"])
@@ -79,7 +79,7 @@ def _catalog_http_error(exc: CatalogStoreError) -> HTTPException:
         detail={
             "code": http_error_code(exc.code),
             "legacy_code": exc.code,
-            "message": str(exc),
+            "message": error_code_message(http_error_code(exc.code), str(exc)),
             "retryable": status == 409,
         },
     )
@@ -105,7 +105,7 @@ def _raise_request_validation_error(
             detail={
                 "code": http_error_code("REQUEST_VALIDATION_ERROR"),
                 "legacy_code": "REQUEST_VALIDATION_ERROR",
-                "message": "请求格式或字段类型错误",
+                "message": error_code_message("1012"),
                 "issues": [
                     issue.model_dump(mode="json")
                     for issue in _pydantic_validation_issues(exc)
@@ -117,7 +117,7 @@ def _raise_request_validation_error(
         detail={
             "code": http_error_code("REQUEST_VALIDATION_ERROR"),
             "legacy_code": "REQUEST_VALIDATION_ERROR",
-            "message": "请求载荷标准化失败",
+            "message": error_code_message("1012"),
             "issues": [
                 BackendValidationIssue(
                     code="load_error",
@@ -150,7 +150,7 @@ def _raise_backend_data_invalid(
         detail={
             "code": http_error_code("BACKEND_DATA_INVALID"),
             "legacy_code": "BACKEND_DATA_INVALID",
-            "message": "后端数据不完整或数据关联关系错误",
+            "message": error_code_message("1010"),
             "issues": [
                 issue.model_dump(mode="json") for issue in issues
             ],
@@ -261,7 +261,7 @@ def evaluate_cutline_request(
                 detail={
                     "code": http_error_code("SNAPSHOT_CONVERSION_FAILED"),
                     "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
-                    "message": str(exc),
+                    "message": error_code_message("1011", str(exc)),
                     "issues": [],
                 },
             ) from exc

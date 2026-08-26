@@ -204,9 +204,7 @@ def test_validator_reports_unknown_process_name_with_existing_issue_shape():
     assert issue.dataset == "process_routes"
     assert issue.field == "process_name"
     assert issue.record_key == original_process_code
-    assert f"process_code={original_process_code!r}" in issue.message
-    assert "process_name='未知工序'" in issue.message
-    assert "cannot be mapped to an internal loop" in issue.message
+    assert issue.message == "工序名称无法映射到内部目录"
 
 
 @pytest.mark.parametrize("loop_code", [None, "", "WRONG-LEGACY-LOOP"])

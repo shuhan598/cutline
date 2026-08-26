@@ -1,0 +1,13 @@
+{
+  "scenario": "机台产线关系存在但产线数据集为空，无法转换算法快照",
+  "endpoint": "/cutline/evaluate",
+  "status_code": 422,
+  "response": {
+    "detail": {
+      "code": "1011",
+      "legacy_code": "SNAPSHOT_CONVERSION_FAILED",
+      "message": "请求数据无法转换为算法快照",
+      "issues": []
+    }
+  }
+}
